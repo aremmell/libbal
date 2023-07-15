@@ -12,8 +12,8 @@ cmake_policy(SET CMP0066 NEW) # CMAKE_<LANG>_FLAGS_<BUILDTYPE>
 cmake_policy(SET CMP0102 NEW) # mark_as_advanced
 
 # toolchain-related
-set(C_FLAGS_DEBUG -g -O0 -fPIC -DDEBUG)
-set(C_FLAGS_RELEASE -O3 -D_FORTIFY_SOURCE=2 -fPIC -DNDEBUG)
+set(C_FLAGS_DEBUG -Wall -Wextra -Wpedantic -g -O0 -fPIC -DDEBUG)
+set(C_FLAGS_RELEASE -Wall -Wextra -Wpedantic -O3 -D_FORTIFY_SOURCE=2 -fPIC -DNDEBUG)
 
 # define the project
 project(
