@@ -78,14 +78,14 @@ typedef HANDLE bal_thread;
 #  endif
 #  define _t(x) L##x
 typedef wchar_t bchar, *bstr;
-typedef const wchar_t *cbstr;
+typedef const wchar_t* cbstr;
 # else
 #  ifdef _t
 #   undef _t
 #  endif
 #  define _t(x) x
 typedef char bchar, *bstr;
-typedef const char *cbstr;
+typedef const char* cbstr;
 # endif /* !BAL_USE_WCHAR */
 
 # define BAL_TRUE 0
@@ -111,21 +111,21 @@ typedef struct {
     int pf;
     unsigned long ud;
     unsigned long _f;
-} bal_t;
+} balst;
 
 typedef struct {
-    struct addrinfo *_ai;
-    struct addrinfo *_p;
+    struct addrinfo* _ai;
+    struct addrinfo* _p;
 } bal_addrinfo;
 
 typedef struct bal_addr {
     bal_sockaddr _sa;
-    struct bal_addr *_n;
+    struct bal_addr* _n;
 } bal_addr;
 
 typedef struct {
-    bal_addr *_a;
-    bal_addr *_p;
+    bal_addr* _a;
+    bal_addr* _p;
 } bal_addrlist;
 
 typedef struct {
@@ -140,25 +140,25 @@ typedef struct {
     bchar desc[BAL_MAXERROR];
 } bal_error;
 
-typedef void (*BALEVENTPROC)(const bal_t*, int);
+typedef void (*bal_async_callback)(const balst*, int);
 
 typedef struct bal_selectdata {
-    bal_t *s;
-    unsigned long mask;
-    BALEVENTPROC proc;
-    struct bal_selectdata *_p;
-    struct bal_selectdata *_n;
+    balst* s;
+    uint32_t mask;
+    bal_async_callback proc;
+    struct bal_selectdata* _p;
+    struct bal_selectdata* _n;
 } bal_selectdata;
 
 typedef struct {
-    bal_selectdata *_h;
-    bal_selectdata *_t;
-    bal_selectdata *_c;
+    bal_selectdata* _h;
+    bal_selectdata* _t;
+    bal_selectdata* _c;
 } bal_selectdata_list;
 
 typedef struct {
-    bal_selectdata_list *l;
-    bal_mutex *m;
+    bal_selectdata_list* l;
+    bal_mutex* m;
     int die;
 } bal_eventthread_data;
 
@@ -169,87 +169,87 @@ extern "C" {
 int bal_initialize(void);
 int bal_finalize(void);
 
-int bal_asyncselect(const bal_t *s, BALEVENTPROC proc, unsigned long mask);
+int bal_asyncselect(const balst* s, bal_async_callback proc, uint32_t mask);
 
-int bal_autosocket(bal_t *s, int af, int pt, cbstr host, cbstr port);
-int bal_sock_create(bal_t *s, int af, int pt, int st);
-int bal_reset(bal_t *s);
-int bal_close(bal_t *s);
-int bal_shutdown(bal_t *s, int how);
+int bal_autosocket(balst* s, int af, int pt, cbstr host, cbstr port);
+int bal_sock_create(balst* s, int af, int pt, int st);
+int bal_reset(balst* s);
+int bal_close(balst* s);
+int bal_shutdown(balst* s, int how);
 
-int bal_connect(const bal_t *s, cbstr host, cbstr port);
-int bal_connectaddrlist(bal_t *s, bal_addrlist *al);
+int bal_connect(const balst* s, cbstr host, cbstr port);
+int bal_connectaddrlist(balst* s, bal_addrlist* al);
 
-int bal_send(const bal_t *s, const void *data, size_t len, int flags);
-int bal_recv(const bal_t *s, void *data, size_t len, int flags);
+int bal_send(const balst* s, const void* data, size_t len, int flags);
+int bal_recv(const balst* s, void* data, size_t len, int flags);
 
-int bal_sendto(const bal_t *s, cbstr host, cbstr port, const void *data, size_t len, int flags);
-int bal_sendtoaddr(const bal_t *s, const bal_sockaddr *sa, const void *data, size_t len, int flags);
+int bal_sendto(const balst* s, cbstr host, cbstr port, const void* data, size_t len, int flags);
+int bal_sendtoaddr(const balst* s, const bal_sockaddr* sa, const void* data, size_t len, int flags);
 
-int bal_recvfrom(const bal_t *s, void *data, size_t len, int flags, bal_sockaddr *res);
+int bal_recvfrom(const balst* s, void* data, size_t len, int flags, bal_sockaddr* res);
 
-int bal_bind(const bal_t *s, cbstr addr, cbstr port);
-int bal_bindaddrany(const bal_t *s, unsigned short port);
-int bal_bindany(const bal_t *s);
+int bal_bind(const balst* s, cbstr addr, cbstr port);
+int bal_bindaddrany(const balst* s, unsigned short port);
+int bal_bindany(const balst* s);
 
-int bal_listen(const bal_t *s, int backlog);
-int bal_accept(const bal_t *s, bal_t *res, bal_sockaddr *resaddr);
+int bal_listen(const balst* s, int backlog);
+int bal_accept(const balst* s, balst* res, bal_sockaddr* resaddr);
 
-int bal_getoption(const bal_t *s, int level, int name, void *optval, socklen_t len);
-int bal_setoption(const bal_t *s, int level, int name, const void *optval, socklen_t len);
+int bal_getoption(const balst* s, int level, int name, void* optval, socklen_t len);
+int bal_setoption(const balst* s, int level, int name, const void* optval, socklen_t len);
 
-int bal_setbroadcast(const bal_t *s, int flag);
-int bal_getbroadcast(const bal_t *s);
+int bal_setbroadcast(const balst* s, int flag);
+int bal_getbroadcast(const balst* s);
 
-int bal_setdebug(const bal_t *s, int flag);
-int bal_getdebug(const bal_t *s);
+int bal_setdebug(const balst* s, int flag);
+int bal_getdebug(const balst* s);
 
-int bal_setlinger(const bal_t *s, int sec);
-int bal_getlinger(const bal_t *s, int *sec);
+int bal_setlinger(const balst* s, int sec);
+int bal_getlinger(const balst* s, int* sec);
 
-int bal_setkeepalive(const bal_t *s, int flag);
-int bal_getkeepalive(const bal_t *s);
+int bal_setkeepalive(const balst* s, int flag);
+int bal_getkeepalive(const balst* s);
 
-int bal_setoobinline(const bal_t *s, int flag);
-int bal_getoobinline(const bal_t *s);
+int bal_setoobinline(const balst* s, int flag);
+int bal_getoobinline(const balst* s);
 
-int bal_setreuseaddr(const bal_t *s, int flag);
-int bal_getreuseaddr(const bal_t *s);
+int bal_setreuseaddr(const balst* s, int flag);
+int bal_getreuseaddr(const balst* s);
 
-int bal_setsendbufsize(const bal_t *s, int size);
-int bal_getsendbufsize(const bal_t *s);
+int bal_setsendbufsize(const balst* s, int size);
+int bal_getsendbufsize(const balst* s);
 
-int bal_setrecvbufsize(const bal_t *s, int size);
-int bal_getrecvbufsize(const bal_t *s);
+int bal_setrecvbufsize(const balst* s, int size);
+int bal_getrecvbufsize(const balst* s);
 
-int bal_setsendtimeout(const bal_t *s, long sec, long msec);
-int bal_getsendtimeout(const bal_t *s, long *sec, long *msec);
+int bal_setsendtimeout(const balst* s, long sec, long msec);
+int bal_getsendtimeout(const balst* s, long* sec, long* msec);
 
-int bal_setrecvtimeout(const bal_t *s, long sec, long msec);
-int bal_getrecvtimeout(const bal_t *s, long *sec, long *msec);
+int bal_setrecvtimeout(const balst* s, long sec, long msec);
+int bal_getrecvtimeout(const balst* s, long* sec, long* msec);
 
-int bal_geterror(const bal_t *s);
+int bal_geterror(const balst* s);
 
-int bal_islistening(const bal_t *s);
-int bal_isreadable(const bal_t *s);
-int bal_iswritable(const bal_t *s);
+int bal_islistening(const balst* s);
+int bal_isreadable(const balst* s);
+int bal_iswritable(const balst* s);
 
-int bal_setiomode(const bal_t *s, unsigned long flag);
-size_t bal_recvqueuesize(const bal_t *s);
+int bal_setiomode(const balst* s, unsigned long flag);
+size_t bal_recvqueuesize(const balst* s);
 
-int bal_lastliberror(bal_error *err);
-int bal_lastsockerror(const bal_t *s, bal_error *err);
+int bal_lastliberror(bal_error* err);
+int bal_lastsockerror(const balst* s, bal_error* err);
 
-int bal_resolvehost(cbstr host, bal_addrlist *out);
-int bal_getremotehostaddr(const bal_t *s, bal_sockaddr *out);
-int bal_getremotehoststrings(const bal_t *s, int dns, bal_addrstrings *out);
-int bal_getlocalhostaddr(const bal_t *s, bal_sockaddr *out);
-int bal_getlocalhoststrings(const bal_t *s, int dns, bal_addrstrings *out);
+int bal_resolvehost(cbstr host, bal_addrlist* out);
+int bal_getremotehostaddr(const balst* s, bal_sockaddr* out);
+int bal_getremotehoststrings(const balst* s, int dns, bal_addrstrings* out);
+int bal_getlocalhostaddr(const balst* s, bal_sockaddr* out);
+int bal_getlocalhoststrings(const balst* s, int dns, bal_addrstrings* out);
 
-int bal_resetaddrlist(bal_addrlist *al);
-const bal_sockaddr *bal_enumaddrlist(bal_addrlist *al);
-int bal_freeaddrlist(bal_addrlist *al);
-int bal_getaddrstrings(const bal_sockaddr *in, int dns, bal_addrstrings *out);
+int bal_resetaddrlist(bal_addrlist* al);
+const bal_sockaddr* bal_enumaddrlist(bal_addrlist* al);
+int bal_freeaddrlist(bal_addrlist* al);
+int bal_getaddrstrings(const bal_sockaddr* in, int dns, bal_addrstrings* out);
 
 
     /*
@@ -260,7 +260,7 @@ int bal_getaddrstrings(const bal_sockaddr *in, int dns, bal_addrstrings *out);
 # define _bal_validstr(str) (str && *str)
 
 # define BAL_SASIZE(sa) \
-    ((PF_INET == ((struct sockaddr *)&sa)->sa_family) ? sizeof(struct sockaddr_in) \
+    ((PF_INET == ((struct sockaddr* )&sa)->sa_family) ? sizeof(struct sockaddr_in) \
                                                       : sizeof(struct sockaddr_in6))
 
 # define BAL_NI_NODNS (NI_NUMERICHOST | NI_NUMERICSERV)
@@ -282,46 +282,46 @@ int bal_getaddrstrings(const bal_sockaddr *in, int dns, bal_addrstrings *out);
 # define BAL_S_EXCEPT    0x00000003
 # define BAL_S_TIME      0x0000C350
 
-int _bal_bindany(const bal_t *s, unsigned short port);
-int _bal_getaddrinfo(int f, int af, int st, cbstr host, cbstr port, bal_addrinfo *res);
-int _bal_getnameinfo(int f, const bal_sockaddr *in, bstr host, bstr port);
+int _bal_bindany(const balst* s, unsigned short port);
+int _bal_getaddrinfo(int f, int af, int st, cbstr host, cbstr port, bal_addrinfo* res);
+int _bal_getnameinfo(int f, const bal_sockaddr* in, bstr host, bstr port);
 
-const struct addrinfo *_bal_enumaddrinfo(bal_addrinfo *ai);
-int _bal_aitoal(bal_addrinfo *in, bal_addrlist *out);
+const struct addrinfo* _bal_enumaddrinfo(bal_addrinfo* ai);
+int _bal_aitoal(bal_addrinfo* in, bal_addrlist* out);
 
-int _bal_getlasterror(const bal_t *s, bal_error *err);
+int _bal_getlasterror(const balst* s, bal_error* err);
 void _bal_setlasterror(int err);
 
-const char *_bal_getmbstr(cbstr input);
-int _bal_retstr(bstr out, const char *in);
+const char* _bal_getmbstr(cbstr input);
+int _bal_retstr(bstr out, const char* in);
 
-int _bal_haspendingconnect(const bal_t *s);
-int _bal_isclosedcircuit(const bal_t *s);
+int _bal_haspendingconnect(const balst* s);
+int _bal_isclosedcircuit(const balst* s);
 
 # if defined(_WIN32)
 #  define BALTHREADAPI DWORD WINAPI
 # else
-#  define BALTHREADAPI void *
+#  define BALTHREADAPI void*
 # endif
 
-BALTHREADAPI _bal_eventthread(void *p);
-int _bal_initasyncselect(bal_thread *t, bal_mutex *m, bal_eventthread_data *td);
-void _bal_dispatchevents(fd_set *set, bal_eventthread_data *td, int type);
+BALTHREADAPI _bal_eventthread(void* p);
+int _bal_initasyncselect(bal_thread* t, bal_mutex* m, bal_eventthread_data* td);
+void _bal_dispatchevents(fd_set* set, bal_eventthread_data* td, int type);
 
-int _bal_sdl_add(bal_selectdata_list *l, const bal_selectdata *d);
-int _bal_sdl_rem(bal_selectdata_list *l, bal_socket sd);
-int _bal_sdl_clr(bal_selectdata_list *l);
-int _bal_sdl_size(bal_selectdata_list *l);
-int _bal_sdl_enum(bal_selectdata_list *l, bal_selectdata **d);
-void _bal_sdl_reset(bal_selectdata_list *l);
-bal_selectdata *_bal_sdl_find(const bal_selectdata_list *l, bal_socket sd);
+int _bal_sdl_add(bal_selectdata_list* l, const bal_selectdata* d);
+int _bal_sdl_rem(bal_selectdata_list* l, bal_socket sd);
+int _bal_sdl_clr(bal_selectdata_list* l);
+int _bal_sdl_size(bal_selectdata_list* l);
+int _bal_sdl_enum(bal_selectdata_list* l, bal_selectdata* *d);
+void _bal_sdl_reset(bal_selectdata_list* l);
+bal_selectdata* _bal_sdl_find(const bal_selectdata_list* l, bal_socket sd);
 
-int _bal_mutex_init(bal_mutex *m);
-int _bal_mutex_lock(bal_mutex *m);
-int _bal_mutex_unlock(bal_mutex *m);
-int _bal_mutex_free(bal_mutex *m);
+int _bal_mutex_init(bal_mutex* m);
+int _bal_mutex_lock(bal_mutex* m);
+int _bal_mutex_unlock(bal_mutex* m);
+int _bal_mutex_free(bal_mutex* m);
 
 # if defined(__cplusplus)
 }
 # endif
-#endif /* !_BAL_H_INCLUDED */
+#endif /* !_BAL_H_INCLUDED* /

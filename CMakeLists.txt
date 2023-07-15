@@ -39,7 +39,7 @@ project(
 
 add_executable(
     balcli
-    main.cpp
+    main.cc
 )
 
 add_library(

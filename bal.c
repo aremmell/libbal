@@ -1,37 +1,27 @@
 /*
- *  sal.c : ANSI C implementation of BAL (Socket Abstraction Library)
+ * bal.c
  *
- *  Copyright 2004 - All Rights Reserved
+ * Author:    Ryan M. Lederman <lederman@gmail.com>
+ * Copyright: Copyright (c) 2004-2023
+ * Version:   0.2.0
+ * License:   The MIT License (MIT)
  *
- *  Description:
- *    This file contains all of the ANSI C functions that comprise the
- *    BAL library.  All functions return error / success codes compliant
- *    with the socket implementation for the system.
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+ * the Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
  *
- *  Author:
- *    Ryan Matthew Lederman
- *    ryan@ript.net
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
  *
- *  Date:
- *    August 08, 2004
- *
- *  Version: 1.0
- *
- *  License:
- *    This software is provided to the end user "as-is", with no warranty
- *    implied or otherwise.  The author is for all intents and purposes
- *    the owner of this source code.  The author grants the end user the
- *    privilege to use this software in any application, commercial or
- *    otherwise, with the following restrictions:
- *      1.) If the end user wishes to modify this source code, he/she must
- *       not distribute the source code as the original source code, and
- *       must clearly document the changes made to the source code in any
- *       distribution of said source code.
- *      2.) This license agreement must always be displayed in any version
- *       of the source code, modified or otherwise.
- *    The author will not be held liable for ANY damage, loss of data,
- *    loss of income, or any other form of loss that results directly or
- *    indirectly from the use of this software.
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+ * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+ * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 #include "bal.h"
 
@@ -39,7 +29,8 @@
   Exported functions
  */
 
-int bal_initialize(void) {
+int bal_initialize(void)
+{
     int r = BAL_FALSE;
 
 #if defined(_WIN32)
@@ -51,13 +42,14 @@ int bal_initialize(void) {
             r = BAL_TRUE;
     }
 #else
-    r = BAL_TRUE;
+    r                  = BAL_TRUE;
 #endif /* !_WIN32 */
 
     return r;
 }
 
-int bal_finalize(void) {
+int bal_finalize(void)
+{
     int r = BAL_FALSE;
 
 #if defined(_WIN32)
@@ -66,21 +58,22 @@ int bal_finalize(void) {
             r = bal_asyncselect(NULL, NULL, BAL_S_DIE);
     }
 #else
-    r = bal_asyncselect(NULL, NULL, BAL_S_DIE);
+    r                  = bal_asyncselect(NULL, NULL, BAL_S_DIE);
 #endif
 
     return r;
 }
 
-int bal_asyncselect(const bal_t *s, BALEVENTPROC proc, unsigned long mask) {
+int bal_asyncselect(const balst* s, bal_async_callback proc, uint32_t mask)
+{
     int r                          = BAL_FALSE;
     static bal_selectdata_list l   = {0};
     static bal_eventthread_data td = {0};
     static bal_thread t            = NULL;
 #if !defined(_WIN32)
-    static bal_mutex m             = PTHREAD_MUTEX_INITIALIZER;
+    static bal_mutex m = PTHREAD_MUTEX_INITIALIZER;
 #else
-    static bal_mutex m             = NULL;
+    static bal_mutex m = NULL;
 #endif
 
     if (BAL_S_DIE == mask) {
@@ -113,7 +106,7 @@ int bal_asyncselect(const bal_t *s, BALEVENTPROC proc, unsigned long mask) {
             } else
 
                 if (_bal_sdl_size(&l) < (FD_SETSIZE - 1)) {
-                bal_selectdata *d = _bal_sdl_find(&l, s->sd);
+                bal_selectdata* d = _bal_sdl_find(&l, s->sd);
 
                 if (d) {
                     d->mask = mask;
@@ -126,7 +119,7 @@ int bal_asyncselect(const bal_t *s, BALEVENTPROC proc, unsigned long mask) {
                     if (BAL_TRUE == bal_setiomode(s, 1)) {
                         d.mask = mask;
                         d.proc = proc;
-                        d.s    = (bal_t *)s;
+                        d.s    = (balst*)s;
                         d._n   = NULL;
                         d._p   = NULL;
 
@@ -145,7 +138,8 @@ int bal_asyncselect(const bal_t *s, BALEVENTPROC proc, unsigned long mask) {
     return r;
 }
 
-int bal_autosocket(bal_t *s, int af, int pt, cbstr host, cbstr port) {
+int bal_autosocket(balst* s, int af, int pt, cbstr host, cbstr port)
+{
     int r = BAL_FALSE;
 
     if ((s) && _bal_validstr(host)) {
@@ -156,7 +150,7 @@ int bal_autosocket(bal_t *s, int af, int pt, cbstr host, cbstr port) {
         memset(&ai, 0, sizeof(ai));
 
         if (BAL_TRUE == _bal_getaddrinfo(0, _af, _st, host, port, &ai)) {
-            const struct addrinfo *a = NULL;
+            const struct addrinfo* a = NULL;
 
             while (NULL != (a = _bal_enumaddrinfo(&ai))) {
                 if (BAL_TRUE == bal_sock_create(s, a->ai_family, a->ai_protocol, a->ai_socktype)) {
@@ -172,7 +166,8 @@ int bal_autosocket(bal_t *s, int af, int pt, cbstr host, cbstr port) {
     return r;
 }
 
-int bal_sock_create(bal_t *s, int af, int pt, int st) {
+int bal_sock_create(balst* s, int af, int pt, int st)
+{
     int r = BAL_FALSE;
 
     if (-1L != (s->sd = socket(af, st, pt))) {
@@ -185,7 +180,8 @@ int bal_sock_create(bal_t *s, int af, int pt, int st) {
     return r;
 }
 
-int bal_reset(bal_t *s) {
+int bal_reset(balst* s)
+{
     int r = BAL_FALSE;
 
     if (s) {
@@ -200,7 +196,8 @@ int bal_reset(bal_t *s) {
     return r;
 }
 
-int bal_close(bal_t *s) {
+int bal_close(balst* s)
+{
     int r = BAL_FALSE;
 
     if (s) {
@@ -218,7 +215,8 @@ int bal_close(bal_t *s) {
     return r;
 }
 
-int bal_shutdown(bal_t *s, int how) {
+int bal_shutdown(balst* s, int how)
+{
     if ((NULL != s)) {
         s->_f &= ~BAL_F_PENDCONN;
         return shutdown(s->sd, how);
@@ -232,7 +230,8 @@ int bal_shutdown(bal_t *s, int how) {
     }
 }
 
-int bal_connect(const bal_t *s, cbstr host, cbstr port) {
+int bal_connect(const balst* s, cbstr host, cbstr port)
+{
     int r = BAL_FALSE;
 
     if ((s) && _bal_validstr(host) && _bal_validstr(port)) {
@@ -246,7 +245,7 @@ int bal_connect(const bal_t *s, cbstr host, cbstr port) {
             memset(&al, 0, sizeof(al));
 
             if (BAL_TRUE == _bal_aitoal(&ai, &al)) {
-                r = bal_connectaddrlist((bal_t *)s, &al);
+                r = bal_connectaddrlist((balst*)s, &al);
 
                 bal_freeaddrlist(&al);
             }
@@ -258,15 +257,16 @@ int bal_connect(const bal_t *s, cbstr host, cbstr port) {
     return r;
 }
 
-int bal_connectaddrlist(bal_t *s, bal_addrlist *al) {
+int bal_connectaddrlist(balst* s, bal_addrlist* al)
+{
     int r = BAL_FALSE;
 
     if (s) {
         if (BAL_TRUE == bal_resetaddrlist(al)) {
-            const bal_sockaddr *sa = NULL;
+            const bal_sockaddr* sa = NULL;
 
             while (NULL != (sa = bal_enumaddrlist(al))) {
-                r = connect(s->sd, (const struct sockaddr *)sa, BAL_SASIZE((*sa)));
+                r = connect(s->sd, (const struct sockaddr*)sa, BAL_SASIZE((*sa)));
 
 #if defined(_WIN32)
 
@@ -287,22 +287,24 @@ int bal_connectaddrlist(bal_t *s, bal_addrlist *al) {
     return r;
 }
 
-int bal_send(const bal_t *s, const void *data, size_t len, int flags) {
+int bal_send(const balst* s, const void* data, size_t len, int flags)
+{
     if ((s) && (data) && (len))
-        return send(s->sd, (const char *)data, len, flags);
+        return send(s->sd, (const char*)data, len, flags);
     else
         return BAL_FALSE;
 }
 
-int bal_recv(const bal_t *s, void *data, size_t len, int flags) {
+int bal_recv(const balst* s, void* data, size_t len, int flags)
+{
     if ((s) && (data) && (len))
-        return recv(s->sd, (char *)data, len, flags);
+        return recv(s->sd, (char*)data, len, flags);
     else
         return BAL_FALSE;
 }
 
-int bal_sendto(const bal_t *s, cbstr host, cbstr port, const void *data, size_t len,
-    int flags) {
+int bal_sendto(const balst* s, cbstr host, cbstr port, const void* data, size_t len, int flags)
+{
     int r = BAL_FALSE;
 
     if ((s) && _bal_validstr(host) && _bal_validstr(port) && (data) && (len)) {
@@ -311,7 +313,7 @@ int bal_sendto(const bal_t *s, cbstr host, cbstr port, const void *data, size_t 
         memset(&ai, 0, sizeof(ai));
 
         if (BAL_TRUE == _bal_getaddrinfo(0, PF_UNSPEC, SOCK_DGRAM, host, port, &ai)) {
-            r = bal_sendtoaddr(s, (const bal_sockaddr *)ai._ai->ai_addr, data, len, flags);
+            r = bal_sendtoaddr(s, (const bal_sockaddr*)ai._ai->ai_addr, data, len, flags);
 
             freeaddrinfo(ai._ai);
         }
@@ -320,26 +322,28 @@ int bal_sendto(const bal_t *s, cbstr host, cbstr port, const void *data, size_t 
     return r;
 }
 
-int bal_sendtoaddr(const bal_t *s, const bal_sockaddr *sa, const void *data, size_t len,
-    int flags) {
+int bal_sendtoaddr(const balst* s, const bal_sockaddr* sa, const void* data, size_t len, int flags)
+{
     if ((s) && (sa) && (data) && (len))
-        return sendto(s->sd, data, len, flags, (const struct sockaddr *)sa, BAL_SASIZE((*sa)));
+        return sendto(s->sd, data, len, flags, (const struct sockaddr*)sa, BAL_SASIZE((*sa)));
     else
         return BAL_FALSE;
 }
 
-int bal_recvfrom(const bal_t *s, void *data, size_t len, int flags, bal_sockaddr *res) {
+int bal_recvfrom(const balst* s, void* data, size_t len, int flags, bal_sockaddr* res)
+{
     if ((s) && (data) && (len)) {
         socklen_t sasize = sizeof(bal_sockaddr);
 
-        return recvfrom(s->sd, (char *)data, len, flags, (struct sockaddr *)res, &sasize);
+        return recvfrom(s->sd, (char*)data, len, flags, (struct sockaddr*)res, &sasize);
 
     } else {
         return BAL_FALSE;
     }
 }
 
-int bal_bind(const bal_t *s, cbstr addr, cbstr port) {
+int bal_bind(const balst* s, cbstr addr, cbstr port)
+{
     int r = BAL_FALSE;
 
     if ((s) && _bal_validstr(addr) && _bal_validstr(port)) {
@@ -348,10 +352,10 @@ int bal_bind(const bal_t *s, cbstr addr, cbstr port) {
         memset(&ai, 0, sizeof(ai));
 
         if (BAL_TRUE == _bal_getaddrinfo(AI_NUMERICHOST, s->af, s->st, addr, port, &ai)) {
-            const struct addrinfo *a = NULL;
+            const struct addrinfo* a = NULL;
 
             while (NULL != (a = _bal_enumaddrinfo(&ai))) {
-                if (0L == bind(s->sd, (const struct sockaddr *)a->ai_addr, a->ai_addrlen)) {
+                if (0L == bind(s->sd, (const struct sockaddr*)a->ai_addr, a->ai_addrlen)) {
                     r = BAL_TRUE;
                     break;
                 }
@@ -364,36 +368,42 @@ int bal_bind(const bal_t *s, cbstr addr, cbstr port) {
     return r;
 }
 
-int bal_listen(const bal_t *s, int backlog) {
+int bal_listen(const balst* s, int backlog)
+{
     return ((NULL != s) ? listen(s->sd, backlog) : BAL_FALSE);
 }
 
-int bal_accept(const bal_t *s, bal_t *res, bal_sockaddr *resaddr) {
+int bal_accept(const balst* s, balst* res, bal_sockaddr* resaddr)
+{
     int r = BAL_FALSE;
 
     if ((s) && (res) && (resaddr)) {
         socklen_t sasize = sizeof(bal_sockaddr);
 
-        if (-1L != (res->sd = accept(s->sd, (struct sockaddr *)resaddr, &sasize)))
+        if (-1L != (res->sd = accept(s->sd, (struct sockaddr*)resaddr, &sasize)))
             r = BAL_TRUE;
     }
 
     return r;
 }
 
-int bal_getoption(const bal_t *s, int level, int name, void *optval, socklen_t len) {
+int bal_getoption(const balst* s, int level, int name, void* optval, socklen_t len)
+{
     return ((NULL != s) ? getsockopt(s->sd, level, name, optval, &len) : BAL_FALSE);
 }
 
-int bal_setoption(const bal_t *s, int level, int name, const void *optval, socklen_t len) {
+int bal_setoption(const balst* s, int level, int name, const void* optval, socklen_t len)
+{
     return ((NULL != s) ? setsockopt(s->sd, level, name, optval, len) : BAL_FALSE);
 }
 
-int bal_setbroadcast(const bal_t *s, int flag) {
+int bal_setbroadcast(const balst* s, int flag)
+{
     return bal_setoption(s, SOL_SOCKET, SO_BROADCAST, &flag, sizeof(int));
 }
 
-int bal_getbroadcast(const bal_t *s) {
+int bal_getbroadcast(const balst* s)
+{
     int r = BAL_FALSE;
 
     if (BAL_FALSE == bal_getoption(s, SOL_SOCKET, SO_BROADCAST, &r, sizeof(int)))
@@ -402,11 +412,13 @@ int bal_getbroadcast(const bal_t *s) {
     return r;
 }
 
-int bal_setdebug(const bal_t *s, int flag) {
+int bal_setdebug(const balst* s, int flag)
+{
     return bal_setoption(s, SOL_SOCKET, SO_DEBUG, &flag, sizeof(int));
 }
 
-int bal_getdebug(const bal_t *s) {
+int bal_getdebug(const balst* s)
+{
     int r = BAL_FALSE;
 
     if (BAL_FALSE == bal_getoption(s, SOL_SOCKET, SO_DEBUG, &r, sizeof(int)))
@@ -415,7 +427,8 @@ int bal_getdebug(const bal_t *s) {
     return r;
 }
 
-int bal_setlinger(const bal_t *s, int sec) {
+int bal_setlinger(const balst* s, int sec)
+{
     struct linger l;
 
     l.l_onoff  = (0 != sec) ? 1 : 0;
@@ -424,7 +437,8 @@ int bal_setlinger(const bal_t *s, int sec) {
     return bal_setoption(s, SOL_SOCKET, SO_LINGER, &l, sizeof(l));
 }
 
-int bal_getlinger(const bal_t *s, int *sec) {
+int bal_getlinger(const balst* s, int* sec)
+{
     int r = BAL_FALSE;
 
     if (sec) {
@@ -441,11 +455,13 @@ int bal_getlinger(const bal_t *s, int *sec) {
     return r;
 }
 
-int bal_setkeepalive(const bal_t *s, int flag) {
+int bal_setkeepalive(const balst* s, int flag)
+{
     return bal_setoption(s, SOL_SOCKET, SO_KEEPALIVE, &flag, sizeof(int));
 }
 
-int bal_getkeepalive(const bal_t *s) {
+int bal_getkeepalive(const balst* s)
+{
     int r = BAL_FALSE;
 
     if (BAL_FALSE == bal_getoption(s, SOL_SOCKET, SO_KEEPALIVE, &r, sizeof(int)))
@@ -454,11 +470,13 @@ int bal_getkeepalive(const bal_t *s) {
     return r;
 }
 
-int bal_setoobinline(const bal_t *s, int flag) {
+int bal_setoobinline(const balst* s, int flag)
+{
     return bal_setoption(s, SOL_SOCKET, SO_OOBINLINE, &flag, sizeof(int));
 }
 
-int bal_getoobinline(const bal_t *s) {
+int bal_getoobinline(const balst* s)
+{
     int r = BAL_FALSE;
 
     if (BAL_FALSE == bal_getoption(s, SOL_SOCKET, SO_OOBINLINE, &r, sizeof(int)))
@@ -467,11 +485,13 @@ int bal_getoobinline(const bal_t *s) {
     return r;
 }
 
-int bal_setreuseaddr(const bal_t *s, int flag) {
+int bal_setreuseaddr(const balst* s, int flag)
+{
     return bal_setoption(s, SOL_SOCKET, SO_REUSEADDR, &flag, sizeof(int));
 }
 
-int bal_getreuseaddr(const bal_t *s) {
+int bal_getreuseaddr(const balst* s)
+{
     int r = BAL_FALSE;
 
     if (BAL_FALSE == bal_getoption(s, SOL_SOCKET, SO_REUSEADDR, &r, sizeof(int)))
@@ -480,11 +500,13 @@ int bal_getreuseaddr(const bal_t *s) {
     return r;
 }
 
-int bal_setsendbufsize(const bal_t *s, int size) {
+int bal_setsendbufsize(const balst* s, int size)
+{
     return bal_setoption(s, SOL_SOCKET, SO_SNDBUF, &size, sizeof(int));
 }
 
-int bal_getsendbufsize(const bal_t *s) {
+int bal_getsendbufsize(const balst* s)
+{
     int r = BAL_FALSE;
 
     if (BAL_FALSE == bal_getoption(s, SOL_SOCKET, SO_SNDBUF, &r, sizeof(int)))
@@ -493,11 +515,13 @@ int bal_getsendbufsize(const bal_t *s) {
     return r;
 }
 
-int bal_setrecvbufsize(const bal_t *s, int size) {
+int bal_setrecvbufsize(const balst* s, int size)
+{
     return bal_setoption(s, SOL_SOCKET, SO_RCVBUF, &size, sizeof(int));
 }
 
-int bal_getrecvbufsize(const bal_t *s) {
+int bal_getrecvbufsize(const balst* s)
+{
     int r = BAL_FALSE;
 
     if (BAL_FALSE == bal_getoption(s, SOL_SOCKET, SO_RCVBUF, &r, sizeof(int)))
@@ -506,7 +530,8 @@ int bal_getrecvbufsize(const bal_t *s) {
     return r;
 }
 
-int bal_setsendtimeout(const bal_t *s, long sec, long msec) {
+int bal_setsendtimeout(const balst* s, long sec, long msec)
+{
     struct timeval t;
 
     t.tv_sec  = sec;
@@ -515,7 +540,8 @@ int bal_setsendtimeout(const bal_t *s, long sec, long msec) {
     return bal_setoption(s, SOL_SOCKET, SO_SNDTIMEO, &t, sizeof(t));
 }
 
-int bal_getsendtimeout(const bal_t *s, long *sec, long *msec) {
+int bal_getsendtimeout(const balst* s, long* sec, long* msec)
+{
     int r = BAL_FALSE;
 
     if ((sec) && (msec)) {
@@ -533,7 +559,8 @@ int bal_getsendtimeout(const bal_t *s, long *sec, long *msec) {
     return r;
 }
 
-int bal_setrecvtimeout(const bal_t *s, long sec, long msec) {
+int bal_setrecvtimeout(const balst* s, long sec, long msec)
+{
     struct timeval t;
 
     t.tv_sec  = sec;
@@ -542,7 +569,8 @@ int bal_setrecvtimeout(const bal_t *s, long sec, long msec) {
     return bal_setoption(s, SOL_SOCKET, SO_RCVTIMEO, &t, sizeof(t));
 }
 
-int bal_getrecvtimeout(const bal_t *s, long *sec, long *msec) {
+int bal_getrecvtimeout(const balst* s, long* sec, long* msec)
+{
     int r = BAL_FALSE;
 
     if ((sec) && (msec)) {
@@ -560,7 +588,8 @@ int bal_getrecvtimeout(const bal_t *s, long *sec, long *msec) {
     return r;
 }
 
-int bal_geterror(const bal_t *s) {
+int bal_geterror(const balst* s)
+{
     int r = BAL_FALSE;
 
     if (BAL_FALSE == bal_getoption(s, SOL_SOCKET, SO_ERROR, &r, sizeof(int)))
@@ -569,7 +598,8 @@ int bal_geterror(const bal_t *s) {
     return r;
 }
 
-int bal_islistening(const bal_t *s) {
+int bal_islistening(const balst* s)
+{
     int r = BAL_FALSE;
     int l = 0;
 
@@ -579,7 +609,8 @@ int bal_islistening(const bal_t *s) {
     return r;
 }
 
-int bal_isreadable(const bal_t *s) {
+int bal_isreadable(const balst* s)
+{
     int r = BAL_FALSE;
 
     if (s) {
@@ -601,7 +632,8 @@ int bal_isreadable(const bal_t *s) {
     return r;
 }
 
-int bal_iswritable(const bal_t *s) {
+int bal_iswritable(const balst* s)
+{
     int r = BAL_FALSE;
 
     if (s) {
@@ -623,7 +655,8 @@ int bal_iswritable(const bal_t *s) {
     return r;
 }
 
-int bal_setiomode(const bal_t *s, unsigned long flag) {
+int bal_setiomode(const balst* s, unsigned long flag)
+{
 #if defined(_WIN32)
     return ((NULL != s) ? ioctlsocket(s->sd, FIONBIO, &flag) : BAL_FALSE);
 #else
@@ -631,12 +664,13 @@ int bal_setiomode(const bal_t *s, unsigned long flag) {
 #endif
 }
 
-size_t bal_recvqueuesize(const bal_t *s) {
+size_t bal_recvqueuesize(const balst* s)
+{
     size_t r = 0UL;
 
     if (s) {
 #if defined(_WIN32)
-        if (0 != ioctlsocket(s->sd, FIONREAD, (void *)&r))
+        if (0 != ioctlsocket(s->sd, FIONREAD, (void*)&r))
             r = 0U;
 #else
         if (0 != ioctl(s->sd, FIONREAD, &r))
@@ -647,15 +681,18 @@ size_t bal_recvqueuesize(const bal_t *s) {
     return r;
 }
 
-int bal_lastliberror(bal_error *err) {
+int bal_lastliberror(bal_error* err)
+{
     return _bal_getlasterror(NULL, err);
 }
 
-int bal_lastsockerror(const bal_t *s, bal_error *err) {
+int bal_lastsockerror(const balst* s, bal_error* err)
+{
     return _bal_getlasterror(s, err);
 }
 
-int bal_resolvehost(cbstr host, bal_addrlist *out) {
+int bal_resolvehost(cbstr host, bal_addrlist* out)
+{
     int r = BAL_FALSE;
 
     if (_bal_validstr(host) && (out)) {
@@ -674,7 +711,8 @@ int bal_resolvehost(cbstr host, bal_addrlist *out) {
     return r;
 }
 
-int bal_getremotehostaddr(const bal_t *s, bal_sockaddr *out) {
+int bal_getremotehostaddr(const balst* s, bal_sockaddr* out)
+{
     int r = BAL_FALSE;
 
     if ((s) && (out)) {
@@ -682,14 +720,15 @@ int bal_getremotehostaddr(const bal_t *s, bal_sockaddr *out) {
 
         memset(out, 0, sizeof(bal_sockaddr));
 
-        if (0 == getpeername(s->sd, (struct sockaddr *)out, &salen))
+        if (0 == getpeername(s->sd, (struct sockaddr*)out, &salen))
             r = BAL_TRUE;
     }
 
     return r;
 }
 
-int bal_getremotehoststrings(const bal_t *s, int dns, bal_addrstrings *out) {
+int bal_getremotehoststrings(const balst* s, int dns, bal_addrstrings* out)
+{
     int r = BAL_FALSE;
     bal_sockaddr sa;
 
@@ -699,7 +738,8 @@ int bal_getremotehoststrings(const bal_t *s, int dns, bal_addrstrings *out) {
     return r;
 }
 
-int bal_getlocalhostaddr(const bal_t *s, bal_sockaddr *out) {
+int bal_getlocalhostaddr(const balst* s, bal_sockaddr* out)
+{
     int r = BAL_FALSE;
 
     if ((s) && (out)) {
@@ -707,14 +747,15 @@ int bal_getlocalhostaddr(const bal_t *s, bal_sockaddr *out) {
 
         memset(out, 0, sizeof(bal_sockaddr));
 
-        if (0 == getsockname(s->sd, (struct sockaddr *)out, &salen))
+        if (0 == getsockname(s->sd, (struct sockaddr*)out, &salen))
             r = BAL_TRUE;
     }
 
     return r;
 }
 
-int bal_getlocalhoststrings(const bal_t *s, int dns, bal_addrstrings *out) {
+int bal_getlocalhoststrings(const balst* s, int dns, bal_addrstrings* out)
+{
     int r = BAL_FALSE;
     bal_sockaddr sa;
 
@@ -724,7 +765,8 @@ int bal_getlocalhoststrings(const bal_t *s, int dns, bal_addrstrings *out) {
     return r;
 }
 
-int bal_resetaddrlist(bal_addrlist *al) {
+int bal_resetaddrlist(bal_addrlist* al)
+{
     int r = BAL_FALSE;
 
     if (al) {
@@ -735,8 +777,9 @@ int bal_resetaddrlist(bal_addrlist *al) {
     return r;
 }
 
-const bal_sockaddr *bal_enumaddrlist(bal_addrlist *al) {
-    const bal_sockaddr *r = NULL;
+const bal_sockaddr* bal_enumaddrlist(bal_addrlist* al)
+{
+    const bal_sockaddr* r = NULL;
 
     if (al) {
         if (al->_a) {
@@ -752,11 +795,12 @@ const bal_sockaddr *bal_enumaddrlist(bal_addrlist *al) {
     return r;
 }
 
-int bal_freeaddrlist(bal_addrlist *al) {
+int bal_freeaddrlist(bal_addrlist* al)
+{
     int r = BAL_FALSE;
 
     if (al) {
-        bal_addr *a = al->_p = al->_a;
+        bal_addr* a = al->_p = al->_a;
 
         while (al->_p) {
             a = al->_p->_n;
@@ -771,7 +815,8 @@ int bal_freeaddrlist(bal_addrlist *al) {
     return r;
 }
 
-int bal_getaddrstrings(const bal_sockaddr *in, int dns, bal_addrstrings *out) {
+int bal_getaddrstrings(const bal_sockaddr* in, int dns, bal_addrstrings* out)
+{
     int r = BAL_FALSE;
 
     if ((in) && (out)) {
@@ -788,9 +833,9 @@ int bal_getaddrstrings(const bal_sockaddr *in, int dns, bal_addrstrings *out) {
                 }
             }
 
-            if (PF_INET == ((struct sockaddr *)in)->sa_family)
+            if (PF_INET == ((struct sockaddr*)in)->sa_family)
                 out->type = BAL_AS_IPV4;
-            else if (PF_INET6 == ((struct sockaddr *)in)->sa_family)
+            else if (PF_INET6 == ((struct sockaddr*)in)->sa_family)
                 out->type = BAL_AS_IPV6;
             else
                 out->type = BAL_AS_UNKNWN;
@@ -808,12 +853,13 @@ int bal_getaddrstrings(const bal_sockaddr *in, int dns, bal_addrstrings *out) {
  */
 
 
-int _bal_getaddrinfo(int f, int af, int st, cbstr host, cbstr port, bal_addrinfo *res) {
+int _bal_getaddrinfo(int f, int af, int st, cbstr host, cbstr port, bal_addrinfo* res)
+{
     int r = BAL_FALSE;
 
     if (_bal_validstr(host) && (res)) {
-        const char *mbhost = _bal_getmbstr(host);
-        const char *mbport = _bal_getmbstr(port);
+        const char* mbhost = _bal_getmbstr(host);
+        const char* mbport = _bal_getmbstr(port);
 
         if (mbhost) {
             struct addrinfo hints;
@@ -824,7 +870,7 @@ int _bal_getaddrinfo(int f, int af, int st, cbstr host, cbstr port, bal_addrinfo
             hints.ai_family   = af;
             hints.ai_socktype = st;
 
-            r = getaddrinfo(mbhost, mbport, (const struct addrinfo *)&hints, &res->_ai);
+            r = getaddrinfo(mbhost, mbport, (const struct addrinfo*)&hints, &res->_ai);
 
             if (!r)
                 res->_p = res->_ai;
@@ -832,10 +878,10 @@ int _bal_getaddrinfo(int f, int af, int st, cbstr host, cbstr port, bal_addrinfo
                 res->_p = res->_ai = NULL;
 
 #ifdef BAL_USE_WCHAR
-            free((void *)mbhost);
+            free((void*)mbhost);
 
             if (mbport)
-                free((void *)mbport);
+                free((void*)mbport);
 #endif
         }
     }
@@ -850,7 +896,8 @@ int _bal_getaddrinfo(int f, int af, int st, cbstr host, cbstr port, bal_addrinfo
     return r;
 }
 
-int _bal_getnameinfo(int f, const bal_sockaddr *in, bstr host, bstr port) {
+int _bal_getnameinfo(int f, const bal_sockaddr* in, bstr host, bstr port)
+{
     int r = BAL_FALSE;
 
     if ((in) && (host)) {
@@ -858,13 +905,13 @@ int _bal_getnameinfo(int f, const bal_sockaddr *in, bstr host, bstr port) {
         char mbhost[NI_MAXHOST] = {0};
         char mbport[NI_MAXSERV] = {0};
 #else
-        char *mbhost = host;
-        char *mbport = port;
+        char* mbhost = host;
+        char* mbport = port;
 #endif
 
         socklen_t inlen = BAL_SASIZE((*in));
 
-        r = getnameinfo((const struct sockaddr *)in, inlen, mbhost, NI_MAXHOST, mbport, NI_MAXSERV,
+        r = getnameinfo((const struct sockaddr*)in, inlen, mbhost, NI_MAXHOST, mbport, NI_MAXSERV,
             f);
 
 #ifdef BAL_USE_WCHAR
@@ -872,9 +919,9 @@ int _bal_getnameinfo(int f, const bal_sockaddr *in, bstr host, bstr port) {
         if (!r) {
             r = BAL_FALSE;
 
-            if (0 == _bal_retstr(host, (const char *)mbhost)) {
+            if (0 == _bal_retstr(host, (const char*)mbhost)) {
                 if (port) {
-                    if (0 == _bal_retstr(port, (const char *)mbport))
+                    if (0 == _bal_retstr(port, (const char*)mbport))
                         r = BAL_TRUE;
                 } else {
                     r = BAL_TRUE;
@@ -895,8 +942,9 @@ int _bal_getnameinfo(int f, const bal_sockaddr *in, bstr host, bstr port) {
     return r;
 }
 
-const struct addrinfo *_bal_enumaddrinfo(bal_addrinfo *ai) {
-    const struct addrinfo *r = NULL;
+const struct addrinfo* _bal_enumaddrinfo(bal_addrinfo* ai)
+{
+    const struct addrinfo* r = NULL;
 
     if (ai) {
         if (ai->_ai) {
@@ -912,18 +960,19 @@ const struct addrinfo *_bal_enumaddrinfo(bal_addrinfo *ai) {
     return r;
 }
 
-int _bal_aitoal(bal_addrinfo *in, bal_addrlist *out) {
+int _bal_aitoal(bal_addrinfo* in, bal_addrlist* out)
+{
     int r = BAL_FALSE;
 
     if ((in) && (in->_ai) && (out)) {
-        const struct addrinfo *ai = NULL;
-        bal_addr **a              = &out->_a;
+        const struct addrinfo* ai = NULL;
+        bal_addr** a              = &out->_a;
         r                         = BAL_TRUE;
 
         in->_p = in->_ai;
 
         while (NULL != (ai = _bal_enumaddrinfo(in))) {
-            *a = (bal_addr *)calloc(1UL, sizeof(bal_addr));
+            *a = (bal_addr*)calloc(1UL, sizeof(bal_addr));
 
             if (!(*a)) {
                 r = BAL_FALSE;
@@ -941,7 +990,8 @@ int _bal_aitoal(bal_addrinfo *in, bal_addrlist *out) {
     return r;
 }
 
-int _bal_getlasterror(const bal_t *s, bal_error *err) {
+int _bal_getlasterror(const balst* s, bal_error* err)
+{
     int r = BAL_FALSE;
 
     if (err) {
@@ -971,7 +1021,7 @@ int _bal_getlasterror(const bal_t *s, bal_error *err) {
                 r = BAL_TRUE;
 
         } else {
-            if (0 == _bal_retstr(err->desc, (const char *)strerror(err->code)))
+            if (0 == _bal_retstr(err->desc, (const char*)strerror(err->code)))
                 r = BAL_TRUE;
         }
 
@@ -981,7 +1031,8 @@ int _bal_getlasterror(const bal_t *s, bal_error *err) {
     return r;
 }
 
-void _bal_setlasterror(int err) {
+void _bal_setlasterror(int err)
+{
 #if defined(_WIN32)
     WSASetLastError(err);
 #else
@@ -989,85 +1040,87 @@ void _bal_setlasterror(int err) {
 #endif
 }
 
-const char *_bal_getmbstr(cbstr input) {
+const char* _bal_getmbstr(cbstr input)
+{
 #ifdef BAL_USE_WCHAR
 
-    char *mbstr = (char *)calloc(sizeof(char), (wcslen(input) + sizeof(char)));
+    char* mbstr = (char*)calloc(sizeof(char), (wcslen(input) + sizeof(char)));
 
     if (!mbstr) {
-        return (char *)(NULL);
+        return (char*)(NULL);
     } else if (((size_t)-1) == wcstombs(mbstr, input, wcslen(input))) {
         free(mbstr);
-        return (char *)(NULL);
+        return (char*)(NULL);
     } else {
         return mbstr;
     }
 #else
     return input;
-#endif /* !BAL_USE_WCHAR */
-}
-
-int _bal_retstr(bstr out, const char *in) {
-    int r = BAL_FALSE;
-
-#ifdef BAL_USE_WCHAR
-    if (((size_t)-1) != mbstowcs(out, in, strlen(in)))
-        r = BAL_TRUE;
-#else
-    strcpy(out, in);
-    r = BAL_TRUE;
-#endif /* !BAL_USE_WCHAR */
-
-    return r;
-}
-
-int _bal_haspendingconnect(const bal_t *s) {
-    int r = BAL_FALSE;
-
-    if (s->_f & BAL_F_PENDCONN)
-        r = BAL_TRUE;
-
-    return r;
-}
-
-int _bal_isclosedcircuit(const bal_t *s) {
-    int r = BAL_FALSE;
-
-    if (s) {
-        unsigned char buf;
-
-        int rcv = recv(s->sd, &buf, sizeof(unsigned char), MSG_PEEK);
-
-        if (0 == rcv)
-            r = BAL_TRUE;
-
-        if (-1 == rcv) {
-#if defined(_WIN32)
-
-            int error = WSAGetLastError();
-
-            if ((WSAENETDOWN == error) || (WSAENOTCONN == error) || (WSAEOPNOTSUPP == error) ||
-                (WSAESHUTDOWN == error) || (WSAECONNABORTED == error) || (WSAECONNRESET == error)) {
-                r = BAL_TRUE;
-            }
-
-#else
-
-            if ((EBADF == errno) || (ENOTCONN == errno) || (ENOTSOCK == errno))
-                r = BAL_TRUE;
-
+#endif /* !BAL_USE_WCHAR* / \
+} \
+ \ \
+int _bal_retstr(bstr out, const char* in) { \
+    int r = BAL_FALSE; \
+ \ \
+#ifdef BAL_USE_WCHAR \
+    if (((size_t)-1) != mbstowcs(out, in, strlen(in))) \
+        r = BAL_TRUE; \
+#else \
+    strcpy(out, in); \
+    r = BAL_TRUE; \
+#endif /* !BAL_USE_WCHAR* / \
+ \ \
+    return r; \
+} \
+ \ \
+int _bal_haspendingconnect(const balst* s) { \
+    int r = BAL_FALSE; \
+ \ \
+    if (s->_f & BAL_F_PENDCONN) \
+        r = BAL_TRUE; \
+ \ \
+    return r; \
+} \
+ \ \
+int _bal_isclosedcircuit(const balst* s) { \
+    int r = BAL_FALSE; \
+ \ \
+    if (s) { \
+        unsigned char buf; \
+ \ \
+        int rcv = recv(s->sd, &buf, sizeof(unsigned char), MSG_PEEK); \
+ \ \
+        if (0 == rcv) \
+            r = BAL_TRUE; \
+ \ \
+        if (-1 == rcv) { \
+#if defined(_WIN32) \
+ \ \
+            int error = WSAGetLastError(); \
+ \ \
+            if ((WSAENETDOWN == error) || (WSAENOTCONN == error) || (WSAEOPNOTSUPP == error) || \
+                (WSAESHUTDOWN == error) || (WSAECONNABORTED == error) || (WSAECONNRESET == error)) \
+{ r = BAL_TRUE; \
+            } \
+ \ \
+#else \
+ \ \
+            if ((EBADF == errno) || (ENOTCONN == errno) || (ENOTSOCK == errno)) \
+                r = BAL_TRUE; \
+ \ \
 #endif /* !_WIN32 */
-        }
-    }
-
-    return r;
+}
 }
 
-BALTHREADAPI _bal_eventthread(void *p) {
-    bal_eventthread_data *td = (bal_eventthread_data *)p;
+return r;
+}
+
+BALTHREADAPI _bal_eventthread(void* p)
+{
+    bal_eventthread_data* td = (bal_eventthread_data*)p;
 
     if (td) {
-        bal_selectdata *t = NULL;
+        bal_selectdata* t = NULL;
         fd_set r;
         fd_set w;
         fd_set e;
@@ -1128,7 +1181,7 @@ BALTHREADAPI _bal_eventthread(void *p) {
 #if defined(_WIN32)
         return 1;
 #else
-        return (void *)(1);
+        return (void*)(1);
 #endif
     }
 
@@ -1139,7 +1192,8 @@ BALTHREADAPI _bal_eventthread(void *p) {
 #endif
 }
 
-int _bal_initasyncselect(bal_thread *t, bal_mutex *m, bal_eventthread_data *td) {
+int _bal_initasyncselect(bal_thread* t, bal_mutex* m, bal_eventthread_data* td)
+{
     int r = BAL_FALSE;
 
     if ((t) && (m) && (td)) {
@@ -1165,9 +1219,10 @@ int _bal_initasyncselect(bal_thread *t, bal_mutex *m, bal_eventthread_data *td) 
     return r;
 }
 
-void _bal_dispatchevents(fd_set *set, bal_eventthread_data *td, int type) {
+void _bal_dispatchevents(fd_set* set, bal_eventthread_data* td, int type)
+{
     if ((set) && (td)) {
-        bal_selectdata *t = NULL;
+        bal_selectdata* t = NULL;
 
         _bal_sdl_reset(td->l);
 
@@ -1239,12 +1294,13 @@ void _bal_dispatchevents(fd_set *set, bal_eventthread_data *td, int type) {
     }
 }
 
-int _bal_sdl_add(bal_selectdata_list *l, const bal_selectdata *d) {
+int _bal_sdl_add(bal_selectdata_list* l, const bal_selectdata* d)
+{
     int r = BAL_FALSE;
 
     if ((l) && (d)) {
-        bal_selectdata **t = NULL;
-        bal_selectdata *n  = NULL;
+        bal_selectdata** t = NULL;
+        bal_selectdata* n  = NULL;
 
         if (l->_h) {
             t = &l->_t->_n;
@@ -1253,7 +1309,7 @@ int _bal_sdl_add(bal_selectdata_list *l, const bal_selectdata *d) {
             t = &l->_h;
         }
 
-        (*t) = (bal_selectdata *)malloc(sizeof(bal_selectdata));
+        (*t) = (bal_selectdata*)malloc(sizeof(bal_selectdata));
 
         if ((*t)) {
             memcpy((*t), d, sizeof(bal_selectdata));
@@ -1268,11 +1324,12 @@ int _bal_sdl_add(bal_selectdata_list *l, const bal_selectdata *d) {
     return r;
 }
 
-int _bal_sdl_rem(bal_selectdata_list *l, bal_socket sd) {
+int _bal_sdl_rem(bal_selectdata_list* l, bal_socket sd)
+{
     int r = BAL_FALSE;
 
     if ((l) && (sd)) {
-        bal_selectdata *t = _bal_sdl_find(l, sd);
+        bal_selectdata* t = _bal_sdl_find(l, sd);
 
         if (t) {
             if (t == l->_h) {
@@ -1298,13 +1355,14 @@ int _bal_sdl_rem(bal_selectdata_list *l, bal_socket sd) {
     return r;
 }
 
-int _bal_sdl_clr(bal_selectdata_list *l) {
+int _bal_sdl_clr(bal_selectdata_list* l)
+{
     int r = BAL_FALSE;
 
     if (l) {
         if (l->_h) {
-            bal_selectdata *t  = l->_h;
-            bal_selectdata *t2 = NULL;
+            bal_selectdata* t  = l->_h;
+            bal_selectdata* t2 = NULL;
 
             while (t) {
                 t2 = t->_n;
@@ -1322,11 +1380,12 @@ int _bal_sdl_clr(bal_selectdata_list *l) {
     return r;
 }
 
-int _bal_sdl_size(bal_selectdata_list *l) {
+int _bal_sdl_size(bal_selectdata_list* l)
+{
     int r = 0;
 
     if (l) {
-        bal_selectdata *d = l->_h;
+        bal_selectdata* d = l->_h;
 
         while (d) {
             d = d->_n;
@@ -1337,11 +1396,12 @@ int _bal_sdl_size(bal_selectdata_list *l) {
     return r;
 }
 
-int _bal_sdl_copy(bal_selectdata_list *dest, bal_selectdata_list *src) {
+int _bal_sdl_copy(bal_selectdata_list* dest, bal_selectdata_list* src)
+{
     int r = BAL_FALSE;
 
     if ((dest) && (src)) {
-        bal_selectdata *d = src->_h;
+        bal_selectdata* d = src->_h;
         int copied        = 0;
 
         _bal_sdl_clr(dest);
@@ -1363,7 +1423,8 @@ int _bal_sdl_copy(bal_selectdata_list *dest, bal_selectdata_list *src) {
     return r;
 }
 
-int _bal_sdl_enum(bal_selectdata_list *l, bal_selectdata **d) {
+int _bal_sdl_enum(bal_selectdata_list* l, bal_selectdata** d)
+{
     int r = BAL_FALSE;
 
     if ((l) && (d)) {
@@ -1380,16 +1441,18 @@ int _bal_sdl_enum(bal_selectdata_list *l, bal_selectdata **d) {
     return r;
 }
 
-void _bal_sdl_reset(bal_selectdata_list *l) {
+void _bal_sdl_reset(bal_selectdata_list* l)
+{
     if (l)
         l->_c = l->_h;
 }
 
-bal_selectdata *_bal_sdl_find(const bal_selectdata_list *l, bal_socket sd) {
-    bal_selectdata *r = NULL;
+bal_selectdata* _bal_sdl_find(const bal_selectdata_list* l, bal_socket sd)
+{
+    bal_selectdata* r = NULL;
 
     if ((l) && (sd)) {
-        bal_selectdata *t = l->_h;
+        bal_selectdata* t = l->_h;
 
         while (t) {
             if (t->s->sd == sd) {
@@ -1404,7 +1467,8 @@ bal_selectdata *_bal_sdl_find(const bal_selectdata_list *l, bal_socket sd) {
     return r;
 }
 
-int _bal_mutex_init(bal_mutex *m) {
+int _bal_mutex_init(bal_mutex* m)
+{
     int r = BAL_FALSE;
 
     if (m) {
@@ -1426,7 +1490,8 @@ int _bal_mutex_init(bal_mutex *m) {
     return r;
 }
 
-int _bal_mutex_lock(bal_mutex *m) {
+int _bal_mutex_lock(bal_mutex* m)
+{
     int r = BAL_FALSE;
 
     if (m) {
@@ -1446,7 +1511,8 @@ int _bal_mutex_lock(bal_mutex *m) {
     return r;
 }
 
-int _bal_mutex_unlock(bal_mutex *m) {
+int _bal_mutex_unlock(bal_mutex* m)
+{
     int r = BAL_FALSE;
 
     if (m) {
@@ -1466,20 +1532,20 @@ int _bal_mutex_unlock(bal_mutex *m) {
     return r;
 }
 
-int _bal_mutex_free(bal_mutex *m) {
+int _bal_mutex_free(bal_mutex* m)
+{
     int r = BAL_FALSE;
 
     if (m) {
 #if defined(_WIN32)
-
-        if (CloseHandle(*m))
-            r = BAL_TRUE;
-
+        if (*m && INVALID_HANDLE_VALUE != *m) {
+            if (CloseHandle(*m))
+                r = BAL_TRUE;
+            *m = NULL;
+        }
 #else
-
         if (0 == pthread_mutex_destroy(m))
             r = BAL_TRUE;
-
 #endif /* !_WIN32 */
     }
 

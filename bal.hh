@@ -43,12 +43,12 @@ namespace bal
     {
       public:
         AddrInfo() {}
-        AddrInfo(const bal_sockaddr *sa, bool dns = false) {
+        AddrInfo(const bal_sockaddr* sa, bool dns = false) {
             Set(sa, dns);
         }
         ~AddrInfo() {}
 
-        bool Set(const bal_sockaddr *sa, bool dns = false) {
+        bool Set(const bal_sockaddr* sa, bool dns = false) {
             bool r = false;
 
             if (sa) {
@@ -56,7 +56,7 @@ namespace bal
 
                 memcpy(&m_sa, sa, sizeof(bal_sockaddr));
 
-                if (BAL_TRUE == Bal_GetAddrStrings(&m_sa, BAL_BI(dns), &as)) {
+                if (BAL_TRUE == bal_getaddrstrings(&m_sa, BAL_BI(dns), &as)) {
                     m_host = as.host;
                     m_ip   = as.ip;
                     m_port = as.port;
@@ -96,8 +96,8 @@ namespace bal
             return const_cast<t_cstring &>(m_type);
         }
 
-        const bal_sockaddr *Binary(void) {
-            return const_cast<const bal_sockaddr *>(&m_sa);
+        const bal_sockaddr* Binary(void) {
+            return const_cast<const bal_sockaddr* >(&m_sa);
         }
 
       private:
@@ -118,7 +118,7 @@ namespace bal
             m_it = begin();
         }
 
-        bool Enumerate(AddrInfo **sai) {
+        bool Enumerate(AddrInfo* *sai) {
             bool r = false;
 
             if (sai) {
@@ -144,7 +144,7 @@ namespace bal
         Error() {}
         ~Error() {}
 
-        bool Set(const bal_error *err) {
+        bool Set(const bal_error* err) {
             bool r = false;
 
             if (err) {
@@ -180,10 +180,10 @@ namespace bal
     {
       public:
         Socket() {
-            Bal_Initialize();
+            bal_initialize();
         }
         virtual ~Socket() {
-            Bal_Finalize();
+            bal_finalize();
         }
 
         bool AutoCreate(t_cstring &host, t_cstring &port, int af = 0, int pt = 0);
@@ -195,20 +195,20 @@ namespace bal
         bool Connect(t_cstring &host, t_cstring &port);
         bool Connect(AddrList &al);
 
-        int Send(const void *data, size_t len, int flags = 0);
-        int Recv(void *data, size_t len, int flags = 0);
+        int Send(const void* data, size_t len, int flags = 0);
+        int Recv(void* data, size_t len, int flags = 0);
 
-        int SendTo(t_cstring &host, t_cstring &port, const void *data, size_t len, int flags = 0);
-        int SendTo(AddrInfo &sa, const void *data, size_t len, int flags = 0);
+        int SendTo(t_cstring &host, t_cstring &port, const void* data, size_t len, int flags = 0);
+        int SendTo(AddrInfo &sa, const void* data, size_t len, int flags = 0);
 
-        int RecvFrom(void *data, size_t len, int flags = 0, AddrInfo *res = NULL);
+        int RecvFrom(void* data, size_t len, int flags = 0, AddrInfo* res = NULL);
 
         bool Bind(t_cstring &addr, t_cstring &port);
         bool Listen(int backlog);
         bool Accept(class Socket &res, AddrInfo &resaddr);
 
-        bool GetOption(int level, int name, void *optval, socklen_t len);
-        bool SetOption(int level, int name, const void *optval, socklen_t len);
+        bool GetOption(int level, int name, void* optval, socklen_t len);
+        bool SetOption(int level, int name, const void* optval, socklen_t len);
 
         bool SetBroadcast(bool flag);
         bool UsesBroadcast(void);
@@ -217,7 +217,7 @@ namespace bal
         bool IsDebuggingEnabled(void);
 
         bool SetLinger(int sec);
-        bool GetLinger(int *sec);
+        bool GetLinger(int* sec);
 
         bool SetKeepAlive(bool flag);
         bool UsesKeepAlive(void);
@@ -235,10 +235,10 @@ namespace bal
         int GetRecvBufSize(void);
 
         bool SetSendTimeout(long sec, long msec);
-        bool GetSendTimeout(long *sec, long *msec);
+        bool GetSendTimeout(long* sec, long* msec);
 
         bool SetRecvTimeout(long sec, long msec);
-        bool GetRecvTimeout(long *sec, long *msec);
+        bool GetRecvTimeout(long* sec, long* msec);
 
         int GetError(void);
 
@@ -262,18 +262,18 @@ namespace bal
         }
 
       protected:
-        bal_t m_s;
+        balst m_s;
 
-        const bal_t *_cs(void) {
-            return const_cast<const bal_t *>(&m_s);
+        const balst* _cs(void) {
+            return const_cast<const balst* >(&m_s);
         }
 
-        void _Set(const bal_t *s) {
+        void _Set(const balst* s) {
             Reset();
-            memcpy(&m_s, s, sizeof(bal_t));
+            memcpy(&m_s, s, sizeof(balst));
         }
     };
 }; // namespace bal
 
 
-#endif /* !_BAL_HH_INCLUDED */
+#endif /* !_BAL_HH_INCLUDED* /
