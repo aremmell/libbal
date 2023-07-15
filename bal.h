@@ -157,7 +157,7 @@ typedef struct {
 } bal_selectdata_list;
 
 typedef struct {
-    bal_selectdata_list* l;
+    bal_selectdata_list* sdl;
     bal_mutex* m;
     int die;
 } bal_eventthread_data;
@@ -299,22 +299,22 @@ int _bal_haspendingconnect(const balst* s);
 int _bal_isclosedcircuit(const balst* s);
 
 # if defined(_WIN32)
-#  define BALTHREADAPI DWORD WINAPI
+#  define BALTHREAD DWORD WINAPI
 # else
-#  define BALTHREADAPI void*
+#  define BALTHREAD void*
 # endif
 
-BALTHREADAPI _bal_eventthread(void* p);
+BALTHREAD _bal_eventthread(void* p);
 int _bal_initasyncselect(bal_thread* t, bal_mutex* m, bal_eventthread_data* td);
 void _bal_dispatchevents(fd_set* set, bal_eventthread_data* td, int type);
 
-int _bal_sdl_add(bal_selectdata_list* l, const bal_selectdata* d);
-int _bal_sdl_rem(bal_selectdata_list* l, bal_socket sd);
-int _bal_sdl_clr(bal_selectdata_list* l);
-int _bal_sdl_size(bal_selectdata_list* l);
-int _bal_sdl_enum(bal_selectdata_list* l, bal_selectdata* *d);
-void _bal_sdl_reset(bal_selectdata_list* l);
-bal_selectdata* _bal_sdl_find(const bal_selectdata_list* l, bal_socket sd);
+int _bal_sdl_add(bal_selectdata_list* sdl, const bal_selectdata* d);
+int _bal_sdl_rem(bal_selectdata_list* sdl, bal_socket sd);
+int _bal_sdl_clr(bal_selectdata_list* sdl);
+int _bal_sdl_size(bal_selectdata_list* sdl);
+int _bal_sdl_enum(bal_selectdata_list* sdl, bal_selectdata** d);
+void _bal_sdl_reset(bal_selectdata_list* sdl);
+bal_selectdata* _bal_sdl_find(const bal_selectdata_list* sdl, bal_socket sd);
 
 int _bal_mutex_init(bal_mutex* m);
 int _bal_mutex_lock(bal_mutex* m);
@@ -324,4 +324,4 @@ int _bal_mutex_free(bal_mutex* m);
 # if defined(__cplusplus)
 }
 # endif
-#endif /* !_BAL_H_INCLUDED* /
+#endif /* !_BAL_H_INCLUDED */

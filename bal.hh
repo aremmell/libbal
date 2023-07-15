@@ -276,4 +276,4 @@ namespace bal
 }; // namespace bal
 
 
-#endif /* !_BAL_HH_INCLUDED* /
+#endif /* !_BAL_HH_INCLUDED */

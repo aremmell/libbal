@@ -91,7 +91,7 @@ int bal_asyncselect(const balst* s, bal_async_callback proc, uint32_t mask)
     if ((s) && (proc)) {
         if (!t) {
             td.die = 0;
-            td.l   = &l;
+            td.sdl = &l;
             td.m   = &m;
 
             if (BAL_FALSE == _bal_initasyncselect(&t, &m, &td))
@@ -1056,58 +1056,54 @@ const char* _bal_getmbstr(cbstr input)
     }
 #else
     return input;
-#endif /* !BAL_USE_WCHAR* / \
-} \
- \ \
-int _bal_retstr(bstr out, const char* in) { \
-    int r = BAL_FALSE; \
- \ \
-#ifdef BAL_USE_WCHAR \
-    if (((size_t)-1) != mbstowcs(out, in, strlen(in))) \
-        r = BAL_TRUE; \
-#else \
-    strcpy(out, in); \
-    r = BAL_TRUE; \
-#endif /* !BAL_USE_WCHAR* / \
- \ \
-    return r; \
-} \
- \ \
-int _bal_haspendingconnect(const balst* s) { \
-    int r = BAL_FALSE; \
- \ \
-    if (s->_f & BAL_F_PENDCONN) \
-        r = BAL_TRUE; \
- \ \
-    return r; \
-} \
- \ \
-int _bal_isclosedcircuit(const balst* s) { \
-    int r = BAL_FALSE; \
- \ \
-    if (s) { \
-        unsigned char buf; \
- \ \
-        int rcv = recv(s->sd, &buf, sizeof(unsigned char), MSG_PEEK); \
- \ \
-        if (0 == rcv) \
-            r = BAL_TRUE; \
- \ \
-        if (-1 == rcv) { \
-#if defined(_WIN32) \
- \ \
-            int error = WSAGetLastError(); \
- \ \
-            if ((WSAENETDOWN == error) || (WSAENOTCONN == error) || (WSAEOPNOTSUPP == error) || \
-                (WSAESHUTDOWN == error) || (WSAECONNABORTED == error) || (WSAECONNRESET == error)) \
-{ r = BAL_TRUE; \
-            } \
- \ \
-#else \
- \ \
-            if ((EBADF == errno) || (ENOTCONN == errno) || (ENOTSOCK == errno)) \
-                r = BAL_TRUE; \
- \ \
+#endif /* !BAL_USE_WCHAR */
+}
+
+int _bal_retstr(bstr out, const char* in) {
+    int r = BAL_FALSE;
+
+#ifdef BAL_USE_WCHAR
+    if (((size_t)-1) != mbstowcs(out, in, strlen(in)))
+        r = BAL_TRUE;
+#else
+    strcpy(out, in);
+    r = BAL_TRUE;
+#endif /* !BAL_USE_WCHAR */
+
+    return r;
+}
+
+int _bal_haspendingconnect(const balst* s) {
+    int r = BAL_FALSE;
+
+    if (s->_f & BAL_F_PENDCONN)
+        r = BAL_TRUE;
+
+    return r;
+}
+
+int _bal_isclosedcircuit(const balst* s) {
+    int r = BAL_FALSE;
+
+    if (s) {
+        unsigned char buf;
+
+        int rcv = recv(s->sd, &buf, sizeof(unsigned char), MSG_PEEK);
+
+        if (0 == rcv)
+            r = BAL_TRUE;
+
+        if (-1 == rcv) {
+#if defined(_WIN32)
+
+            int error = WSAGetLastError();
+
+            if ((WSAENETDOWN == error) || (WSAENOTCONN == error) || (WSAEOPNOTSUPP == error) ||
+                (WSAESHUTDOWN == error) || (WSAECONNABORTED == error) || (WSAECONNRESET == error))
+                r = BAL_TRUE;
+#else
+            if ((EBADF == errno) || (ENOTCONN == errno) || (ENOTSOCK == errno))
+                r = BAL_TRUE;
 #endif /* !_WIN32 */
 }
 }
@@ -1115,7 +1111,7 @@ int _bal_isclosedcircuit(const balst* s) { \
 return r;
 }
 
-BALTHREADAPI _bal_eventthread(void* p)
+BALTHREAD _bal_eventthread(void* p)
 {
     bal_eventthread_data* td = (bal_eventthread_data*)p;
 
@@ -1127,7 +1123,7 @@ BALTHREADAPI _bal_eventthread(void* p)
 
         while (0 == td->die) {
             if (BAL_TRUE == _bal_mutex_lock(td->m)) {
-                int size = _bal_sdl_size(td->l);
+                int size = _bal_sdl_size(td->sdl);
 
                 if (0 < size) {
                     struct timeval tv = {0, 0};
@@ -1138,9 +1134,9 @@ BALTHREADAPI _bal_eventthread(void* p)
                     FD_ZERO(&w);
                     FD_ZERO(&e);
 
-                    _bal_sdl_reset(td->l);
+                    _bal_sdl_reset(td->sdl);
 
-                    while (BAL_TRUE == _bal_sdl_enum(td->l, &t)) {
+                    while (BAL_TRUE == _bal_sdl_enum(td->sdl, &t)) {
                         if (BAL_TRUE == _bal_haspendingconnect(t->s)) {
                             t->mask |= BAL_S_CONNECT;
                             t->s->_f &= ~BAL_F_PENDCONN;
@@ -1224,9 +1220,9 @@ void _bal_dispatchevents(fd_set* set, bal_eventthread_data* td, int type)
     if ((set) && (td)) {
         bal_selectdata* t = NULL;
 
-        _bal_sdl_reset(td->l);
+        _bal_sdl_reset(td->sdl);
 
-        while (BAL_TRUE == _bal_sdl_enum(td->l, &t)) {
+        while (BAL_TRUE == _bal_sdl_enum(td->sdl, &t)) {
             int event = 0;
             int snd   = 0;
 
@@ -1288,35 +1284,35 @@ void _bal_dispatchevents(fd_set* set, bal_eventthread_data* td, int type)
 
                 if (BAL_E_CLOSE == event)
 
-                    _bal_sdl_rem(td->l, t->s->sd);
+                    _bal_sdl_rem(td->sdl, t->s->sd);
             }
         }
     }
 }
 
-int _bal_sdl_add(bal_selectdata_list* l, const bal_selectdata* d)
+int _bal_sdl_add(bal_selectdata_list* sdl, const bal_selectdata* d)
 {
     int r = BAL_FALSE;
 
-    if ((l) && (d)) {
+    if ((sdl) && (d)) {
         bal_selectdata** t = NULL;
         bal_selectdata* n  = NULL;
 
-        if (l->_h) {
-            t = &l->_t->_n;
-            n = l->_t;
+        if (sdl->_h) {
+            t = &sdl->_t->_n;
+            n = sdl->_t;
         } else {
-            t = &l->_h;
+            t = &sdl->_h;
         }
 
-        (*t) = (bal_selectdata*)malloc(sizeof(bal_selectdata));
+        *t = (bal_selectdata*)malloc(sizeof(bal_selectdata));
 
-        if ((*t)) {
+        if (*t) {
             memcpy((*t), d, sizeof(bal_selectdata));
 
             (*t)->_n = NULL;
             (*t)->_p = n;
-            l->_t    = (*t);
+            sdl->_t  = (*t);
             r        = BAL_TRUE;
         }
     }
@@ -1324,26 +1320,23 @@ int _bal_sdl_add(bal_selectdata_list* l, const bal_selectdata* d)
     return r;
 }
 
-int _bal_sdl_rem(bal_selectdata_list* l, bal_socket sd)
+int _bal_sdl_rem(bal_selectdata_list* sdl, bal_socket sd)
 {
     int r = BAL_FALSE;
 
-    if ((l) && (sd)) {
-        bal_selectdata* t = _bal_sdl_find(l, sd);
+    if ((sdl) && (sd)) {
+        bal_selectdata* t = _bal_sdl_find(sdl, sd);
 
         if (t) {
-            if (t == l->_h) {
-                l->_h = t->_n;
+            if (t == sdl->_h) {
+                sdl->_h = t->_n;
 
             } else {
                 t->_p->_n = (t->_n ? t->_n : NULL);
 
-                if (t == l->_t)
-
-                    l->_t = t->_p;
-
+                if (t == sdl->_t)
+                    sdl->_t = t->_p;
                 else
-
                     t->_n->_p = (t->_p ? t->_p : NULL);
             }
 
@@ -1355,37 +1348,35 @@ int _bal_sdl_rem(bal_selectdata_list* l, bal_socket sd)
     return r;
 }
 
-int _bal_sdl_clr(bal_selectdata_list* l)
+int _bal_sdl_clr(bal_selectdata_list* sdl)
 {
     int r = BAL_FALSE;
 
-    if (l) {
-        if (l->_h) {
-            bal_selectdata* t  = l->_h;
+    if (sdl) {
+        if (sdl->_h) {
+            bal_selectdata* t  = sdl->_h;
             bal_selectdata* t2 = NULL;
 
             while (t) {
                 t2 = t->_n;
-
                 free(t);
-
                 t = t2;
             }
 
-            l->_h = l->_t = l->_c = NULL;
-            r                     = BAL_TRUE;
+            sdl->_h = sdl->_t = sdl->_c = NULL;
+            r                           = BAL_TRUE;
         }
     }
 
     return r;
 }
 
-int _bal_sdl_size(bal_selectdata_list* l)
+int _bal_sdl_size(bal_selectdata_list* sdl)
 {
     int r = 0;
 
-    if (l) {
-        bal_selectdata* d = l->_h;
+    if (sdl) {
+        bal_selectdata* d = sdl->_h;
 
         while (d) {
             d = d->_n;
@@ -1409,50 +1400,47 @@ int _bal_sdl_copy(bal_selectdata_list* dest, bal_selectdata_list* src)
 
         while (d) {
             if (BAL_TRUE == _bal_sdl_add(dest, d))
-
                 copied++;
-
             d = d->_n;
         }
 
         if (0 < copied)
-
             r = BAL_TRUE;
     }
 
     return r;
 }
 
-int _bal_sdl_enum(bal_selectdata_list* l, bal_selectdata** d)
+int _bal_sdl_enum(bal_selectdata_list* sdl, bal_selectdata** d)
 {
     int r = BAL_FALSE;
 
-    if ((l) && (d)) {
-        if (l->_c) {
-            *d    = l->_c;
-            l->_c = l->_c->_n;
+    if ((sdl) && (d)) {
+        if (sdl->_c) {
+            *d    = sdl->_c;
+            sdl->_c = sdl->_c->_n;
             r     = BAL_TRUE;
 
         } else {
-            _bal_sdl_reset(l);
+            _bal_sdl_reset(sdl);
         }
     }
 
     return r;
 }
 
-void _bal_sdl_reset(bal_selectdata_list* l)
+void _bal_sdl_reset(bal_selectdata_list* sdl)
 {
-    if (l)
-        l->_c = l->_h;
+    if (sdl)
+        sdl->_c = sdl->_h;
 }
 
-bal_selectdata* _bal_sdl_find(const bal_selectdata_list* l, bal_socket sd)
+bal_selectdata* _bal_sdl_find(const bal_selectdata_list* sdl, bal_socket sd)
 {
     bal_selectdata* r = NULL;
 
-    if ((l) && (sd)) {
-        bal_selectdata* t = l->_h;
+    if ((sdl) && (sd)) {
+        bal_selectdata* t = sdl->_h;
 
         while (t) {
             if (t->s->sd == sd) {
