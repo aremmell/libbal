@@ -74,10 +74,14 @@ int bal_finalize(void) {
 
 int bal_asyncselect(const bal_t *s, BALEVENTPROC proc, unsigned long mask) {
     int r                          = BAL_FALSE;
-    static bal_selectdata_list l   = {NULL};
-    static bal_eventthread_data td = {NULL};
-    static bal_thread t          = NULL;
-    static bal_mutex m           = {NULL};
+    static bal_selectdata_list l   = {0};
+    static bal_eventthread_data td = {0};
+    static bal_thread t            = NULL;
+#if !defined(_WIN32)
+    static bal_mutex m             = PTHREAD_MUTEX_INITIALIZER;
+#else
+    static bal_mutex m             = NULL;
+#endif
 
     if (BAL_S_DIE == mask) {
         td.die = 1;
@@ -1151,7 +1155,7 @@ int _bal_initasyncselect(bal_thread *t, bal_mutex *m, bal_eventthread_data *td) 
 
 #else
 
-            if (0 == pthread_create(t, NULL, _Bal_EventThread, td))
+            if (0 == pthread_create(t, NULL, _bal_eventthread, td))
                 r = BAL_TRUE;
 
 #endif /* _WIN32 */

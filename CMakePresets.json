@@ -1,0 +1,73 @@
+{
+    "version": 6,
+    "cmakeMinimumRequired": {
+        "major": 3,
+        "minor": 25,
+        "patch": 0
+    },
+    "configurePresets": [
+        {
+            "name": "default",
+            "displayName": "Configure: default",
+            "description": "Generator: Ninja",
+            "generator": "Ninja",
+            "cacheVariables": {
+            },
+            "binaryDir": "build",
+            "installDir": "build/install",
+            "toolset": {
+                "strategy": "external"
+            },
+            "environment": {
+                "PATH": "$penv{PATH}"
+            },
+            "warnings": {
+                "unusedCli": true,
+                "systemVars": true
+            },
+            "debug": {
+                "output": true
+            }
+        },
+        {
+            "name": "debug",
+            "displayName": "Configure: debug",
+            "inherits": "default",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "release",
+            "displayName": "Configure: release",
+            "inherits": "default",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "default",
+            "displayName": "Build: default",
+            "configurePreset": "default",
+            "cleanFirst": true,
+            "jobs": 0,
+            "verbose": true
+        },
+        {
+            "name": "debug",
+            "displayName": "Build: debug",
+            "description": "Builds libbal with debugging symbols.",
+            "configurePreset": "debug",
+            "inherits": "default"
+        },
+        {
+            "name": "release",
+            "displayName": "Build: release",
+            "description": "Builds libbal for public use.",
+            "configurePreset": "release",
+            "inherits": "default"
+        }
+    ]
+}

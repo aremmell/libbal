@@ -183,10 +183,8 @@ int bal_connectaddrlist(bal_t *s, bal_addrlist *al);
 int bal_send(const bal_t *s, const void *data, size_t len, int flags);
 int bal_recv(const bal_t *s, void *data, size_t len, int flags);
 
-int
-bal_sendto(const bal_t *s, cbstr host, cbstr port, const void *data, size_t len, int flags);
-int
-bal_sendtoaddr(const bal_t *s, const bal_sockaddr *sa, const void *data, size_t len, int flags);
+int bal_sendto(const bal_t *s, cbstr host, cbstr port, const void *data, size_t len, int flags);
+int bal_sendtoaddr(const bal_t *s, const bal_sockaddr *sa, const void *data, size_t len, int flags);
 
 int bal_recvfrom(const bal_t *s, void *data, size_t len, int flags, bal_sockaddr *res);
 
