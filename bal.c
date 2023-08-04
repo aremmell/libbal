@@ -208,9 +208,9 @@ int bal_close(balst* s)
         if (0 == close(s->sd))
             r = bal_reset(s);
 #endif
-    }
 
-    s->_f &= ~BAL_F_PENDCONN;
+        s->_f &= ~BAL_F_PENDCONN;
+    }
 
     return r;
 }
