@@ -67,7 +67,7 @@ int bal_asyncselect(const balst* s, bal_async_callback proc, uint32_t mask)
     static bal_eventthread_data td = {0};
 
 #if !defined(_WIN32)
-    static bal_thread t = PTHREAD_ONCE_INIT;
+    static bal_thread t = {0};
     static bal_mutex m  = PTHREAD_MUTEX_INITIALIZER;
 #else
     static bal_thread t = INVALID_HANDLE_VALUE;
@@ -138,7 +138,7 @@ int bal_autosocket(balst* s, int af, int pt, cbstr host, cbstr port)
     if (s && _bal_validstr(host)) {
         int _af = ((af == 0) ? PF_UNSPEC : af);
         int _st = ((pt == 0) ? 0 : (pt == IPPROTO_TCP) ? SOCK_STREAM : SOCK_DGRAM);
-        bal_addrinfo ai = {NULL};
+        bal_addrinfo ai = {NULL, NULL};
 
         if (BAL_TRUE == _bal_getaddrinfo(0, _af, _st, host, port, &ai)) {
             const struct addrinfo* a = NULL;
@@ -225,10 +225,10 @@ int bal_connect(const balst* s, cbstr host, cbstr port)
     int r = BAL_FALSE;
 
     if (s && _bal_validstr(host) && _bal_validstr(port)) {
-        bal_addrinfo ai = {NULL};
+        bal_addrinfo ai = {NULL, NULL};
 
         if (BAL_TRUE == _bal_getaddrinfo(0, s->af, s->st, host, port, &ai)) {
-            bal_addrlist al = {NULL};
+            bal_addrlist al = {NULL, NULL};
 
             if (BAL_TRUE == _bal_aitoal(&ai, &al)) {
                 r = bal_connectaddrlist((balst*)s, &al);
@@ -290,7 +290,7 @@ int bal_sendto(const balst* s, cbstr host, cbstr port, const void* data, size_t 
     int r = BAL_FALSE;
 
     if (s && _bal_validstr(host) && _bal_validstr(port) && data && len) {
-        bal_addrinfo ai = {NULL};
+        bal_addrinfo ai = {NULL, NULL};
 
         if (BAL_TRUE == _bal_getaddrinfo(0, PF_UNSPEC, SOCK_DGRAM, host, port, &ai)) {
             r = bal_sendtoaddr(s, (const bal_sockaddr*)ai._ai->ai_addr, data, len, flags);
@@ -324,7 +324,7 @@ int bal_bind(const balst* s, cbstr addr, cbstr port)
     int r = BAL_FALSE;
 
     if (s && _bal_validstr(addr) && _bal_validstr(port)) {
-        bal_addrinfo ai = {NULL};
+        bal_addrinfo ai = {NULL, NULL};
 
         if (BAL_TRUE == _bal_getaddrinfo(AI_NUMERICHOST, s->af, s->st, addr, port, &ai)) {
             const struct addrinfo* a = NULL;
@@ -1009,7 +1009,7 @@ int _bal_retstr(bstr out, const char* in)
 
 int _bal_haspendingconnect(const balst* s)
 {
-    return (s && (s->_f & BAL_F_PENDCONN == BAL_F_PENDCONN)) ? BAL_TRUE : BAL_FALSE;
+    return (s && ((s->_f & BAL_F_PENDCONN) == BAL_F_PENDCONN)) ? BAL_TRUE : BAL_FALSE;
 }
 
 int _bal_isclosedcircuit(const balst* s)
