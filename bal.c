@@ -1260,7 +1260,9 @@ int _bal_sdl_clr(bal_selectdata_list* sdl)
     int r = BAL_FALSE;
 
     if (sdl) {
-        if (sdl->_h) {
+        if (0 == _bal_sdl_size(sdl))
+            r = BAL_TRUE;
+        else if (sdl->_h) {
             bal_selectdata* t  = sdl->_h;
             bal_selectdata* t2 = NULL;
 
