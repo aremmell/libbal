@@ -12,9 +12,12 @@ cmake_policy(SET CMP0066 NEW) # CMAKE_<LANG>_FLAGS_<BUILDTYPE>
 cmake_policy(SET CMP0102 NEW) # mark_as_advanced
 
 # toolchain-related
-set(C_FLAGS_BASE "-std=c11 -Wall -Wextra -Wpedantic -Werror -fPIC")
+set(C_FLAGS_BASE "-Wall -Wextra -Wpedantic -Werror -fPIC")
 set(CMAKE_C_FLAGS_DEBUG "${C_FLAGS_BASE} -g3 -O0 -DDEBUG")
 set(CMAKE_C_FLAGS_RELEASE "${C_FLAGS_BASE} -O3 -D_FORTIFY_SOURCE=2 -DNDEBUG")
+set(CMAKE_LDFLAGS_BASE "-L. -lbal")
+set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_LDFLAGS_BASE}")
+set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_LDFLAGS_BASE}")
 
 # define the project
 project(
@@ -60,14 +63,19 @@ target_include_directories(
     .
 )
 
+target_link_libraries(
+    ${PROJECT_NAME}
+    ${CMAKE_CURRENT_BINARY_DIR}/libbal.a
+)
+
 target_compile_features(
     ${PROJECT_NAME}
     PUBLIC
     c_std_11
 )
 
-#install(
-#    PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}
-#    TYPE BIN
-#    CONFIGURATIONS Release
-#)
+install(
+    PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}
+    TYPE BIN
+    CONFIGURATIONS Release
+)
