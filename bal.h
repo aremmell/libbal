@@ -190,8 +190,6 @@ int bal_sendtoaddr(const balst* s, const bal_sockaddr* sa, const void* data, siz
 int bal_recvfrom(const balst* s, void* data, size_t len, int flags, bal_sockaddr* res);
 
 int bal_bind(const balst* s, cbstr addr, cbstr port);
-int bal_bindaddrany(const balst* s, unsigned short port);
-int bal_bindany(const balst* s);
 
 int bal_listen(const balst* s, int backlog);
 int bal_accept(const balst* s, balst* res, bal_sockaddr* resaddr);
