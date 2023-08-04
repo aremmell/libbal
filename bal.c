@@ -749,7 +749,8 @@ int bal_freeaddrlist(bal_addrlist* al)
     int r = BAL_FALSE;
 
     if (al) {
-        bal_addr* a = al->_p = al->_a;
+        bal_addr* a = NULL;
+        al->_p = al->_a;
 
         while (al->_p) {
             a = al->_p->_n;
@@ -1143,10 +1144,10 @@ void _bal_dispatchevents(fd_set* set, bal_eventthread_data* td, int type)
         _bal_sdl_reset(td->sdl);
 
         while (BAL_TRUE == _bal_sdl_enum(td->sdl, &t)) {
-            int event = 0;
-            int snd   = 0;
-
             if (0 != FD_ISSET(t->s->sd, set)) {
+                int event = 0;
+                int snd   = 0;
+
                 switch (type) {
                     case BAL_S_READ:
                         if (t->mask & BAL_E_READ) {
