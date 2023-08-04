@@ -1042,19 +1042,21 @@ void _bal_setlasterror(int err)
 
 const char* _bal_getmbstr(cbstr input)
 {
+    if (input) {
 #ifdef BAL_USE_WCHAR
+        char* mbstr = calloc(sizeof(char), wcslen(input) + sizeof(char));
+        if (!mbstr)
+            return NULL;
 
-    char* mbstr = (char*)calloc(sizeof(char), (wcslen(input) + sizeof(char)));
+        if (-1 == wcstombs(mbstr, input, wcslen(input))) {
+            free(mbstr);
+            return NULL;
+        }
 
-    if (!mbstr) {
-        return (char*)(NULL);
-    } else if (((size_t)-1) == wcstombs(mbstr, input, wcslen(input))) {
-        free(mbstr);
-        return (char*)(NULL);
-    } else {
         return mbstr;
-    }
 #else
+    }
+
     return input;
 #endif /* !BAL_USE_WCHAR */
 }
