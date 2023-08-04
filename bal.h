@@ -222,11 +222,11 @@ int bal_getsendbufsize(const balst* s);
 int bal_setrecvbufsize(const balst* s, int size);
 int bal_getrecvbufsize(const balst* s);
 
-int bal_setsendtimeout(const balst* s, long sec, long msec);
-int bal_getsendtimeout(const balst* s, long* sec, long* msec);
+int bal_setsendtimeout(const balst* s, long sec, long usec);
+int bal_getsendtimeout(const balst* s, long* sec, long* usec);
 
-int bal_setrecvtimeout(const balst* s, long sec, long msec);
-int bal_getrecvtimeout(const balst* s, long* sec, long* msec);
+int bal_setrecvtimeout(const balst* s, long sec, long usec);
+int bal_getrecvtimeout(const balst* s, long* sec, long* usec);
 
 int bal_geterror(const balst* s);
 
