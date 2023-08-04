@@ -56,7 +56,8 @@ typedef int bal_socket;
 typedef pthread_mutex_t bal_mutex;
 typedef pthread_t bal_thread;
 
-# else /* _WIN32 */
+# else /* __WIN__ */
+#  define __WIN__
 #  include <winsock2.h>
 #  include <ws2tcpip.h>
 #  include <process.h>
@@ -298,8 +299,8 @@ int _bal_retstr(bstr out, const char* in);
 int _bal_haspendingconnect(const balst* s);
 int _bal_isclosedcircuit(const balst* s);
 
-# if defined(_WIN32)
-#  define BALTHREAD DWORD WINAPI
+# if defined(__WIN__)
+#  define BALTHREAD unsigned __stdcall
 # else
 #  define BALTHREAD void*
 # endif

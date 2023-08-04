@@ -33,7 +33,7 @@ int bal_initialize(void)
 {
     int r = BAL_FALSE;
 
-#if defined(_WIN32)
+#if defined(__WIN__)
     WORD wVer  = MAKEWORD(WSOCK_MINVER, WSOCK_MAJVER);
     WSADATA wd = {0};
 
@@ -41,7 +41,7 @@ int bal_initialize(void)
         r = BAL_TRUE;
 #else
     r = BAL_TRUE;
-#endif /* !_WIN32 */
+#endif
 
     return r;
 }
@@ -50,7 +50,7 @@ int bal_finalize(void)
 {
     int r = BAL_FALSE;
 
-#if defined(_WIN32)
+#if defined(__WIN__)
     if (0 == WSACleanup())
         r = bal_asyncselect(NULL, NULL, BAL_S_DIE);
 #else
@@ -66,7 +66,7 @@ int bal_asyncselect(const balst* s, bal_async_callback proc, uint32_t mask)
     static bal_selectdata_list l   = {0};
     static bal_eventthread_data td = {0};
 
-#if !defined(_WIN32)
+#if !defined(__WIN__)
     static bal_thread t = {0};
     static bal_mutex m  = PTHREAD_MUTEX_INITIALIZER;
 #else
@@ -193,7 +193,7 @@ int bal_close(balst* s)
     int r = BAL_FALSE;
 
     if (s) {
-#if defined(_WIN32)
+#if defined(__WIN__)
         if (0 == closesocket(s->sd))
             r = bal_reset(s);
 #else
@@ -212,11 +212,11 @@ int bal_shutdown(balst* s, int how)
         s->_f &= ~BAL_F_PENDCONN;
         return shutdown(s->sd, how);
     } else {
-#if defined(_WIN32)
+#if defined(__WIN__)
         return SOCKET_ERROR;
 #else
         return ENOTSOCK;
-#endif // !_WIN32
+#endif
     }
 }
 
@@ -253,11 +253,11 @@ int bal_connectaddrlist(balst* s, bal_addrlist* al)
             while (NULL != (sa = bal_enumaddrlist(al))) {
                 r = connect(s->sd, (const struct sockaddr*)sa, BAL_SASIZE((*sa)));
 
-#if defined(_WIN32)
+#if defined(__WIN__)
                 if (!r || (-1 == r && WSAEWOULDBLOCK == WSAGetLastError())) {
 #else
                 if (!r || (-1 == r && EWOULDBLOCK == errno)) {
-#endif /* !_WIN32 */
+#endif
                     s->_f |= BAL_F_PENDCONN;
                     r = BAL_TRUE;
                     break;
@@ -612,7 +612,7 @@ int bal_iswritable(const balst* s)
 
 int bal_setiomode(const balst* s, unsigned long flag)
 {
-#if defined(_WIN32)
+#if defined(__WIN__)
     return ((NULL != s) ? ioctlsocket(s->sd, FIONBIO, &flag) : BAL_FALSE);
 #else
     return ((NULL != s) ? ioctl(s->sd, FIONBIO, &flag) : BAL_FALSE);
@@ -624,7 +624,7 @@ size_t bal_recvqueuesize(const balst* s)
     size_t r = 0UL;
 
     if (s) {
-#if defined(_WIN32)
+#if defined(__WIN__)
         if (0 != ioctlsocket(s->sd, FIONREAD, (void*)&r))
             r = 0UL;
 #else
@@ -935,14 +935,14 @@ int _bal_getlasterror(const balst* s, bal_error* err)
         if (s) {
             err->code = bal_geterror(s);
         } else {
-#if defined(_WIN32)
+#if defined(__WIN__)
             err->code = WSAGetLastError();
 #else
             err->code = errno;
 #endif
         }
 
-#if defined(_WIN32)
+#if defined(__WIN__)
         if (0 != FormatMessage(0x00001200U, NULL, err->code, 0U, err->desc, BAL_MAXERROR, NULL))
             r = BAL_TRUE;
 #else
@@ -956,7 +956,7 @@ int _bal_getlasterror(const balst* s, bal_error* err)
                 r = BAL_TRUE;
         }
 
-#endif /* !_WIN32 */
+#endif
     }
 
     return r;
@@ -964,7 +964,7 @@ int _bal_getlasterror(const balst* s, bal_error* err)
 
 void _bal_setlasterror(int err)
 {
-#if defined(_WIN32)
+#if defined(__WIN__)
     WSASetLastError(err);
 #else
     errno = err;
@@ -1023,7 +1023,7 @@ int _bal_isclosedcircuit(const balst* s)
         if (0 == rcv)
             r = BAL_TRUE;
         else if (-1 == rcv) {
-#if defined(_WIN32)
+#if defined(__WIN__)
             int error = WSAGetLastError();
             if (WSAENETDOWN == error  || WSAENOTCONN == error     || WSAEOPNOTSUPP == error ||
                 WSAESHUTDOWN == error || WSAECONNABORTED == error || WSAECONNRESET == error)
@@ -1031,7 +1031,7 @@ int _bal_isclosedcircuit(const balst* s)
 #else
             if (EBADF == errno || ENOTCONN == errno || ENOTSOCK == errno)
                 r = BAL_TRUE;
-#endif /* !_WIN32 */
+#endif
         }
     }
 
@@ -1093,22 +1093,22 @@ BALTHREAD _bal_eventthread(void* p)
             FD_ZERO(&w);
             FD_ZERO(&e);
 
-#if defined(_WIN32)
+#if defined(__WIN__)
             Sleep(1);
 #else
             sched_yield();
 #endif
         }
     } else {
-#if defined(_WIN32)
-        return 1;
+#if defined(__WIN__)
+        return 1U;
 #else
         return (void*)(1);
 #endif
     }
 
-#if defined(_WIN32)
-    return 0;
+#if defined(__WIN__)
+    return 0U;
 #else
     return NULL;
 #endif
@@ -1122,13 +1122,13 @@ int _bal_initasyncselect(bal_thread* t, bal_mutex* m, bal_eventthread_data* td)
         td->die = 0;
 
         if (BAL_TRUE == _bal_mutex_init(m)) {
-#if defined(_WIN32)
+#if defined(__WIN__)
             if (NULL != (*t = (bal_thread)_beginthreadex(NULL, 0U, _bal_eventthread, td, 0U, NULL)))
                 r = BAL_TRUE;
 #else
             if (0 == pthread_create(t, NULL, _bal_eventthread, td))
                 r = BAL_TRUE;
-#endif /* _WIN32 */
+#endif
         }
     }
 
@@ -1366,14 +1366,14 @@ int _bal_mutex_init(bal_mutex* m)
     int r = BAL_FALSE;
 
     if (m) {
-#if defined(_WIN32)
+#if defined(__WIN__)
         *m = CreateMutex(NULL, FALSE, NULL);
         if (*m)
             r = BAL_TRUE;
 #else
         if (0 == pthread_mutex_init(m, NULL))
             r = BAL_TRUE;
-#endif /* !_WIN32 */
+#endif
     }
 
     return r;
@@ -1384,13 +1384,13 @@ int _bal_mutex_lock(bal_mutex* m)
     int r = BAL_FALSE;
 
     if (m) {
-#if defined(_WIN32)
+#if defined(__WIN__)
         if (WAIT_OBJECT_0 == WaitForSingleObject(*m, INFINITE))
             r = BAL_TRUE;
 #else
         if (0 == pthread_mutex_lock(m))
             r = BAL_TRUE;
-#endif /* !_WIN32 */
+#endif
     }
 
     return r;
@@ -1401,13 +1401,13 @@ int _bal_mutex_unlock(bal_mutex* m)
     int r = BAL_FALSE;
 
     if (m) {
-#if defined(_WIN32)
+#if defined(__WIN__)
         if (ReleaseMutex(*m))
             r = BAL_TRUE;
 #else
         if (0 == pthread_mutex_unlock(m))
             r = BAL_TRUE;
-#endif /* !_WIN32 */
+#endif
     }
 
     return r;
@@ -1418,7 +1418,7 @@ int _bal_mutex_free(bal_mutex* m)
     int r = BAL_FALSE;
 
     if (m) {
-#if defined(_WIN32)
+#if defined(__WIN__)
         if (*m && INVALID_HANDLE_VALUE != *m) {
             if (CloseHandle(*m))
                 r = BAL_TRUE;
@@ -1427,7 +1427,7 @@ int _bal_mutex_free(bal_mutex* m)
 #else
         if (0 == pthread_mutex_destroy(m))
             r = BAL_TRUE;
-#endif /* !_WIN32 */
+#endif
     }
 
     return r;
