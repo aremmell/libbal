@@ -35,6 +35,7 @@
 #  include <sys/ioctl.h>
 #  include <netinet/in.h>
 #  include <arpa/inet.h>
+#  include <fcntl.h>
 #  include <netdb.h>
 #  include <unistd.h>
 #  include <errno.h>
@@ -230,7 +231,7 @@ int bal_islistening(const bal_socket* s);
 int bal_isreadable(const bal_socket* s);
 int bal_iswritable(const bal_socket* s);
 
-int bal_setiomode(const bal_socket* s, unsigned long flag);
+int bal_setiomode(const bal_socket* s, bool async);
 size_t bal_recvqueuesize(const bal_socket* s);
 
 int bal_lastliberror(bal_error* err);

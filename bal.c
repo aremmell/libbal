@@ -353,7 +353,6 @@ int bal_accept(const bal_socket* s, bal_socket* res, bal_sockaddr* resaddr)
 
     if (s && res && resaddr) {
         socklen_t sasize = sizeof(bal_sockaddr);
-
         if (-1 != (res->sd = accept(s->sd, (struct sockaddr*)resaddr, &sasize)))
             r = BAL_TRUE;
     }
@@ -363,12 +362,12 @@ int bal_accept(const bal_socket* s, bal_socket* res, bal_sockaddr* resaddr)
 
 int bal_getoption(const bal_socket* s, int level, int name, void* optval, socklen_t len)
 {
-    return ((NULL != s) ? getsockopt(s->sd, level, name, optval, &len) : BAL_FALSE);
+    return (NULL != s) ? getsockopt(s->sd, level, name, optval, &len) : BAL_FALSE;
 }
 
 int bal_setoption(const bal_socket* s, int level, int name, const void* optval, socklen_t len)
 {
-    return ((NULL != s) ? setsockopt(s->sd, level, name, optval, len) : BAL_FALSE);
+    return (NULL != s) ? setsockopt(s->sd, level, name, optval, len) : BAL_FALSE;
 }
 
 int bal_setbroadcast(const bal_socket* s, int flag)
@@ -609,12 +608,13 @@ int bal_iswritable(const bal_socket* s)
     return r;
 }
 
-int bal_setiomode(const bal_socket* s, unsigned long flag)
+int bal_setiomode(const bal_socket* s, bool async)
 {
 #if defined(__WIN__)
+    unsigned long flag = async ? 1 : 0;
     return ((NULL != s) ? ioctlsocket(s->sd, FIONBIO, &flag) : BAL_FALSE);
 #else
-    return ((NULL != s) ? ioctl(s->sd, FIONBIO, &flag) : BAL_FALSE);
+    return ((NULL != s) ? fcntl(s->sd, F_SETFL, async ? O_NONBLOCK : 0) : BAL_FALSE);
 #endif
 }
 
