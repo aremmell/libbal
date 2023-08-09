@@ -651,8 +651,7 @@ int bal_resolvehost(cbstr host, bal_addrlist* out)
     int r = BAL_FALSE;
 
     if (_bal_validstr(host) && out) {
-        bal_addrinfo ai;
-        memset(&ai, 0, sizeof(ai));
+        bal_addrinfo ai = {NULL, NULL};
 
         if (BAL_TRUE == _bal_getaddrinfo(0, PF_UNSPEC, SOCK_STREAM, host, NULL, &ai)) {
             if (BAL_TRUE == _bal_aitoal(&ai, out))
