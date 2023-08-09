@@ -271,7 +271,7 @@ int bal_connectaddrlist(bal_socket* s, bal_addrlist* al)
 int bal_send(const bal_socket* s, const void* data, size_t len, int flags)
 {
     if (s && data && len)
-        return send(s->sd, (const char*)data, len, flags);
+        return send(s->sd, data, len, flags);
     else
         return BAL_FALSE;
 }
@@ -279,7 +279,7 @@ int bal_send(const bal_socket* s, const void* data, size_t len, int flags)
 int bal_recv(const bal_socket* s, void* data, size_t len, int flags)
 {
     if (s && data && len)
-        return recv(s->sd, (char*)data, len, flags);
+        return recv(s->sd, data, len, flags);
     else
         return BAL_FALSE;
 }
