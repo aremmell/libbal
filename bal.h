@@ -67,7 +67,7 @@ typedef pthread_t bal_thread;
 #  define WSOCK_MAJVER 2
 #  define WSOCK_MINVER 2
 
-typedef SOCKET bal_socket;
+typedef SOCKET bal_descriptor;
 typedef HANDLE bal_mutex;
 typedef HANDLE bal_thread;
 # endif
@@ -96,11 +96,11 @@ typedef struct sockaddr_storage bal_sockaddr;
  * @brief BAL state structure.
  */
 typedef struct {
-    bal_socket sd;    /**< Socket descriptor. */
-    int af;           /**< Address family (e.g. AF_INET). */
-    int st;           /**< Socket type (e.g., SOCK_STREAM). */
-    int pf;           /**< Protocol family (e.g., PROTO_TCP). */
-    unsigned long _f; /**< Internally-used state flags. */
+    bal_descriptor sd; /**< Socket descriptor. */
+    int af;            /**< Address family (e.g. AF_INET). */
+    int st;            /**< Socket type (e.g., SOCK_STREAM). */
+    int pf;            /**< Protocol family (e.g., PROTO_TCP). */
+    uint32_t _f;       /**< Internally-used state flags. */
 } bal_socket;
 
 typedef struct {
@@ -301,12 +301,12 @@ int _bal_initasyncselect(bal_thread* t, bal_mutex* m, bal_eventthread_data* td);
 void _bal_dispatchevents(fd_set* set, bal_eventthread_data* td, int type);
 
 int _bal_sdl_add(bal_selectdata_list* sdl, const bal_selectdata* d);
-int _bal_sdl_rem(bal_selectdata_list* sdl, bal_socket sd);
+int _bal_sdl_rem(bal_selectdata_list* sdl, bal_descriptor sd);
 int _bal_sdl_clr(bal_selectdata_list* sdl);
 int _bal_sdl_size(bal_selectdata_list* sdl);
 int _bal_sdl_enum(bal_selectdata_list* sdl, bal_selectdata** d);
 void _bal_sdl_reset(bal_selectdata_list* sdl);
-bal_selectdata* _bal_sdl_find(const bal_selectdata_list* sdl, bal_socket sd);
+bal_selectdata* _bal_sdl_find(const bal_selectdata_list* sdl, bal_descriptor sd);
 
 int _bal_mutex_init(bal_mutex* m);
 int _bal_mutex_lock(bal_mutex* m);

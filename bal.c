@@ -1054,7 +1054,7 @@ BALTHREAD _bal_eventthread(void* p)
                 if (0 < size) {
                     struct timeval tv = {0, 0};
                     int ret           = -1;
-                    bal_socket highsd = (bal_socket)-1;
+                    bal_descriptor highsd = (bal_descriptor)-1;
 
                     FD_ZERO(&r);
                     FD_ZERO(&w);
@@ -1226,11 +1226,11 @@ int _bal_sdl_add(bal_selectdata_list* sdl, const bal_selectdata* d)
     return r;
 }
 
-int _bal_sdl_rem(bal_selectdata_list* sdl, bal_socket sd)
+int _bal_sdl_rem(bal_selectdata_list* sdl, bal_descriptor sd)
 {
     int r = BAL_FALSE;
 
-    if (sdl && sd) {
+    if (sdl && sd != BAL_BADSOCKET) {
         bal_selectdata* t = _bal_sdl_find(sdl, sd);
 
         if (t) {
@@ -1341,11 +1341,11 @@ void _bal_sdl_reset(bal_selectdata_list* sdl)
         sdl->_c = sdl->_h;
 }
 
-bal_selectdata* _bal_sdl_find(const bal_selectdata_list* sdl, bal_socket sd)
+bal_selectdata* _bal_sdl_find(const bal_selectdata_list* sdl, bal_descriptor sd)
 {
     bal_selectdata* r = NULL;
 
-    if (sdl && sd) {
+    if (sdl && sd != BAL_BADSOCKET) {
         bal_selectdata* t = sdl->_h;
 
         while (t) {
