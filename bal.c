@@ -625,10 +625,10 @@ size_t bal_recvqueuesize(const bal_socket* s)
     if (s) {
 #if defined(__WIN__)
         if (0 != ioctlsocket(s->sd, FIONREAD, (void*)&r))
-            r = 0UL;
+            r = 0ul;
 #else
         if (0 != ioctl(s->sd, FIONREAD, &r))
-            r = 0UL;
+            r = 0ul;
 #endif
     }
 
@@ -652,7 +652,8 @@ int bal_resolvehost(const char* host, bal_addrlist* out)
     if (_bal_validstr(host) && out) {
         bal_addrinfo ai = {NULL, NULL};
 
-        if (BAL_TRUE == _bal_getaddrinfo(0, PF_UNSPEC, SOCK_STREAM, host, NULL, &ai)) {
+        int get = _bal_getaddrinfo(0, PF_UNSPEC, SOCK_STREAM, host, NULL, &ai);
+        if (BAL_TRUE == get) {
             if (BAL_TRUE == _bal_aitoal(&ai, out))
                 r = BAL_TRUE;
             freeaddrinfo(ai._ai);
@@ -772,7 +773,8 @@ int bal_getaddrstrings(const bal_sockaddr* in, int dns, bal_addrstrings* out)
 
         if (BAL_TRUE == _bal_getnameinfo(BAL_NI_NODNS, in, out->ip, out->port)) {
             if (dns) {
-                if (BAL_FALSE == _bal_getnameinfo(BAL_NI_DNS, in, out->host, out->port)) {
+                int get = _bal_getnameinfo(BAL_NI_DNS, in, out->host, out->port);
+                if (BAL_FALSE == get) {
                     strncpy(out->host, BAL_AS_UNKNWN, NI_MAXHOST - 1);
                     out->host[NI_MAXHOST - 1] = '\0';
                 }
@@ -798,7 +800,8 @@ int bal_getaddrstrings(const bal_sockaddr* in, int dns, bal_addrstrings* out)
 ╰─────────────────────────────────────────────────────────────────────────────*/
 
 
-int _bal_getaddrinfo(int f, int af, int st, const char* host, const char* port, bal_addrinfo* res)
+int _bal_getaddrinfo(int f, int af, int st, const char* host, const char* port,
+    bal_addrinfo* res)
 {
     int r = BAL_FALSE;
 
@@ -833,7 +836,8 @@ int _bal_getnameinfo(int f, const bal_sockaddr* in, char* host, char* port)
 
     if (in && host) {
         socklen_t inlen = BAL_SASIZE(*in);
-        r = getnameinfo((const struct sockaddr*)in, inlen, host, NI_MAXHOST, port, NI_MAXSERV, f);
+        r = getnameinfo((const struct sockaddr*)in, inlen, host, NI_MAXHOST,
+            port, NI_MAXSERV, f);
     }
 
     if (BAL_TRUE != r && BAL_FALSE != r) {
@@ -907,12 +911,15 @@ int _bal_getlasterror(const bal_socket* s, bal_error* err)
         }
 
 #if defined(__WIN__)
-        if (0 != FormatMessage(0x00001200U, NULL, err->code, 0U, err->desc, BAL_MAXERROR, NULL))
+        if (0 != FormatMessage(0x00001200U, NULL, err->code, 0U, err->desc,
+            BAL_MAXERROR, NULL))
             r = BAL_TRUE;
 #else
-        if (err->code == EAI_AGAIN  || err->code == EAI_BADFLAGS || err->code == EAI_FAIL   ||
-            err->code == EAI_FAMILY || err->code == EAI_MEMORY   || err->code == EAI_NONAME ||
-            err->code == EAI_NODATA || err->code == EAI_SERVICE  || err->code == EAI_SOCKTYPE) {
+        if (err->code == EAI_AGAIN  || err->code == EAI_BADFLAGS ||
+            err->code == EAI_FAIL   || err->code == EAI_FAMILY   ||
+            err->code == EAI_MEMORY || err->code == EAI_NONAME   ||
+            err->code == EAI_NODATA || err->code == EAI_SERVICE  ||
+            err->code == EAI_SOCKTYPE) {
             if (0 == _bal_retstr(err->desc, gai_strerror(err->code)))
                 r = BAL_TRUE;
         } else {
@@ -948,7 +955,8 @@ int _bal_retstr(char* out, const char* in)
 
 int _bal_haspendingconnect(const bal_socket* s)
 {
-    return (s && ((s->_f & BAL_F_PENDCONN) == BAL_F_PENDCONN)) ? BAL_TRUE : BAL_FALSE;
+    return (s && ((s->_f & BAL_F_PENDCONN) == BAL_F_PENDCONN))
+        ? BAL_TRUE : BAL_FALSE;
 }
 
 int _bal_isclosedcircuit(const bal_socket* s)
@@ -964,8 +972,9 @@ int _bal_isclosedcircuit(const bal_socket* s)
         else if (-1 == rcv) {
 #if defined(__WIN__)
             int error = WSAGetLastError();
-            if (WSAENETDOWN == error  || WSAENOTCONN == error     || WSAEOPNOTSUPP == error ||
-                WSAESHUTDOWN == error || WSAECONNABORTED == error || WSAECONNRESET == error)
+            if (WSAENETDOWN == error     || WSAENOTCONN == error  ||
+                WSAEOPNOTSUPP == error   || WSAESHUTDOWN == error ||
+                WSAECONNABORTED == error || WSAECONNRESET == error)
                 r = BAL_TRUE;
 #else
             if (EBADF == errno || ENOTCONN == errno || ENOTSOCK == errno)
@@ -1062,7 +1071,8 @@ int _bal_initasyncselect(bal_thread* t, bal_mutex* m, bal_eventthread_data* td)
 
         if (BAL_TRUE == _bal_mutex_init(m)) {
 #if defined(__WIN__)
-            if (NULL != (*t = (bal_thread)_beginthreadex(NULL, 0U, _bal_eventthread, td, 0U, NULL)))
+            if (NULL != (*t = (bal_thread)_beginthreadex(NULL, 0U,
+                _bal_eventthread, td, 0U, NULL)))
                 r = BAL_TRUE;
 #else
             if (0 == pthread_create(t, NULL, _bal_eventthread, td))

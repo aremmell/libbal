@@ -27,6 +27,17 @@
 # define _BAL_H_INCLUDED
 
 # if !defined(_WIN32)
+#  if defined(__APPLE__) && defined(__MACH__)
+#   undef _DARWIN_C_SOURCE
+#   define _DARWIN_C_SOURCE
+#  elif defined(__linux__)
+#   undef _GNU_SOURCE
+#   define _GNU_SOURCE
+#  elif defined (__FreeBSD__)
+#   undef _BSD_SOURCE
+#   define _BSD_SOURCE
+#  endif
+#  undef _DEFAULT_SOURCE
 #  define _DEFAULT_SOURCE 1
 #  include <sys/types.h>
 #  include <sys/socket.h>
@@ -182,18 +193,23 @@ int bal_connectaddrlist(bal_socket* s, bal_addrlist* al);
 int bal_send(const bal_socket* s, const void* data, size_t len, int flags);
 int bal_recv(const bal_socket* s, void* data, size_t len, int flags);
 
-int bal_sendto(const bal_socket* s, const char* host, const char* port, const void* data, size_t len, int flags);
-int bal_sendtoaddr(const bal_socket* s, const bal_sockaddr* sa, const void* data, size_t len, int flags);
+int bal_sendto(const bal_socket* s, const char* host, const char* port,
+    const void* data, size_t len, int flags);
+int bal_sendtoaddr(const bal_socket* s, const bal_sockaddr* sa, const void* data,
+    size_t len, int flags);
 
-int bal_recvfrom(const bal_socket* s, void* data, size_t len, int flags, bal_sockaddr* res);
+int bal_recvfrom(const bal_socket* s, void* data, size_t len, int flags,
+    bal_sockaddr* res);
 
 int bal_bind(const bal_socket* s, const char* addr, const char* port);
 
 int bal_listen(const bal_socket* s, int backlog);
 int bal_accept(const bal_socket* s, bal_socket* res, bal_sockaddr* resaddr);
 
-int bal_getoption(const bal_socket* s, int level, int name, void* optval, socklen_t len);
-int bal_setoption(const bal_socket* s, int level, int name, const void* optval, socklen_t len);
+int bal_getoption(const bal_socket* s, int level, int name, void* optval,
+    socklen_t len);
+int bal_setoption(const bal_socket* s, int level, int name, const void* optval,
+    socklen_t len);
 
 int bal_setbroadcast(const bal_socket* s, int flag);
 int bal_getbroadcast(const bal_socket* s);
@@ -280,7 +296,8 @@ int bal_getaddrstrings(const bal_sockaddr* in, int dns, bal_addrstrings* out);
 # define BAL_S_TIME      0x0000C350u
 
 int _bal_bindany(const bal_socket* s, unsigned short port);
-int _bal_getaddrinfo(int f, int af, int st, const char* host, const char* port, bal_addrinfo* res);
+int _bal_getaddrinfo(int f, int af, int st, const char* host, const char* port,
+    bal_addrinfo* res);
 int _bal_getnameinfo(int f, const bal_sockaddr* in, char* host, char* port);
 
 const struct addrinfo* _bal_enumaddrinfo(bal_addrinfo* ai);
