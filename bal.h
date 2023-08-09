@@ -85,7 +85,7 @@ typedef HANDLE bal_mutex;
 typedef HANDLE bal_thread;
 # endif
 
-#include "version.h"
+# include "version.h"
 
 # include <stdio.h>
 # include <stdarg.h>
