@@ -95,7 +95,7 @@ int bal_asyncselect(const bal_socket* s, bal_async_callback proc, uint32_t mask)
         _bal_set_boolean(&td.die, true);
 
 #if defined(__WIN__)
-        (void)WaitForSingleObject(t, INFINITE);
+        (void)WaitForSingleObject((HANDLE)t, INFINITE);
 #else
         (void)pthread_join(t, NULL);
 #endif
@@ -202,13 +202,12 @@ void bal_reset(bal_socket* s)
     }
 }
 
-#pragma message("TODO: Convert all functions that return a value from the underlying library to this type of configuration")
 int bal_close(bal_socket* s)
 {
     int r = BAL_FALSE;
 
-#if defined(__WIN__)
     if (s) {
+#if defined(__WIN__)
         if (0 == closesocket(s->sd)) {
             bal_reset(s);
             r = BAL_TRUE;
@@ -217,7 +216,6 @@ int bal_close(bal_socket* s)
         r = SOCKET_ERROR;
     }
 #else
-    if (s) {
         if (0 == close(s->sd)) {
             bal_reset(s);
             r = BAL_TRUE;
@@ -227,7 +225,8 @@ int bal_close(bal_socket* s)
     }
 #endif
 
-    s->_f &= ~(BAL_F_PENDCONN | BAL_F_LISTENING);
+    if (s)
+        s->_f &= ~(BAL_F_PENDCONN | BAL_F_LISTENING);
 
     return r;
 }
@@ -239,11 +238,20 @@ int bal_shutdown(bal_socket* s, int how)
     if (s) {
         r = shutdown(s->sd, how);
         if (0 == r) {
-            if (how == SHUT_RDWR)
+#if defined(__WIN__)
+            int RDWR  = SD_BOTH;
+            int READ  = SD_RECEIVE;
+            int WRITE = SD_SEND;
+#else
+            int RDWR  = SHUT_RDWR;
+            int READ  = SHUT_RD;
+            int WRITE = SHUT_WR;
+#endif
+            if (how == RDWR)
                 s->_f &= ~(BAL_F_PENDCONN | BAL_F_LISTENING);
-            else if (how == SHUT_RD)
+            else if (how == READ)
                 s->_f &= ~BAL_F_LISTENING;
-            else if (how == SHUT_WR)
+            else if (how == WRITE)
                 s->_f &= ~BAL_F_PENDCONN;
         }
     }
@@ -324,7 +332,8 @@ int bal_sendto(const bal_socket* s, const char* host, const char* port,
     if (s && _bal_validstr(host) && _bal_validstr(port) && data && len) {
         bal_addrinfo ai = {NULL, NULL};
 
-        if (BAL_TRUE == _bal_getaddrinfo(0, PF_UNSPEC, SOCK_DGRAM, host, port, &ai)) {
+        if (BAL_TRUE == _bal_getaddrinfo(0, PF_UNSPEC, SOCK_DGRAM, host, port, &ai) &&
+            NULL != ai._ai) {
             r = bal_sendtoaddr(s, (const bal_sockaddr*)ai._ai->ai_addr, data, len, flags);
             freeaddrinfo(ai._ai);
         }
@@ -1136,7 +1145,7 @@ int _bal_initasyncselect(bal_thread* t, bal_mutex* m, bal_eventthread_data* td)
 #endif
         if (BAL_TRUE == _bal_mutex_init(m)) {
 #if defined(__WIN__)
-            *t = _beginthreadex(NULL, 0u, _bal_eventthread, td, 0u, NULL)
+            *t = _beginthreadex(NULL, 0u, _bal_eventthread, td, 0u, NULL);
             if (0ull != *t)
                 r = BAL_TRUE;
 #else
@@ -1455,23 +1464,49 @@ int _bal_mutex_destroy(bal_mutex* m)
     return r;
 }
 
-bool _bal_get_boolean(void* maybe_atomic_boolean)
-{
 #if defined(__HAVE_STDATOMICS__)
-    return atomic_load((_Atomic bool*)maybe_atomic_boolean);
-#else
-    return (*(bool*)maybe_atomic_boolean)
-#endif
+bool _bal_get_boolean(atomic_bool* boolean)
+{
+    bool retval = false;
+
+    if (boolean)
+        retval = atomic_load(boolean);
+
+    return retval;
 }
 
-void _bal_set_boolean(void* maybe_atomic_boolean, bool value)
+void _bal_set_boolean(atomic_bool* boolean, bool value)
 {
-#if defined(__HAVE_STDATOMICS__)
-    atomic_store((_Atomic bool*)maybe_atomic_boolean, value);
-#else
-    (*(bool*)maybe_atomic_boolean) = value;
-#endif
+    if (boolean)
+        atomic_store(boolean, value);
 }
+#else
+bool _bal_get_boolean(bool* boolean)
+{
+    bool retval = false;
+
+    if (boolean)
+        retval = *boolean;
+
+    return retval;
+}
+
+void _bal_set_boolean(bool* boolean, bool value)
+{
+    if (boolean)
+        *boolean = value;
+}
+#endif
+
+void _bal_yield_thread()
+{
+#if defined(__WIN__)
+    Sleep(1);
+#else
+    int yield = sched_yield();
+    assert(0 == yield);
+#endif
+    }
 
 bool _bal_once(bal_once* once, bal_once_fn func)
 {

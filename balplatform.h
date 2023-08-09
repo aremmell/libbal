@@ -73,9 +73,10 @@
 #  define __HAVE_STDATOMICS__
 #  endif
 
+#  define BAL_SOCKET_SPEC "%d"
+
 typedef int bal_descriptor;
 typedef pthread_mutex_t bal_mutex;
-typedef pthread_cond_t bal_condition;
 typedef pthread_t bal_thread;
 
 /** The one-time type. */
@@ -112,9 +113,10 @@ typedef void (*bal_once_fn)(void);
 #  define WSOCK_MAJVER 2
 #  define WSOCK_MINVER 2
 
+#  define BAL_SOCKET_SPEC "%llu"
+
 typedef SOCKET bal_descriptor;
 typedef CRITICAL_SECTION bal_mutex;
-typdedef CONDITION_VARIBLE bal_condition;
 typedef uintptr_t bal_thread;
 
 /** The one-time type. */

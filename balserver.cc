@@ -56,8 +56,7 @@ int main(int argc, char** argv)
         balcommon::localaddr, balcommon::portnum);
 
     do {
-        int yield = sched_yield();
-        assert(0 == yield);
+        _bal_yield_thread();
     } while (balcommon::should_run());
 
     ret = bal_close(&s);
@@ -97,9 +96,9 @@ void balserver::async_events_cb(bal_socket* s, uint32_t events)
             return;
         }
 
-        printf("[%d] got connection from %s %s:%s; sd = %d\n", s->sd,
-            client_strings.type, client_strings.ip, client_strings.port,
-            client_socket.sd);
+        printf("[" BAL_SOCKET_SPEC "] got connection from %s %s:%s; sd = "
+               BAL_SOCKET_SPEC "\n", s->sd, client_strings.type, client_strings.ip,
+               client_strings.port, client_socket.sd);
     }
 
     static bool sent_reply = false;
@@ -110,28 +109,26 @@ void balserver::async_events_cb(bal_socket* s, uint32_t events)
         int read = bal_recv(s, &read_buf[0], 2047, 0);
         if (read > 0) {
             sent_reply = false;
-            printf("[%d] read %d bytes: '%s'\n", s->sd, read, read_buf);
+            printf("[" BAL_SOCKET_SPEC "] read %d bytes: '%s'\n", s->sd, read, read_buf);
 
             if (bal_iswritable(s) && !sent_reply) {
-                if (!sent_reply) {
-                    int sent = bal_send(s, reply, 11, 0u);
-                    if (sent > 0) {
-                        sent_reply = true;
-                        printf("[%d] wrote %d bytes\n", s->sd, 11);
-                    }
+                int sent = bal_send(s, reply, 11, 0u);
+                if (sent > 0) {
+                    sent_reply = true;
+                    printf("[" BAL_SOCKET_SPEC "] wrote %d bytes\n", s->sd, 11);
                 }
             }
         } else
-            printf("[%d] read error %d!\n", s->sd, bal_geterror(s));
+            printf("[" BAL_SOCKET_SPEC "] read error %d!\n", s->sd, bal_geterror(s));
     }
 
     if (bal_isbitset(events, BAL_E_CLOSE)) {
-        printf("[%d] connection closed.\n", s->sd);
+        printf("[" BAL_SOCKET_SPEC "] connection closed.\n", s->sd);
         bal_close(s);
     }
 
     if (bal_isbitset(events, BAL_E_EXCEPTION)) {
-        printf("[%d] error: got exception condition! err: %d\n", s->sd,
+        printf("[" BAL_SOCKET_SPEC "] error: got exception condition! err: %d\n", s->sd,
             bal_geterror(s));
         return;
     }

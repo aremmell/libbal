@@ -173,8 +173,15 @@ int _bal_mutex_lock(bal_mutex* m);
 int _bal_mutex_unlock(bal_mutex* m);
 int _bal_mutex_destroy(bal_mutex* m);
 
-bool _bal_get_boolean(void* maybe_atomic_boolean);
-void _bal_set_boolean(void* maybe_atomic_boolean, bool value);
+#if defined(__HAVE_STDATOMICS__)
+bool _bal_get_boolean(atomic_bool* boolean);
+void _bal_set_boolean(atomic_bool* boolean, bool value);
+#else
+bool _bal_get_boolean(bool* boolean);
+void _bal_set_boolean(bool* boolean, bool value);
+#endif
+
+void _bal_yield_thread();
 
 bool _bal_once(bal_once* once, bal_once_fn func);
 
