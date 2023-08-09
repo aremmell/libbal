@@ -1,9 +1,22 @@
-cmake_minimum_required(VERSION 3.24.0)
+cmake_minimum_required(
+    VERSION 3.0.0...3.27.1
+)
 
 # variables
-set(PROJECT_NAME bal)
+set(PROJECT_NAME libbal)
+set(CLIENT_EXECUTABLE_NAME balclient)
+set(SERVER_EXECUTABLE_NAME balserver)
+set(STATIC_LIBRARY_NAME bal_static)
+set(SHARED_LIBRARY_NAME bal_shared)
+
+# "-dev" if this is a development build, empty if it is a release build.
+set(PROJECT_VERSION_SUFFIX, "-dev")
+
+# true if this is a development build, false if it is a release build.
+set(PROJECT_IS_DEV_BUILD true)
 
 # policy settings, so CMake doesn't whine.
+cmake_policy(SET CMP0025 NEW) # AppleClang
 cmake_policy(SET CMP0048 NEW) # project VERSION
 cmake_policy(SET CMP0065 NEW) # ENABLE_EXPORTS
 cmake_policy(SET CMP0126 NEW) # cache
@@ -12,12 +25,9 @@ cmake_policy(SET CMP0066 NEW) # CMAKE_<LANG>_FLAGS_<BUILDTYPE>
 cmake_policy(SET CMP0102 NEW) # mark_as_advanced
 
 # toolchain-related
-set(C_FLAGS_BASE "-Wall -Wextra -Wpedantic -Werror -fPIC")
+set(C_FLAGS_BASE "-Wall -Wextra -Wpedantic -Werror")
 set(CMAKE_C_FLAGS_DEBUG "${C_FLAGS_BASE} -g3 -O0 -DDEBUG")
 set(CMAKE_C_FLAGS_RELEASE "${C_FLAGS_BASE} -O3 -D_FORTIFY_SOURCE=2 -DNDEBUG")
-set(CMAKE_LDFLAGS_BASE "-L. -lbal")
-set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_LDFLAGS_BASE}")
-set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_LDFLAGS_BASE}")
 
 # define the project
 project(
@@ -27,55 +37,108 @@ project(
     DESCRIPTION "Berkeley Abstraction Layer"
 )
 
-#execute_process(
-#    COMMAND git rev-parse --short --verify HEAD
-#    OUTPUT_VARIABLE GIT_COMMIT_HASH
-#    OUTPUT_STRIP_TRAILING_WHITESPACE
-#    ECHO_OUTPUT_VARIABLE
-#    COMMAND_ERROR_IS_FATAL ANY
-#)
+execute_process(
+    COMMAND git rev-parse --short --verify HEAD
+    OUTPUT_VARIABLE GIT_COMMIT_HASH
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    ECHO_OUTPUT_VARIABLE
+    COMMAND_ERROR_IS_FATAL ANY
+)
 
-#configure_file(
-#    version.h.in
-#    include/version.h
-#    NEWLINE_STYLE LF
-#)
+configure_file(
+    version.h.in
+    include/version.h
+    NEWLINE_STYLE LF
+)
 
 add_executable(
-    balcli
-    main.cc
+    ${CLIENT_EXECUTABLE_NAME}
+    balclient.cc
+)
+
+add_executable(
+    ${SERVER_EXECUTABLE_NAME}
+    balserver.cc
 )
 
 add_library(
-    bal
+    ${STATIC_LIBRARY_NAME}
     STATIC
+    bal.c
+)
+
+add_library(
+    ${SHARED_LIBRARY_NAME}
+    SHARED
     bal.c
 )
 
 if(WIN32)
     add_library(libcmt.lib STATIC IMPORTED)
     add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
+else()
+    set_target_properties(${STATIC_LIBRARY_NAME} PROPERTIES OUTPUT_NAME ${PROJECT_NAME})
+    set_target_properties(${SHARED_LIBRARY_NAME} PROPERTIES OUTPUT_NAME ${PROJECT_NAME})
 endif()
 
 target_include_directories(
-    ${PROJECT_NAME}
+    ${STATIC_LIBRARY_NAME}
     PUBLIC
     .
+    ${CMAKE_CURRENT_BINARY_DIR}/include
+)
+
+target_include_directories(
+    ${SHARED_LIBRARY_NAME}
+    PUBLIC
+    .
+    ${CMAKE_CURRENT_BINARY_DIR}/include
 )
 
 target_link_libraries(
-    ${PROJECT_NAME}
-    ${CMAKE_CURRENT_BINARY_DIR}/libbal.a
+    ${CLIENT_EXECUTABLE_NAME}
+    ${STATIC_LIBRARY_NAME}
+)
+
+target_link_libraries(
+    ${SERVER_EXECUTABLE_NAME}
+    ${STATIC_LIBRARY_NAME}
 )
 
 target_compile_features(
-    ${PROJECT_NAME}
+    ${CLIENT_EXECUTABLE_NAME}
     PUBLIC
-    c_std_11
+    c_std_17
+)
+
+target_compile_features(
+    ${SERVER_EXECUTABLE_NAME}
+    PUBLIC
+    c_std_17
+)
+
+target_compile_features(
+    ${STATIC_LIBRARY_NAME}
+    PUBLIC
+    c_std_17
+)
+
+target_compile_features(
+    ${SHARED_LIBRARY_NAME}
+    PUBLIC
+    c_std_17
 )
 
 install(
-    PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}
-    TYPE BIN
+    TARGETS ${STATIC_LIBRARY_NAME} ${SHARED_LIBRARY_NAME}
+    DESTINATION lib
+    PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+    CONFIGURATIONS Release
+)
+
+install(
+    FILES bal.h include/version.h
+    DESTINATION include/libbal
+    PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
     CONFIGURATIONS Release
 )

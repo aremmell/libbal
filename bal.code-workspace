@@ -60,7 +60,9 @@
 			"chrono": "cpp",
 			"compare": "cpp",
 			"concepts": "cpp",
-			"algorithm": "cpp"
+			"algorithm": "cpp",
+			"*.in": "cpp",
+			"iomanip": "cpp"
 		}
 	}
 }

@@ -26,12 +26,8 @@
 #ifndef _BAL_H_INCLUDED
 # define _BAL_H_INCLUDED
 
-# include <stdio.h>
-# include <stdarg.h>
-# include <stdbool.h>
-# include <stdint.h>
-
 # if !defined(_WIN32)
+#  define _DEFAULT_SOURCE 1
 #  include <sys/types.h>
 #  include <sys/socket.h>
 #  include <sys/select.h>
@@ -46,23 +42,28 @@
 #  include <string.h>
 #  include <pthread.h>
 #  include <sched.h>
+#  include <stdatomic.h>
 
 #  if defined(__sun)
 #   include <sys/filio.h>
 #   include <stropts.h>
 #  endif
 
-typedef int bal_socket;
+#  undef __HAVE_ATOMIC_H__
+#  define __HAVE_ATOMIC_H__
+
+typedef int bal_descriptor;
 typedef pthread_mutex_t bal_mutex;
 typedef pthread_t bal_thread;
 
-# else /* __WIN__ */
+# else /* _WIN32 */
 #  define __WIN__
 #  include <winsock2.h>
 #  include <ws2tcpip.h>
 #  include <process.h>
 #  include <time.h>
-#  include <tchar.h>
+
+#  undef __HAVE_ATOMIC_H__
 
 #  define WSOCK_MAJVER 2
 #  define WSOCK_MINVER 2
@@ -72,20 +73,26 @@ typedef HANDLE bal_mutex;
 typedef HANDLE bal_thread;
 # endif
 
+#include "version.h"
+
+# include <stdio.h>
+# include <stdarg.h>
+# include <stdbool.h>
+# include <stdint.h>
+
 typedef char bchar, *bstr;
 typedef const char* cbstr;
 
-# define BAL_TRUE 0
-# define BAL_FALSE -1
-# define BAL_ERROR BAL_FALSE
+# define BAL_TRUE     0
+# define BAL_FALSE    -1
 # define BAL_MAXERROR 1024
 
 # define BAL_AS_UNKNWN "<unknown>"
 # define BAL_AS_IPV6   "IPv6"
 # define BAL_AS_IPV4   "IPv4"
 
-# define BAL_F_PENDCONN 0x00000001UL
-# define BAL_F_CLOSELCL 0x00000002UL
+# define BAL_F_PENDCONN 0x00000001u
+# define BAL_F_CLOSELCL 0x00000002u
 
 # define BAL_BADSOCKET -1
 
@@ -108,9 +115,9 @@ typedef struct {
     struct addrinfo* _p;
 } bal_addrinfo;
 
-typedef struct bal_addr {
+typedef struct _bal_addr {
     bal_sockaddr _sa;
-    struct bal_addr* _n;
+    struct _bal_addr* _n;
 } bal_addr;
 
 typedef struct {
@@ -258,21 +265,21 @@ int bal_getaddrstrings(const bal_sockaddr* in, int dns, bal_addrstrings* out);
 # define BAL_NI_NODNS (NI_NUMERICHOST | NI_NUMERICSERV)
 # define BAL_NI_DNS   (NI_NAMEREQD | NI_NUMERICSERV)
 
-# define BAL_E_READ      0x00000001
-# define BAL_E_WRITE     0x00000002
-# define BAL_E_CONNECT   0x00000004
-# define BAL_E_ACCEPT    0x00000008
-# define BAL_E_CLOSE     0x00000010
-# define BAL_E_CONNFAIL  0x00000020
-# define BAL_E_EXCEPTION 0x00000040
-# define BAL_E_ALL       0x0000007F
+# define BAL_E_READ      0x00000001u
+# define BAL_E_WRITE     0x00000002u
+# define BAL_E_CONNECT   0x00000004u
+# define BAL_E_ACCEPT    0x00000008u
+# define BAL_E_CLOSE     0x00000010u
+# define BAL_E_CONNFAIL  0x00000020u
+# define BAL_E_EXCEPTION 0x00000040u
+# define BAL_E_ALL       0x0000007Fu
 
-# define BAL_S_DIE       0x0D1E0D1E
-# define BAL_S_CONNECT   0x10000000
-# define BAL_S_READ      0x00000001
-# define BAL_S_WRITE     0x00000002
-# define BAL_S_EXCEPT    0x00000003
-# define BAL_S_TIME      0x0000C350
+# define BAL_S_DIE       0x0D1E0D1Eu
+# define BAL_S_CONNECT   0x10000000u
+# define BAL_S_READ      0x00000001u
+# define BAL_S_WRITE     0x00000002u
+# define BAL_S_EXCEPT    0x00000003u
+# define BAL_S_TIME      0x0000C350u
 
 int _bal_bindany(const bal_socket* s, unsigned short port);
 int _bal_getaddrinfo(int f, int af, int st, cbstr host, cbstr port, bal_addrinfo* res);
@@ -310,7 +317,7 @@ bal_selectdata* _bal_sdl_find(const bal_selectdata_list* sdl, bal_descriptor sd)
 int _bal_mutex_init(bal_mutex* m);
 int _bal_mutex_lock(bal_mutex* m);
 int _bal_mutex_unlock(bal_mutex* m);
-int _bal_mutex_free(bal_mutex* m);
+int _bal_mutex_destroy(bal_mutex* m);
 
 # if defined(__cplusplus)
 }

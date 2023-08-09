@@ -77,7 +77,7 @@ int bal_asyncselect(const bal_socket* s, bal_async_callback proc, uint32_t mask)
     if (BAL_S_DIE == mask) {
         td.die = 1;
 
-        if (BAL_TRUE == _bal_mutex_free(&m)) {
+        if (BAL_TRUE == _bal_mutex_destroy(&m)) {
             if (BAL_TRUE == _bal_sdl_clr(&l)) {
                 t = NULL;
                 r = BAL_TRUE;
@@ -872,7 +872,7 @@ int _bal_aitoal(bal_addrinfo* in, bal_addrlist* out)
         in->_p = in->_ai;
 
         while (NULL != (ai = _bal_enumaddrinfo(in))) {
-            *a = (bal_addr*)calloc(1ul, sizeof(bal_addr));
+            *a = calloc(1ul, sizeof(bal_addr));
 
             if (!*a) {
                 r = BAL_FALSE;
@@ -1353,7 +1353,7 @@ int _bal_mutex_unlock(bal_mutex* m)
     return r;
 }
 
-int _bal_mutex_free(bal_mutex* m)
+int _bal_mutex_destroy(bal_mutex* m)
 {
     int r = BAL_FALSE;
 
