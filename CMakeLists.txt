@@ -3,7 +3,7 @@ cmake_minimum_required(
 )
 
 # variables
-set(PROJECT_NAME libbal)
+set(PROJECT_NAME bal)
 set(CLIENT_EXECUTABLE_NAME balclient)
 set(SERVER_EXECUTABLE_NAME balserver)
 set(STATIC_LIBRARY_NAME bal_static)
