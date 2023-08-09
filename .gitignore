@@ -4,6 +4,7 @@
 # Libraries
 *.lib
 *.a
+*.dylib
 
 # Shared objects (inc. Windows DLLs)
 *.dll
@@ -18,3 +19,6 @@
 
 # Build artifacts
 build/
+
+# Visual Studio files
+.vs/
