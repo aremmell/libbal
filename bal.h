@@ -70,12 +70,18 @@ typedef pthread_t bal_thread;
 
 # else /* _WIN32 */
 #  define __WIN__
+#  define _CRT_SECURE_NO_WARNINGS
 #  include <winsock2.h>
 #  include <ws2tcpip.h>
 #  include <process.h>
 #  include <time.h>
 
 #  undef __HAVE_ATOMIC_H__
+
+# if _MSC_VER >= 1933
+#  include <stdatomic.h>
+#  define __HAVE_ATOMIC_H__
+# endif
 
 #  define WSOCK_MAJVER 2
 #  define WSOCK_MINVER 2

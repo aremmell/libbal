@@ -52,7 +52,6 @@
             "displayName": "Build: default",
             "configurePreset": "default",
             "cleanFirst": true,
-            "jobs": 0,
             "verbose": true
         },
         {

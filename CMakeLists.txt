@@ -25,9 +25,15 @@ cmake_policy(SET CMP0066 NEW) # CMAKE_<LANG>_FLAGS_<BUILDTYPE>
 cmake_policy(SET CMP0102 NEW) # mark_as_advanced
 
 # toolchain-related
-set(C_FLAGS_BASE "-Wall -Wextra -Wpedantic -Werror")
-set(CMAKE_C_FLAGS_DEBUG "${C_FLAGS_BASE} -g3 -O0 -DDEBUG")
-set(CMAKE_C_FLAGS_RELEASE "${C_FLAGS_BASE} -O3 -D_FORTIFY_SOURCE=2 -DNDEBUG")
+if (WIN32)
+    set(C_FLAGS_BASE "/experimental:c11atomics")
+    set(CMAKE_C_FLAGS_DEBUG "${C_FLAGS_BASE} ${CMAKE_C_FLAGS}")
+    set(CMAKE_C_FLAGS_RELEASE "${C_FLAGS_BASE} ${CMAKE_C_FLAGS}")
+else()
+    set(C_FLAGS_BASE "-Wall -Wextra -Wpedantic -Werror")
+    set(CMAKE_C_FLAGS_DEBUG "${C_FLAGS_BASE} -g3 -O0 -DDEBUG")
+    set(CMAKE_C_FLAGS_RELEASE "${C_FLAGS_BASE} -O3 -D_FORTIFY_SOURCE=2 -DNDEBUG")
+endif()
 
 # define the project
 project(
@@ -73,10 +79,7 @@ add_library(
     bal.c
 )
 
-if(WIN32)
-    add_library(libcmt.lib STATIC IMPORTED)
-    add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
-else()
+if(!WIN32)
     set_target_properties(${STATIC_LIBRARY_NAME} PROPERTIES OUTPUT_NAME ${PROJECT_NAME})
     set_target_properties(${SHARED_LIBRARY_NAME} PROPERTIES OUTPUT_NAME ${PROJECT_NAME})
 endif()
