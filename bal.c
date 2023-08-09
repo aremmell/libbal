@@ -255,7 +255,7 @@ int bal_connectaddrlist(bal_socket* s, bal_addrlist* al)
 #if defined(__WIN__)
                 if (!r || (-1 == r && WSAEWOULDBLOCK == WSAGetLastError())) {
 #else
-                if (!r || (-1 == r && EWOULDBLOCK == errno)) {
+                if (!r || (-1 == r && EAGAIN == errno)) {
 #endif
                     s->_f |= BAL_F_PENDCONN;
                     r = BAL_TRUE;
@@ -611,16 +611,17 @@ int bal_iswritable(const bal_socket* s)
 int bal_setiomode(const bal_socket* s, bool async)
 {
 #if defined(__WIN__)
-    unsigned long flag = async ? 1 : 0;
+    unsigned long flag = async ? 1ul : 0ul;
     return ((NULL != s) ? ioctlsocket(s->sd, FIONBIO, &flag) : BAL_FALSE);
 #else
-    return ((NULL != s) ? fcntl(s->sd, F_SETFL, async ? O_NONBLOCK : 0) : BAL_FALSE);
+    uint32_t flag = async ? O_NONBLOCK : 0u;
+    return ((NULL != s) ? fcntl(s->sd, F_SETFL, flag) : BAL_FALSE);
 #endif
 }
 
 size_t bal_recvqueuesize(const bal_socket* s)
 {
-    size_t r = 0UL;
+    size_t r = 0ul;
 
     if (s) {
 #if defined(__WIN__)
