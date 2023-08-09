@@ -133,6 +133,7 @@ bool bal_isbitset(uint32_t bitmask, uint32_t bit)
     return (bitmask & bit) == bit;
 }
 
+
 /*─────────────────────────────────────────────────────────────────────────────╮
 │                             Internal functions                               │
 ╰─────────────────────────────────────────────────────────────────────────────*/
@@ -147,9 +148,10 @@ const struct addrinfo* _bal_enumaddrinfo(bal_addrinfo* ai);
 int _bal_aitoal(bal_addrinfo* in, bal_addrlist* out);
 
 int _bal_getlasterror(const bal_socket* s, bal_error* err);
-void _bal_setlasterror(int err);
+void __bal_setlasterror(int err, const char* func, const char* file, int line);
+# define _bal_setlasterror(err) __bal_setlasterror(err, __func__, __file__, __LINE__);
 
-int _bal_retstr(char* out, const char* in);
+int _bal_retstr(char* out, const char* in, size_t destlen);
 
 int _bal_haspendingconnect(const bal_socket* s);
 int _bal_isclosedcircuit(const bal_socket* s);
@@ -170,6 +172,9 @@ int _bal_mutex_init(bal_mutex* m);
 int _bal_mutex_lock(bal_mutex* m);
 int _bal_mutex_unlock(bal_mutex* m);
 int _bal_mutex_destroy(bal_mutex* m);
+
+bool _bal_get_boolean(void* maybe_atomic_boolean);
+void _bal_set_boolean(void* maybe_atomic_boolean, bool value);
 
 bool _bal_once(bal_once* once, bal_once_fn func);
 

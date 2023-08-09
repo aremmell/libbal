@@ -37,7 +37,7 @@
 
 bal_once _bal_asyncselect_once = BAL_ONCE_INIT;
 
-#if !defined(__STDC_NO_ATOMICS__)
+#if defined(__HAVE_STDATOMICS__)
     atomic_bool _bal_asyncselect_init;
 #else
     volatile bool _bal_asyncselect_init = false;
@@ -72,10 +72,9 @@ int bal_finalize(void)
 
 #if defined(__WIN__)
     (void)WSACleanup();
-    r = bal_asyncselect(NULL, NULL, BAL_S_DIE);
-#else
-    r = bal_asyncselect(NULL, NULL, BAL_S_DIE);
 #endif
+
+    r = bal_asyncselect(NULL, NULL, BAL_S_DIE);
 
     return r;
 }
@@ -93,42 +92,27 @@ int bal_asyncselect(const bal_socket* s, bal_async_callback proc, uint32_t mask)
 
     int r = BAL_FALSE;
     if (BAL_S_DIE == mask) {
-#if !defined(__STDC_NO_ATOMICS__)
-        atomic_store(&td.die, true);
-#else
-        td.die = true;
-#endif
-        if (BAL_TRUE == _bal_mutex_destroy(&m)) {
-            if (BAL_TRUE == _bal_sdl_clr(&l)) {
-#if !defined(__STDC_NO_ATOMICS__)
-                atomic_store(&_bal_asyncselect_init, false);
-#else
-                _bal_asyncselect_init = false;
-#endif
+        _bal_set_boolean(&td.die, true);
 
 #if defined(__WIN__)
-                (void)WaitForSingleObject(t, INFINITE);
+        (void)WaitForSingleObject(t, INFINITE);
 #else
-                (void)pthread_join(t, NULL);
+        (void)pthread_join(t, NULL);
 #endif
+
+        if (BAL_TRUE == _bal_mutex_destroy(&m)) {
+            if (BAL_TRUE == _bal_sdl_clr(&l)) {
+                _bal_set_boolean(&_bal_asyncselect_init, false);
                 return r = BAL_TRUE;
             }
         }
     }
 
     if (s && proc) {
-#if !defined(__STDC_NO_ATOMICS__)
-        if (!atomic_load(&_bal_asyncselect_init)) {
-#else
-        if (!_bal_asyncselect_init) {
-#endif
+        if (!_bal_get_boolean(&_bal_asyncselect_init)) {
             if (BAL_FALSE == _bal_initasyncselect(&t, &m, &td))
                 return r = BAL_FALSE;
-#if !defined(__STDC_NO_ATOMICS__)
-            atomic_store(&_bal_asyncselect_init, true);
-#else
-            _bal_asyncselect_init = true;
-#endif
+            _bal_set_boolean(&_bal_asyncselect_init, true);
         }
 
         if (BAL_TRUE == _bal_mutex_lock(&m)) {
@@ -827,10 +811,8 @@ int bal_getaddrstrings(const bal_sockaddr* in, bool dns, bal_addrstrings* out)
         if (BAL_TRUE == _bal_getnameinfo(BAL_NI_NODNS, in, out->ip, out->port)) {
             if (dns) {
                 int get = _bal_getnameinfo(BAL_NI_DNS, in, out->host, out->port);
-                if (BAL_FALSE == get) {
-                    strncpy(out->host, BAL_AS_UNKNWN, NI_MAXHOST - 1);
-                    out->host[NI_MAXHOST - 1] = '\0';
-                }
+                if (BAL_FALSE == get)
+                    (void)_bal_retstr(out->host, BAL_AS_UNKNWN, NI_MAXHOST);
             }
 
             if (PF_INET == ((struct sockaddr*)in)->sa_family)
@@ -973,10 +955,11 @@ int _bal_getlasterror(const bal_socket* s, bal_error* err)
             err->code == EAI_MEMORY || err->code == EAI_NONAME   ||
             err->code == EAI_NODATA || err->code == EAI_SERVICE  ||
             err->code == EAI_SOCKTYPE) {
-            if (0 == _bal_retstr(err->desc, gai_strerror(err->code)))
+            if (0 == _bal_retstr(err->desc, gai_strerror(err->code), BAL_MAXERROR))
                 r = BAL_TRUE;
         } else {
-            if (0 == _bal_retstr(err->desc, (const char*)strerror(err->code)))
+            if (0 == _bal_retstr(err->desc, (const char*)strerror(err->code),
+                BAL_MAXERROR))
                 r = BAL_TRUE;
         }
 #endif
@@ -985,21 +968,38 @@ int _bal_getlasterror(const bal_socket* s, bal_error* err)
     return r;
 }
 
-void _bal_setlasterror(int err)
+void __bal_setlasterror(int err, const char* func, const char* file, int line)
 {
 #if defined(__WIN__)
     WSASetLastError(err);
 #else
     errno = err;
 #endif
+
+#ifdef DEBUG
+    bal_error lasterr = {0};
+    int get_err = _bal_getlasterror(NULL, &lasterr);
+
+    if (BAL_TRUE != get_err) {
+#if defined(__WIN__)
+        lasterr.code = WSAGetLastError();
+#else
+        lasterr.code = errno;
+#endif
+        strncpy(lasterr.desc, BAL_AS_UNKNWN, strlen(BAL_AS_UNKNWN));
+    }
+
+    fprintf(stderr, "%s %s:%d error: %d (%s)\n", func, file, line,
+        lasterr.code, lasterr.desc);
+#endif
 }
 
-int _bal_retstr(char* out, const char* in)
+int _bal_retstr(char* out, const char* in, size_t destlen)
 {
     int r = BAL_FALSE;
 
-    strncpy(out, in, BAL_MAXERROR - 1);
-    out[BAL_MAXERROR - 1] = '\0';
+    strncpy(out, in, destlen - 1);
+    out[destlen - 1] = '\0';
     r = BAL_TRUE;
 
     return r;
@@ -1046,17 +1046,19 @@ BALTHREAD _bal_eventthread(void* p)
 {
     bal_eventthread_data* td = (bal_eventthread_data*)p;
 
-    if (td) {
+    if (!td) {
+#if defined(__WIN__)
+        return 1u;
+#else
+        return (void*)1;
+#endif
+    }
         bal_selectdata* t = NULL;
         fd_set r = {0};
         fd_set w = {0};
         fd_set e = {0};
 
-#if !defined(__STDC_NO_ATOMICS__)
-        while (!atomic_load(&td->die)) {
-#else
-        while (!td->die) {
-#endif
+        while (!_bal_get_boolean(&td->die)) {
             if (BAL_TRUE == _bal_mutex_lock(td->m)) {
                 int size = _bal_sdl_size(td->sdl);
 
@@ -1099,7 +1101,9 @@ BALTHREAD _bal_eventthread(void* p)
                     }
                 }
 
-                _bal_mutex_unlock(td->m);
+                int unlock = _bal_mutex_unlock(td->m);
+                assert(BAL_TRUE == unlock);
+                BAL_UNUSED(unlock);
             }
 
             FD_ZERO(&r);
@@ -1112,13 +1116,6 @@ BALTHREAD _bal_eventthread(void* p)
             sched_yield();
 #endif
         }
-    } else {
-#if defined(__WIN__)
-        return 1u;
-#else
-        return (void*)1;
-#endif
-    }
 
 #if defined(__WIN__)
     return 0u;
@@ -1132,7 +1129,7 @@ int _bal_initasyncselect(bal_thread* t, bal_mutex* m, bal_eventthread_data* td)
     int r = BAL_FALSE;
 
     if (t && m && td) {
-#if !defined(__STDC_NO_ATOMICS__)
+#if defined(__HAVE_STDATOMICS__)
         atomic_init(&td->die, false);
 #else
         td->die = false;
@@ -1413,7 +1410,8 @@ int _bal_mutex_lock(bal_mutex* m)
         EnterCriticalSection(m);
         r = BAL_TRUE;
 #else
-        if (0 == pthread_mutex_lock(m))
+        int op = pthread_mutex_lock(m);
+        if (0 == op)
             r = BAL_TRUE;
 #endif
     }
@@ -1430,7 +1428,8 @@ int _bal_mutex_unlock(bal_mutex* m)
         LeaveCriticalSection(m);
         r = BAL_TRUE;
 #else
-        if (0 == pthread_mutex_unlock(m))
+        int op = pthread_mutex_unlock(m);
+        if (0 == op)
             r = BAL_TRUE;
 #endif
     }
@@ -1447,12 +1446,31 @@ int _bal_mutex_destroy(bal_mutex* m)
         DeleteCriticalSection(m);
         r = BAL_TRUE;
 #else
-        if (0 == pthread_mutex_destroy(m))
+        int op = pthread_mutex_destroy(m);
+        if (0 == op)
             r = BAL_TRUE;
 #endif
     }
 
     return r;
+}
+
+bool _bal_get_boolean(void* maybe_atomic_boolean)
+{
+#if defined(__HAVE_STDATOMICS__)
+    return atomic_load((_Atomic bool*)maybe_atomic_boolean);
+#else
+    return (*(bool*)maybe_atomic_boolean)
+#endif
+}
+
+void _bal_set_boolean(void* maybe_atomic_boolean, bool value)
+{
+#if defined(__HAVE_STDATOMICS__)
+    atomic_store((_Atomic bool*)maybe_atomic_boolean, value);
+#else
+    (*(bool*)maybe_atomic_boolean) = value;
+#endif
 }
 
 bool _bal_once(bal_once* once, bal_once_fn func)
@@ -1470,7 +1488,7 @@ BOOL CALLBACK _bal_static_once_init(PINIT_ONCE ponce, PVOID param, PVOID* ctx)
     BAL_UNUSED(ponce);
     BAL_UNUSED(param);
     BAL_UNUSED(ctx);
-#if !defined(__STDC_NO_ATOMICS__)
+#if defined(__HAVE_STDATOMICS__)
     atomic_init(&_bal_asyncselect_init, false);
 #else
     _bal_asyncselect_init = false;
@@ -1480,7 +1498,7 @@ BOOL CALLBACK _bal_static_once_init(PINIT_ONCE ponce, PVOID param, PVOID* ctx)
 #else
 void _bal_static_once_init(void)
 {
-#if !defined(__STDC_NO_ATOMICS__)
+#if defined(__HAVE_STDATOMICS__)
     atomic_init(&_bal_asyncselect_init, false);
 #else
     _bal_asyncselect_init = false;

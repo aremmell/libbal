@@ -70,7 +70,8 @@
 			"clocale": "cpp",
 			"complex": "cpp",
 			"mutex": "cpp",
-			"system_error": "cpp"
+			"system_error": "cpp",
+			"stdatomic.h": "c"
 		}
 	}
 }

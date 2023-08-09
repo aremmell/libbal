@@ -67,7 +67,7 @@ typedef struct {
     char desc[BAL_MAXERROR];
 } bal_error;
 
-typedef void (*bal_async_callback)(const bal_socket*, uint32_t);
+typedef void (*bal_async_callback)(bal_socket*, uint32_t);
 
 typedef struct bal_selectdata {
     bal_socket* s;
@@ -86,7 +86,7 @@ typedef struct {
 typedef struct {
     bal_selectdata_list* sdl;
     bal_mutex* m;
-#if !defined(__STDC_NO_ATOMICS__) && !defined(__cplusplus)
+#if defined(__HAVE_STDATOMICS__) && !defined(__cplusplus)
     atomic_bool die;
 #else
     volatile bool die;

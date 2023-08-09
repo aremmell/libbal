@@ -69,6 +69,8 @@
 
 #  if !defined(__STDC_NO_ATOMICS__) && !defined(__cplusplus)
 #   include <stdatomic.h>
+#  undef __HAVE_STDATOMICS__
+#  define __HAVE_STDATOMICS__
 #  endif
 
 typedef int bal_descriptor;
@@ -100,11 +102,11 @@ typedef void (*bal_once_fn)(void);
 #  include <process.h>
 #  include <time.h>
 
-#  undef __HAVE_ATOMIC_H__
+#  undef __HAVE_STDATOMICS__
 
-# if !defined(__cplusplus) && defined(_MSC_VER) && _MSC_VER >= 1933
+# if defined(_MSC_VER) && _MSC_VER >= 1933 && !defined(__cplusplus)
 #  include <stdatomic.h>
-#  define __HAVE_ATOMIC_H__
+#  define __HAVE_STDATOMICS__
 # endif
 
 #  define WSOCK_MAJVER 2
@@ -186,6 +188,14 @@ typedef struct sockaddr_storage bal_sockaddr;
 #  define BALTHREAD unsigned __stdcall
 # else
 #  define BALTHREAD void*
+# endif
+
+# if (defined(__clang__) || defined(__GNUC__)) && defined(__FILE_NAME__)
+#  define __file__ __FILE_NAME__
+# elif defined(__BASE_FILE__)
+#  define __file__ __BASE_FILE__
+# else
+#  define __file__ __FILE__
 # endif
 
 #endif /* !_BAL_PLATF0RM_H_INCLUDED */

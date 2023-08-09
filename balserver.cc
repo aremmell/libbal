@@ -40,6 +40,9 @@ int main(int argc, char** argv)
     int ret = bal_sock_create(&s, AF_INET, IPPROTO_TCP, SOCK_STREAM);
     EXIT_IF_FAILED(ret, nullptr, "bal_sock_create");
 
+    ret = bal_setreuseaddr(&s, 1);
+    EXIT_IF_FAILED(ret, nullptr, "bal_setreuseaddr");
+
     ret = bal_bind(&s, balcommon::localaddr, balcommon::portnum);
     EXIT_IF_FAILED(ret, nullptr, "bal_bind");
 
@@ -66,7 +69,7 @@ int main(int argc, char** argv)
     return EXIT_SUCCESS;
 }
 
-void balserver::async_events_cb(const bal_socket* s, uint32_t events)
+void balserver::async_events_cb(bal_socket* s, uint32_t events)
 {
     if (bal_isbitset(events, BAL_E_ACCEPT))
     {
@@ -99,14 +102,32 @@ void balserver::async_events_cb(const bal_socket* s, uint32_t events)
             client_socket.sd);
     }
 
+    static bool sent_reply = false;
+    static const char* reply = "O, HELO 2 U";
     if (bal_isbitset(events, BAL_E_READ))
     {
         char read_buf[2048] = {0};
         int read = bal_recv(s, &read_buf[0], 2047, 0);
-        if (read > 0)
+        if (read > 0) {
+            sent_reply = false;
             printf("[%d] read %d bytes: '%s'\n", s->sd, read, read_buf);
-        else
+
+            if (bal_iswritable(s) && !sent_reply) {
+                if (!sent_reply) {
+                    int sent = bal_send(s, reply, 11, 0u);
+                    if (sent > 0) {
+                        sent_reply = true;
+                        printf("[%d] wrote %d bytes\n", s->sd, 11);
+                    }
+                }
+            }
+        } else
             printf("[%d] read error %d!\n", s->sd, bal_geterror(s));
+    }
+
+    if (bal_isbitset(events, BAL_E_CLOSE)) {
+        printf("[%d] connection closed.\n", s->sd);
+        bal_close(s);
     }
 
     if (bal_isbitset(events, BAL_E_EXCEPTION)) {

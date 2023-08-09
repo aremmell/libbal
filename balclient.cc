@@ -63,38 +63,50 @@ int main(int argc, char** argv)
     return EXIT_SUCCESS;
 }
 
-void balclient::async_events_cb(const bal_socket* s, uint32_t events)
+void balclient::async_events_cb(bal_socket* s, uint32_t events)
 {
     if (bal_isbitset(events, BAL_E_CONNECT)) {
-        printf("connected to %s:%s\n", balcommon::localaddr,
+        printf("[%d] connected to %s:%s\n", s->sd, balcommon::localaddr,
             balcommon::portnum);
     }
 
     if (bal_isbitset(events, BAL_E_CONNFAIL)) {
         bal_error err;
         bal_lastsockerror(s, &err);
-        fprintf(stderr, "error: failed to connect to %s:%s %d (%s)\n",
-            balcommon::localaddr, balcommon::portnum, err.code, err.desc);
+        fprintf(stderr, "[%d] error: failed to connect to %s:%s %d (%s)\n",
+            s->sd, balcommon::localaddr, balcommon::portnum, err.code, err.desc);
+    }
+
+    if (bal_isbitset(events, BAL_E_READ))
+    {
+        char read_buf[2048] = {0};
+        int read = bal_recv(s, &read_buf[0], 2047, 0);
+        if (read > 0)
+            printf("[%d] read %d bytes: '%s'\n", s->sd, read, read_buf);
+        else
+            printf("[%d] read error %d!\n", s->sd, bal_geterror(s));
     }
 
     static bool wrote_helo = false;
     if (bal_isbitset(events, BAL_E_WRITE)) {
         int err = bal_geterror(s);
         if (0 != err) {
-            printf("write error %d!\n", err);
+            printf("[%d] write error %d!\n", s->sd, err);
         } else {
             if (!wrote_helo) {
                 const char* req = "HELO";
                 int ret = bal_send(s, req, 4, 0u);
-                if (BAL_FALSE == ret)
+                if (ret <= 0)
                     balcommon::print_last_lib_error(s, "bal_send");
+                else
+                    printf("[%d] wrote %d bytes\n", s->sd, ret);
                 wrote_helo = true;
             }
         }
     }
 
     if (bal_isbitset(events, BAL_E_CLOSE)) {
-        printf("connection closed.\n");
+        printf("[%d] connection closed.\n", s->sd);
         balcommon::quit();
     }
 
