@@ -72,9 +72,8 @@ void balserver::async_events_cb(bal_socket* s, uint32_t events)
 {
     if (bal_isbitset(events, BAL_E_ACCEPT))
     {
-        bal_socket client_socket;
-        bal_sockaddr client_addr;
-
+        bal_socket client_socket = {0};
+        bal_sockaddr client_addr = {0};
         int ret = bal_accept(s, &client_socket, &client_addr);
         if (BAL_TRUE != ret) {
             balcommon::print_last_lib_error(nullptr, "bal_accept");

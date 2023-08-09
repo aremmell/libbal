@@ -142,6 +142,7 @@ typedef BOOL(CALLBACK* bal_once_fn)(PINIT_ONCE, PVOID, PVOID*);
 # include <stdarg.h>
 # include <stdbool.h>
 # include <stdint.h>
+# include <inttypes.h>
 # include <assert.h>
 
 typedef struct sockaddr_storage bal_sockaddr;
@@ -166,6 +167,11 @@ typedef struct sockaddr_storage bal_sockaddr;
                                                       : sizeof(struct sockaddr_in6))
 
 # define BAL_UNUSED(var) (void)var
+# define BAL_ASSERT_UNUSED(var, expr) \
+    if (!(expr)) { \
+        assert((expr)); \
+        BAL_UNUSED((var)); \
+    }
 
 # define BAL_NI_NODNS (NI_NUMERICHOST | NI_NUMERICSERV)
 # define BAL_NI_DNS   (NI_NAMEREQD | NI_NUMERICSERV)

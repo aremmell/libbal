@@ -181,7 +181,17 @@ bool _bal_get_boolean(bool* boolean);
 void _bal_set_boolean(bool* boolean, bool value);
 #endif
 
-void _bal_yield_thread();
+void _bal_yield_thread(void);
+
+#if defined(BAL_SELFLOG)
+void __bal_selflog(const char* func, const char* file, uint32_t line,
+    const char* format, ...);
+# define _bal_selflog(...) \
+    __bal_selflog(__func__, __file__, __LINE__, __VA_ARGS__);
+#else
+void __dummy_func(const char* dummy, ...) { BAL_UNUSED(dummy); }
+# define _bal_selflog(...) __dummy_func(__VA_ARGS__)
+#endif
 
 bool _bal_once(bal_once* once, bal_once_fn func);
 

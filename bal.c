@@ -985,7 +985,7 @@ void __bal_setlasterror(int err, const char* func, const char* file, int line)
     errno = err;
 #endif
 
-#ifdef DEBUG
+#if defined(BAL_SELFLOG)
     bal_error lasterr = {0};
     int get_err = _bal_getlasterror(NULL, &lasterr);
 
@@ -998,8 +998,7 @@ void __bal_setlasterror(int err, const char* func, const char* file, int line)
         strncpy(lasterr.desc, BAL_AS_UNKNWN, strlen(BAL_AS_UNKNWN));
     }
 
-    fprintf(stderr, "%s %s:%d error: %d (%s)\n", func, file, line,
-        lasterr.code, lasterr.desc);
+    __bal_selflog(func, file, line, "error: %d (%s)", lasterr.code, lasterr.desc);
 #endif
 }
 
@@ -1119,11 +1118,7 @@ BALTHREAD _bal_eventthread(void* p)
             FD_ZERO(&w);
             FD_ZERO(&e);
 
-#if defined(__WIN__)
-            Sleep(1);
-#else
-            sched_yield();
-#endif
+            _bal_yield_thread();
         }
 
 #if defined(__WIN__)
@@ -1498,7 +1493,7 @@ void _bal_set_boolean(bool* boolean, bool value)
 }
 #endif
 
-void _bal_yield_thread()
+void _bal_yield_thread(void)
 {
 #if defined(__WIN__)
     Sleep(1);
@@ -1506,7 +1501,42 @@ void _bal_yield_thread()
     int yield = sched_yield();
     assert(0 == yield);
 #endif
+}
+
+#if defined(BAL_SELFLOG)
+void __bal_selflog(const char* func, const char* file, uint32_t line,
+    const char* format, ...)
+{
+    va_list args;
+    va_list args2;
+    va_start(args, format);
+    va_copy(args2, args);
+    int prnt_len = vsnprintf(NULL, 0, format, args);
+    va_end(args);
+    assert(prnt_len > 0);
+
+    char* buf = calloc(prnt_len + 257, sizeof(char));
+    assert(NULL != buf);
+
+    if (buf) {
+        char prefix[256] = {0};
+        int pfx_len = snprintf(prefix, 256, "%s (%s:%"PRIu32"): ", func, file, line);
+        assert(pfx_len > 0 && pfx_len < 256);
+
+        (void)strncpy(buf, prefix, pfx_len);
+
+        va_start(args2, format);
+        (void)vsnprintf(&buf[pfx_len], prnt_len + 1, format, args2);
+        va_end(args2);
+
+        int put = puts(buf);
+        BAL_ASSERT_UNUSED(put, EOF != put);
+
+        free(buf);
+        buf = NULL;
     }
+}
+#endif
 
 bool _bal_once(bal_once* once, bal_once_fn func)
 {
