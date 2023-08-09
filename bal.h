@@ -26,157 +26,14 @@
 #ifndef _BAL_H_INCLUDED
 # define _BAL_H_INCLUDED
 
-# if !defined(_WIN32)
-#  if defined(__APPLE__) && defined(__MACH__)
-#   undef _DARWIN_C_SOURCE
-#   define _DARWIN_C_SOURCE
-#  elif defined(__linux__)
-#   undef _GNU_SOURCE
-#   define _GNU_SOURCE
-#  elif defined (__FreeBSD__)
-#   undef _BSD_SOURCE
-#   define _BSD_SOURCE
-#  endif
-#  undef _DEFAULT_SOURCE
-#  define _DEFAULT_SOURCE 1
-#  include <sys/types.h>
-#  include <sys/socket.h>
-#  include <sys/select.h>
-#  include <sys/time.h>
-#  include <sys/ioctl.h>
-#  include <netinet/in.h>
-#  include <arpa/inet.h>
-#  include <fcntl.h>
-#  include <netdb.h>
-#  include <unistd.h>
-#  include <errno.h>
-#  include <stdlib.h>
-#  include <string.h>
-#  include <pthread.h>
-#  include <sched.h>
-#  include <stdatomic.h>
+#include "balplatform.h"
+#include "baltypes.h"
 
-#  if defined(__sun)
-#   include <sys/filio.h>
-#   include <stropts.h>
-#  endif
-
-#  undef __HAVE_ATOMIC_H__
-#  define __HAVE_ATOMIC_H__
-
-typedef int bal_descriptor;
-typedef pthread_mutex_t bal_mutex;
-typedef pthread_t bal_thread;
-
-# else /* _WIN32 */
-#  define __WIN__
-#  define _CRT_SECURE_NO_WARNINGS
-#  include <winsock2.h>
-#  include <ws2tcpip.h>
-#  include <process.h>
-#  include <time.h>
-
-#  undef __HAVE_ATOMIC_H__
-
-# if _MSC_VER >= 1933
-#  include <stdatomic.h>
-#  define __HAVE_ATOMIC_H__
-# endif
-
-#  define WSOCK_MAJVER 2
-#  define WSOCK_MINVER 2
-
-typedef SOCKET bal_descriptor;
-typedef HANDLE bal_mutex;
-typedef HANDLE bal_thread;
-# endif
-
-# include "version.h"
-
-# include <stdio.h>
-# include <stdarg.h>
-# include <stdbool.h>
-# include <stdint.h>
-
-# define BAL_TRUE     0
-# define BAL_FALSE    -1
-# define BAL_MAXERROR 1024
-
-# define BAL_AS_UNKNWN "<unknown>"
-# define BAL_AS_IPV6   "IPv6"
-# define BAL_AS_IPV4   "IPv4"
-
-# define BAL_F_PENDCONN 0x00000001u
-# define BAL_F_CLOSELCL 0x00000002u
-
-# define BAL_BADSOCKET -1
-
-typedef struct sockaddr_storage bal_sockaddr;
-
-/**
- * @struct bal_socket
- * @brief BAL state structure.
- */
-typedef struct {
-    bal_descriptor sd; /**< Socket descriptor. */
-    int af;            /**< Address family (e.g. AF_INET). */
-    int st;            /**< Socket type (e.g., SOCK_STREAM). */
-    int pf;            /**< Protocol family (e.g., IPPROTO_TCP). */
-    uint32_t _f;       /**< Internally-used state flags. */
-} bal_socket;
-
-typedef struct {
-    struct addrinfo* _ai;
-    struct addrinfo* _p;
-} bal_addrinfo;
-
-typedef struct _bal_addr {
-    bal_sockaddr _sa;
-    struct _bal_addr* _n;
-} bal_addr;
-
-typedef struct {
-    bal_addr* _a;
-    bal_addr* _p;
-} bal_addrlist;
-
-typedef struct {
-    char host[NI_MAXHOST];
-    char ip[NI_MAXHOST];
-    char* type;
-    char port[NI_MAXSERV];
-} bal_addrstrings;
-
-typedef struct {
-    int code;
-    char desc[BAL_MAXERROR];
-} bal_error;
-
-typedef void (*bal_async_callback)(const bal_socket*, int);
-
-typedef struct bal_selectdata {
-    bal_socket* s;
-    uint32_t mask;
-    bal_async_callback proc;
-    struct bal_selectdata* _p;
-    struct bal_selectdata* _n;
-} bal_selectdata;
-
-typedef struct {
-    bal_selectdata* _h;
-    bal_selectdata* _t;
-    bal_selectdata* _c;
-} bal_selectdata_list;
-
-typedef struct {
-    bal_selectdata_list* sdl;
-    bal_mutex* m;
-    int die;
-} bal_eventthread_data;
 
 /*─────────────────────────────────────────────────────────────────────────────╮
 │                            Exported Functions                                │
 ╰─────────────────────────────────────────────────────────────────────────────*/
+
 
 # if defined(__cplusplus)
 extern "C" {
@@ -272,34 +129,9 @@ int bal_getaddrstrings(const bal_sockaddr* in, int dns, bal_addrstrings* out);
 
 
 /*─────────────────────────────────────────────────────────────────────────────╮
-│                           Internal definitions                               │
+│                             Internal functions                               │
 ╰─────────────────────────────────────────────────────────────────────────────*/
 
-
-# define _bal_validstr(str) (str && *str)
-
-# define BAL_SASIZE(sa) \
-    ((PF_INET == ((struct sockaddr* )&sa)->sa_family) ? sizeof(struct sockaddr_in) \
-                                                      : sizeof(struct sockaddr_in6))
-
-# define BAL_NI_NODNS (NI_NUMERICHOST | NI_NUMERICSERV)
-# define BAL_NI_DNS   (NI_NAMEREQD | NI_NUMERICSERV)
-
-# define BAL_E_READ      0x00000001u
-# define BAL_E_WRITE     0x00000002u
-# define BAL_E_CONNECT   0x00000004u
-# define BAL_E_ACCEPT    0x00000008u
-# define BAL_E_CLOSE     0x00000010u
-# define BAL_E_CONNFAIL  0x00000020u
-# define BAL_E_EXCEPTION 0x00000040u
-# define BAL_E_ALL       0x0000007Fu
-
-# define BAL_S_DIE       0x0D1E0D1Eu
-# define BAL_S_CONNECT   0x10000000u
-# define BAL_S_READ      0x00000001u
-# define BAL_S_WRITE     0x00000002u
-# define BAL_S_EXCEPT    0x00000003u
-# define BAL_S_TIME      0x0000C350u
 
 int _bal_bindany(const bal_socket* s, unsigned short port);
 int _bal_getaddrinfo(int f, int af, int st, const char* host, const char* port,
@@ -324,8 +156,8 @@ int _bal_isclosedcircuit(const bal_socket* s);
 # endif
 
 BALTHREAD _bal_eventthread(void* p);
-int _bal_initasyncselect(bal_thread* t, bal_mutex* m, bal_eventthread_data* td);
-void _bal_dispatchevents(fd_set* set, bal_eventthread_data* td, int type);
+int _bal_initasyncselect(bal_thread* t, bal_mutex* m, bal_eventthread_data * td);
+void _bal_dispatchevents(fd_set* set, bal_eventthread_data * td, int type);
 
 int _bal_sdl_add(bal_selectdata_list* sdl, const bal_selectdata* d);
 int _bal_sdl_rem(bal_selectdata_list* sdl, bal_descriptor sd);
@@ -340,7 +172,22 @@ int _bal_mutex_lock(bal_mutex* m);
 int _bal_mutex_unlock(bal_mutex* m);
 int _bal_mutex_destroy(bal_mutex* m);
 
+static inline
+bool _bal_isbitset(uint32_t bitmask, uint32_t bit)
+{
+    return (bitmask & bit) == bit;
+}
+
+bool _bal_once(bal_once* once, bal_once_fn func);
+
+# if defined(__WIN__)
+BOOL CALLBACK _bal_static_once_init(PINIT_ONCE ponce, PVOID param, PVOID* ctx);
+# else
+void _bal_static_once_init(void);
+# endif
+
 # if defined(__cplusplus)
 }
 # endif
+
 #endif /* !_BAL_H_INCLUDED */

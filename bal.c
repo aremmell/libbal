@@ -25,9 +25,21 @@
  */
 #include "bal.h"
 
-# if defined(__WIN__)
-#  pragma comment(lib, "ws2_32.lib")
-# endif
+#if defined(__WIN__)
+# pragma comment(lib, "ws2_32.lib")
+#endif
+
+/*─────────────────────────────────────────────────────────────────────────────╮
+│                              Static globals                                  │
+╰─────────────────────────────────────────────────────────────────────────────*/
+
+bal_once _bal_asyncselect_once = BAL_ONCE_INIT;
+
+#if !defined(__STDC_NO_ATOMICS__)
+    atomic_bool _bal_asyncselect_init;
+#else
+    volatile bool _bal_asyncselect_init = false;
+#endif
 
 /*─────────────────────────────────────────────────────────────────────────────╮
 │                            Exported Functions                                │
@@ -68,33 +80,38 @@ int bal_asyncselect(const bal_socket* s, bal_async_callback proc, uint32_t mask)
 {
     int r                          = BAL_FALSE;
     static bal_selectdata_list l   = {0};
-    static bal_eventthread_data td = {0};
+    static bal_mutex m             = BAL_MUTEX_INIT;
+    static bal_eventthread_data td = {&l, &m, false};
+    static bal_thread t            = BAL_THREAD_INIT;
 
-#if !defined(__WIN__)
-    static bal_thread t = {0};
-    static bal_mutex m  = PTHREAD_MUTEX_INITIALIZER;
-#else
-    static bal_thread t = INVALID_HANDLE_VALUE;
-    static bal_mutex m  = INVALID_HANDLE_VALUE;
-#endif
+    bool static_init = _bal_once(&_bal_asyncselect_once, &_bal_static_once_init);
+    assert(static_init);
 
     if (BAL_S_DIE == mask) {
-        td.die = 1;
+#if !defined(__STDC_NO_ATOMICS__)
+        atomic_store(&td.die, true);
+#else
+        td.die = true;
+#endif
 
         if (BAL_TRUE == _bal_mutex_destroy(&m)) {
             if (BAL_TRUE == _bal_sdl_clr(&l)) {
-                t = NULL;
+#if !defined(__STDC_NO_ATOMICS__)
+                atomic_store(&_bal_asyncselect_init, false);
+#else
+                _bal_asyncselect_init = false;
+#endif
                 r = BAL_TRUE;
             }
         }
     }
 
     if (s && proc) {
-        if (!t) {
-            td.die = 0;
-            td.sdl = &l;
-            td.m   = &m;
-
+#if !defined(__STDC_NO_ATOMICS__)
+        if (!atomic_load(&_bal_asyncselect_init)) {
+#else
+        if (!_bal_asyncselect_init) {
+#endif
             if (BAL_FALSE == _bal_initasyncselect(&t, &m, &td))
                 return r;
         }
@@ -113,7 +130,7 @@ int bal_asyncselect(const bal_socket* s, bal_async_callback proc, uint32_t mask)
                 } else {
                     bal_selectdata d;
 
-                    if (BAL_TRUE == bal_setiomode(s, 1)) {
+                    if (BAL_TRUE == bal_setiomode(s, true)) {
                         d.mask = mask;
                         d.proc = proc;
                         d.s    = (bal_socket*)s;
@@ -916,7 +933,7 @@ int _bal_getlasterror(const bal_socket* s, bal_error* err)
         }
 
 #if defined(__WIN__)
-        if (0 != FormatMessage(0x00001200U, NULL, err->code, 0U, err->desc,
+        if (0 != FormatMessage(0x00001200u, NULL, err->code, 0u, err->desc,
             BAL_MAXERROR, NULL))
             r = BAL_TRUE;
 #else
@@ -960,7 +977,7 @@ int _bal_retstr(char* out, const char* in)
 
 int _bal_haspendingconnect(const bal_socket* s)
 {
-    return (s && ((s->_f & BAL_F_PENDCONN) == BAL_F_PENDCONN))
+    return (s && _bal_isbitset(s->_f, BAL_F_PENDCONN))
         ? BAL_TRUE : BAL_FALSE;
 }
 
@@ -1001,7 +1018,11 @@ BALTHREAD _bal_eventthread(void* p)
         fd_set w = {0};
         fd_set e = {0};
 
+#if !defined(__STDC_NO_ATOMICS__)
+        while (!atomic_load(&td->die)) {
+#else
         while (!td->die) {
+#endif
             if (BAL_TRUE == _bal_mutex_lock(td->m)) {
                 int size = _bal_sdl_size(td->sdl);
 
@@ -1054,14 +1075,14 @@ BALTHREAD _bal_eventthread(void* p)
         }
     } else {
 #if defined(__WIN__)
-        return 1U;
+        return 1u;
 #else
-        return (void*)(1);
+        return (void*)1;
 #endif
     }
 
 #if defined(__WIN__)
-    return 0U;
+    return 0u;
 #else
     return NULL;
 #endif
@@ -1072,12 +1093,15 @@ int _bal_initasyncselect(bal_thread* t, bal_mutex* m, bal_eventthread_data* td)
     int r = BAL_FALSE;
 
     if (t && m && td) {
-        td->die = 0;
-
+#if !defined(__STDC_NO_ATOMICS__)
+        atomic_init(&td->die, false);
+#else
+        td->die = false;
+#endif
         if (BAL_TRUE == _bal_mutex_init(m)) {
 #if defined(__WIN__)
-            if (NULL != (*t = (bal_thread)_beginthreadex(NULL, 0U,
-                _bal_eventthread, td, 0U, NULL)))
+            *t = _beginthreadex(NULL, 0u, _bal_eventthread, td, 0u, NULL)
+            if (0ull != *t)
                 r = BAL_TRUE;
 #else
             if (0 == pthread_create(t, NULL, _bal_eventthread, td))
@@ -1098,12 +1122,12 @@ void _bal_dispatchevents(fd_set* set, bal_eventthread_data* td, int type)
 
         while (BAL_TRUE == _bal_sdl_enum(td->sdl, &t)) {
             if (0 != FD_ISSET(t->s->sd, set)) {
-                int event = 0;
-                int snd   = 0;
+                uint32_t event = 0u;
+                bool snd       = false;
 
                 switch (type) {
                     case BAL_S_READ:
-                        if (t->mask & BAL_E_READ) {
+                        if (_bal_isbitset(t->mask, BAL_E_READ)) {
                             if (BAL_TRUE == _bal_isclosedcircuit(t->s))
                                 event = BAL_E_CLOSE;
                             else if (BAL_TRUE == bal_islistening(t->s))
@@ -1111,37 +1135,37 @@ void _bal_dispatchevents(fd_set* set, bal_eventthread_data* td, int type)
                             else
                                 event = BAL_E_READ;
 
-                            snd = 1;
+                            snd = true;
                         }
                     break;
                     case BAL_S_WRITE:
-                        if (t->mask & BAL_E_WRITE) {
-                            if (t->mask & BAL_S_CONNECT) {
+                        if (_bal_isbitset(t->mask, BAL_E_WRITE)) {
+                            if (_bal_isbitset(t->mask, BAL_S_CONNECT)) {
                                 event = BAL_E_CONNECT;
                                 t->mask &= ~BAL_S_CONNECT;
                             } else {
                                 event = BAL_E_WRITE;
                             }
 
-                            snd = 1;
+                            snd = true;
                         }
                     break;
                     case BAL_S_EXCEPT:
-                        if (t->mask & BAL_S_CONNECT) {
+                        if (_bal_isbitset(t->mask, BAL_S_CONNECT)) {
                             event = BAL_E_CONNFAIL;
                             t->mask &= ~BAL_S_CONNECT;
                         } else {
                             event = BAL_E_EXCEPTION;
                         }
 
-                        snd = 1;
+                        snd = true;
                     break;
                     default:
                         _bal_setlasterror(EINVAL);
                     break;
                 }
 
-                if (1 == snd)
+                if (snd)
                     t->proc(t->s, event);
 
                 if (BAL_E_CLOSE == event)
@@ -1387,3 +1411,36 @@ int _bal_mutex_destroy(bal_mutex* m)
 
     return r;
 }
+
+bool _bal_once(bal_once* once, bal_once_fn func)
+{
+#if defined(__WIN__)
+    return FALSE != InitOnceExecuteOnce(once, func, NULL, NULL);
+#else
+    return 0 == pthread_once(once, func);
+#endif
+}
+
+#if defined(__WIN__)
+BOOL CALLBACK _bal_static_once_init(PINIT_ONCE ponce, PVOID param, PVOID* ctx)
+{
+    BAL_UNUSED(ponce);
+    BAL_UNUSED(param);
+    BAL_UNUSED(ctx);
+#if !defined(__STDC_NO_ATOMICS__)
+    atomic_init(&_bal_asyncselect_init, false);
+#else
+    _bal_asyncselect_init = false;
+#endif
+    return TRUE;
+}
+#else
+void _bal_static_once_init(void)
+{
+#if !defined(__STDC_NO_ATOMICS__)
+    atomic_init(&_bal_asyncselect_init, false);
+#else
+    _bal_asyncselect_init = false;
+#endif
+}
+#endif
