@@ -284,7 +284,6 @@ int _bal_aitoal(bal_addrinfo* in, bal_addrlist* out);
 int _bal_getlasterror(const bal_socket* s, bal_error* err);
 void _bal_setlasterror(int err);
 
-const char* _bal_getmbstr(cbstr input);
 int _bal_retstr(bstr out, const char* in);
 
 int _bal_haspendingconnect(const bal_socket* s);

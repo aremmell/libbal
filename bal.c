@@ -773,12 +773,8 @@ int bal_getaddrstrings(const bal_sockaddr* in, int dns, bal_addrstrings* out)
         if (BAL_TRUE == _bal_getnameinfo(BAL_NI_NODNS, in, out->ip, out->port)) {
             if (dns) {
                 if (BAL_FALSE == _bal_getnameinfo(BAL_NI_DNS, in, out->host, out->port)) {
-#ifdef BAL_USE_WCHAR
-                    wcsncpy(out->host, BAL_AS_UNKNWN, NI_MAXHOST - 1);
-#else
                     strncpy(out->host, BAL_AS_UNKNWN, NI_MAXHOST - 1);
-#endif
-                    out->host[NI_MAXHOST - 1] = _t('\0');
+                    out->host[NI_MAXHOST - 1] = '\0';
                 }
             }
 
@@ -807,28 +803,19 @@ int _bal_getaddrinfo(int f, int af, int st, cbstr host, cbstr port, bal_addrinfo
     int r = BAL_FALSE;
 
     if (_bal_validstr(host) && res) {
-        const char* mbhost = _bal_getmbstr(host);
-        const char* mbport = _bal_getmbstr(port);
-
-        if (mbhost) {
-            struct addrinfo hints;
-            memset(&hints, 0, sizeof(hints));
+        if (host) {
+            struct addrinfo hints = {0};
 
             hints.ai_flags    = f;
             hints.ai_family   = af;
             hints.ai_socktype = st;
 
-            r = getaddrinfo(mbhost, mbport, (const struct addrinfo*)&hints, &res->_ai);
+            r = getaddrinfo(host, port, (const struct addrinfo*)&hints, &res->_ai);
 
             if (!r)
                 res->_p = res->_ai;
             else
                 res->_p = res->_ai = NULL;
-
-#ifdef BAL_USE_WCHAR
-            free(mbhost);
-            free(mbport);
-#endif
         }
     }
 
@@ -845,30 +832,8 @@ int _bal_getnameinfo(int f, const bal_sockaddr* in, bstr host, bstr port)
     int r = BAL_FALSE;
 
     if (in && host) {
-#ifdef BAL_USE_WCHAR
-        char mbhost[NI_MAXHOST] = {0};
-        char mbport[NI_MAXSERV] = {0};
-#else
-        char* mbhost = host;
-        char* mbport = port;
-#endif
         socklen_t inlen = BAL_SASIZE(*in);
-        r = getnameinfo((const struct sockaddr*)in, inlen, mbhost, NI_MAXHOST, mbport, NI_MAXSERV, f);
-
-#ifdef BAL_USE_WCHAR
-        if (!r) {
-            r = BAL_FALSE;
-
-            if (0 == _bal_retstr(host, (const char*)mbhost)) {
-                if (port) {
-                    if (0 == _bal_retstr(port, (const char*)mbport))
-                        r = BAL_TRUE;
-                } else {
-                    r = BAL_TRUE;
-                }
-            }
-        }
-#endif
+        r = getnameinfo((const struct sockaddr*)in, inlen, host, NI_MAXHOST, port, NI_MAXSERV, f);
     }
 
     if (BAL_TRUE != r && BAL_FALSE != r) {
@@ -970,38 +935,13 @@ void _bal_setlasterror(int err)
 #endif
 }
 
-const char* _bal_getmbstr(cbstr input)
-{
-    if (_bal_validstr(input)) {
-#ifdef BAL_USE_WCHAR
-        char* mbstr = calloc(sizeof(char), wcsnlen(input, NI_MAXHOST) + sizeof(char));
-        if (!mbstr)
-            return NULL;
-
-        if (-1 == wcstombs(mbstr, input, wcsnlen(input, NI_MAXHOST))) {
-            free(mbstr);
-            return NULL;
-        }
-        return mbstr;
-#else
-    }
-
-    return input;
-#endif /* !BAL_USE_WCHAR */
-}
-
-int _bal_retstr(bstr out, const char* in)
+int _bal_retstr(char* out, const char* in)
 {
     int r = BAL_FALSE;
 
-#ifdef BAL_USE_WCHAR
-    if (-1 != mbstowcs(out, in, strnlen(in, BAL_MAXERROR)))
-        r = BAL_TRUE;
-#else
     strncpy(out, in, BAL_MAXERROR - 1);
     out[BAL_MAXERROR - 1] = '\0';
     r = BAL_TRUE;
-#endif /* !BAL_USE_WCHAR */
 
     return r;
 }
