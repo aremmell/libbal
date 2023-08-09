@@ -30,6 +30,7 @@
 
 namespace balclient
 {
+    void async_events_cb(const bal_socket* s, uint32_t events);
 } // !namespace balclient
 
 #endif // !_BAL_CLIENT_HH_INCLUDED

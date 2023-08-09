@@ -67,7 +67,7 @@ typedef struct {
     char desc[BAL_MAXERROR];
 } bal_error;
 
-typedef void (*bal_async_callback)(const bal_socket*, int);
+typedef void (*bal_async_callback)(const bal_socket*, uint32_t);
 
 typedef struct bal_selectdata {
     bal_socket* s;

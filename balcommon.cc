@@ -35,9 +35,19 @@ bool balcommon::initialize()
     if (!balcommon::install_ctrl_c_handler())
         return false;
 
+    if (BAL_TRUE != bal_initialize()) {
+        print_last_lib_error(nullptr, "bal_initialize");
+        return false;
+    }
+
     _run.store(true);
 
     return true;
+}
+
+void balcommon::quit()
+{
+    _run.store(false);
 }
 
 bool balcommon::should_run()
@@ -66,11 +76,7 @@ bool balcommon::install_ctrl_c_handler()
 void balcommon::ctrl_c_handler_impl()
 {
     printf("got ctrl+c; exiting...\n");
-
-    _run.store(false);
-
-    if (BAL_FALSE == bal_finalize())
-        print_last_lib_error(nullptr, "bal_finalize");
+    quit();
 }
 
 void balcommon::print_last_lib_error(const bal_socket* s /* = nullptr */,

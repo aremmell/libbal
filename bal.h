@@ -46,7 +46,7 @@ int bal_asyncselect(const bal_socket* s, bal_async_callback proc, uint32_t mask)
 
 int bal_autosocket(bal_socket* s, int af, int pt, const char* host, const char* port);
 int bal_sock_create(bal_socket* s, int af, int pt, int st);
-int bal_reset(bal_socket* s);
+void bal_reset(bal_socket* s);
 int bal_close(bal_socket* s);
 int bal_shutdown(bal_socket* s, int how);
 
@@ -66,7 +66,7 @@ int bal_recvfrom(const bal_socket* s, void* data, size_t len, int flags,
 
 int bal_bind(const bal_socket* s, const char* addr, const char* port);
 
-int bal_listen(const bal_socket* s, int backlog);
+int bal_listen(bal_socket* s, int backlog);
 int bal_accept(const bal_socket* s, bal_socket* res, bal_sockaddr* resaddr);
 
 int bal_getoption(const bal_socket* s, int level, int name, void* optval,
@@ -125,8 +125,13 @@ int bal_getlocalhoststrings(const bal_socket* s, int dns, bal_addrstrings* out);
 int bal_resetaddrlist(bal_addrlist* al);
 const bal_sockaddr* bal_enumaddrlist(bal_addrlist* al);
 int bal_freeaddrlist(bal_addrlist* al);
-int bal_getaddrstrings(const bal_sockaddr* in, int dns, bal_addrstrings* out);
+int bal_getaddrstrings(const bal_sockaddr* in, bool dns, bal_addrstrings* out);
 
+static inline
+bool bal_isbitset(uint32_t bitmask, uint32_t bit)
+{
+    return (bitmask & bit) == bit;
+}
 
 /*─────────────────────────────────────────────────────────────────────────────╮
 │                             Internal functions                               │
@@ -149,12 +154,6 @@ int _bal_retstr(char* out, const char* in);
 int _bal_haspendingconnect(const bal_socket* s);
 int _bal_isclosedcircuit(const bal_socket* s);
 
-# if defined(__WIN__)
-#  define BALTHREAD unsigned __stdcall
-# else
-#  define BALTHREAD void*
-# endif
-
 BALTHREAD _bal_eventthread(void* p);
 int _bal_initasyncselect(bal_thread* t, bal_mutex* m, bal_eventthread_data * td);
 void _bal_dispatchevents(fd_set* set, bal_eventthread_data * td, int type);
@@ -171,12 +170,6 @@ int _bal_mutex_init(bal_mutex* m);
 int _bal_mutex_lock(bal_mutex* m);
 int _bal_mutex_unlock(bal_mutex* m);
 int _bal_mutex_destroy(bal_mutex* m);
-
-static inline
-bool _bal_isbitset(uint32_t bitmask, uint32_t bit)
-{
-    return (bitmask & bit) == bit;
-}
 
 bool _bal_once(bal_once* once, bal_once_fn func);
 

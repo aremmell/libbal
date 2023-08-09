@@ -73,6 +73,7 @@
 
 typedef int bal_descriptor;
 typedef pthread_mutex_t bal_mutex;
+typedef pthread_cond_t bal_condition;
 typedef pthread_t bal_thread;
 
 /** The one-time type. */
@@ -109,6 +110,11 @@ typedef void (*bal_once_fn)(void);
 #  define WSOCK_MAJVER 2
 #  define WSOCK_MINVER 2
 
+typedef SOCKET bal_descriptor;
+typedef CRITICAL_SECTION bal_mutex;
+typdedef CONDITION_VARIBLE bal_condition;
+typedef uintptr_t bal_thread;
+
 /** The one-time type. */
 typedef INIT_ONCE bal_once;
 
@@ -122,11 +128,8 @@ typedef BOOL(CALLBACK* bal_once_fn)(PINIT_ONCE, PVOID, PVOID*);
 #  define BAL_THREAD_INIT 0ull
 
 /** The mutex initializer. */
-#  define BAL_MUTEX_INIT INVALID_HANDLE_VALUE
+#  define BAL_MUTEX_INIT {0}
 
-typedef SOCKET bal_descriptor;
-typedef HANDLE bal_mutex;
-typedef uintptr_t bal_thread;
 # endif
 
 # include "version.h"
@@ -147,8 +150,8 @@ typedef struct sockaddr_storage bal_sockaddr;
 # define BAL_AS_IPV6   "IPv6"
 # define BAL_AS_IPV4   "IPv4"
 
-# define BAL_F_PENDCONN 0x00000001u
-# define BAL_F_CLOSELCL 0x00000002u
+# define BAL_F_PENDCONN  0x00000001u
+# define BAL_F_LISTENING 0x00000002u
 
 # define BAL_BADSOCKET -1
 
@@ -174,9 +177,15 @@ typedef struct sockaddr_storage bal_sockaddr;
 
 # define BAL_S_DIE       0x0D1E0D1Eu
 # define BAL_S_CONNECT   0x10000000u
+# define BAL_S_LISTEN    0x20000000u
 # define BAL_S_READ      0x00000001u
 # define BAL_S_WRITE     0x00000002u
 # define BAL_S_EXCEPT    0x00000003u
-# define BAL_S_TIME      0x0000C350u
+
+# if defined(__WIN__)
+#  define BALTHREAD unsigned __stdcall
+# else
+#  define BALTHREAD void*
+# endif
 
 #endif /* !_BAL_PLATF0RM_H_INCLUDED */

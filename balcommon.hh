@@ -39,6 +39,7 @@ namespace balcommon
     constexpr const char* portnum = "9000";
 
     bool initialize();
+    void quit();
     bool should_run();
     bool install_ctrl_c_handler();
     void ctrl_c_handler_impl();

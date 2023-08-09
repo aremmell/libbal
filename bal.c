@@ -29,9 +29,11 @@
 # pragma comment(lib, "ws2_32.lib")
 #endif
 
+
 /*─────────────────────────────────────────────────────────────────────────────╮
 │                              Static globals                                  │
 ╰─────────────────────────────────────────────────────────────────────────────*/
+
 
 bal_once _bal_asyncselect_once = BAL_ONCE_INIT;
 
@@ -41,9 +43,11 @@ bal_once _bal_asyncselect_once = BAL_ONCE_INIT;
     volatile bool _bal_asyncselect_init = false;
 #endif
 
+
 /*─────────────────────────────────────────────────────────────────────────────╮
 │                            Exported Functions                                │
 ╰─────────────────────────────────────────────────────────────────────────────*/
+
 
 int bal_initialize(void)
 {
@@ -67,8 +71,8 @@ int bal_finalize(void)
     int r = BAL_FALSE;
 
 #if defined(__WIN__)
-    if (0 == WSACleanup())
-        r = bal_asyncselect(NULL, NULL, BAL_S_DIE);
+    (void)WSACleanup();
+    r = bal_asyncselect(NULL, NULL, BAL_S_DIE);
 #else
     r = bal_asyncselect(NULL, NULL, BAL_S_DIE);
 #endif
@@ -78,7 +82,6 @@ int bal_finalize(void)
 
 int bal_asyncselect(const bal_socket* s, bal_async_callback proc, uint32_t mask)
 {
-    int r                          = BAL_FALSE;
     static bal_selectdata_list l   = {0};
     static bal_mutex m             = BAL_MUTEX_INIT;
     static bal_eventthread_data td = {&l, &m, false};
@@ -86,14 +89,15 @@ int bal_asyncselect(const bal_socket* s, bal_async_callback proc, uint32_t mask)
 
     bool static_init = _bal_once(&_bal_asyncselect_once, &_bal_static_once_init);
     assert(static_init);
+    BAL_UNUSED(static_init);
 
+    int r = BAL_FALSE;
     if (BAL_S_DIE == mask) {
 #if !defined(__STDC_NO_ATOMICS__)
         atomic_store(&td.die, true);
 #else
         td.die = true;
 #endif
-
         if (BAL_TRUE == _bal_mutex_destroy(&m)) {
             if (BAL_TRUE == _bal_sdl_clr(&l)) {
 #if !defined(__STDC_NO_ATOMICS__)
@@ -101,7 +105,13 @@ int bal_asyncselect(const bal_socket* s, bal_async_callback proc, uint32_t mask)
 #else
                 _bal_asyncselect_init = false;
 #endif
-                r = BAL_TRUE;
+
+#if defined(__WIN__)
+                (void)WaitForSingleObject(t, INFINITE);
+#else
+                (void)pthread_join(t, NULL);
+#endif
+                return r = BAL_TRUE;
             }
         }
     }
@@ -113,13 +123,17 @@ int bal_asyncselect(const bal_socket* s, bal_async_callback proc, uint32_t mask)
         if (!_bal_asyncselect_init) {
 #endif
             if (BAL_FALSE == _bal_initasyncselect(&t, &m, &td))
-                return r;
+                return r = BAL_FALSE;
+#if !defined(__STDC_NO_ATOMICS__)
+            atomic_store(&_bal_asyncselect_init, true);
+#else
+            _bal_asyncselect_init = true;
+#endif
         }
 
         if (BAL_TRUE == _bal_mutex_lock(&m)) {
-            if (0 == mask) {
-                if (BAL_TRUE == _bal_sdl_rem(&l, s->sd))
-                    r = BAL_TRUE;
+            if (0u == mask) {
+                r = _bal_sdl_rem(&l, s->sd);
             } else if (_bal_sdl_size(&l) < FD_SETSIZE - 1) {
                 bal_selectdata* d = _bal_sdl_find(&l, s->sd);
 
@@ -194,51 +208,63 @@ int bal_sock_create(bal_socket* s, int af, int pt, int st)
     return r;
 }
 
-int bal_reset(bal_socket* s)
+void bal_reset(bal_socket* s)
 {
-    int r = BAL_FALSE;
-
     if (s) {
         s->af = -1;
         s->pf = -1;
         s->sd = -1;
         s->st = -1;
-        r     = BAL_TRUE;
     }
-
-    return r;
 }
 
+#pragma message("TODO: Convert all functions that return a value from the underlying library to this type of configuration")
 int bal_close(bal_socket* s)
 {
     int r = BAL_FALSE;
 
-    if (s) {
 #if defined(__WIN__)
-        if (0 == closesocket(s->sd))
-            r = bal_reset(s);
-#else
-        if (0 == close(s->sd))
-            r = bal_reset(s);
-#endif
-        s->_f &= ~BAL_F_PENDCONN;
+    if (s) {
+        if (0 == closesocket(s->sd)) {
+            bal_reset(s);
+            r = BAL_TRUE;
+        }
+    } else {
+        r = SOCKET_ERROR;
     }
+#else
+    if (s) {
+        if (0 == close(s->sd)) {
+            bal_reset(s);
+            r = BAL_TRUE;
+        }
+    } else {
+        r = ENOTSOCK;
+    }
+#endif
+
+    s->_f &= ~(BAL_F_PENDCONN | BAL_F_LISTENING);
 
     return r;
 }
 
 int bal_shutdown(bal_socket* s, int how)
 {
+    int r = BAL_FALSE;
+
     if (s) {
-        s->_f &= ~BAL_F_PENDCONN;
-        return shutdown(s->sd, how);
-    } else {
-#if defined(__WIN__)
-        return SOCKET_ERROR;
-#else
-        return ENOTSOCK;
-#endif
+        r = shutdown(s->sd, how);
+        if (0 == r) {
+            if (how == SHUT_RDWR)
+                s->_f &= ~(BAL_F_PENDCONN | BAL_F_LISTENING);
+            else if (how == SHUT_RD)
+                s->_f &= ~BAL_F_LISTENING;
+            else if (how == SHUT_WR)
+                s->_f &= ~BAL_F_PENDCONN;
+        }
     }
+
+    return r;
 }
 
 int bal_connect(const bal_socket* s, const char* host, const char* port)
@@ -275,9 +301,9 @@ int bal_connectaddrlist(bal_socket* s, bal_addrlist* al)
                 r = connect(s->sd, (const struct sockaddr*)sa, BAL_SASIZE(*sa));
 
 #if defined(__WIN__)
-                if (!r || (-1 == r && WSAEWOULDBLOCK == WSAGetLastError())) {
+                if (!r || WSAEWOULDBLOCK == WSAGetLastError()) {
 #else
-                if (!r || (-1 == r && EAGAIN == errno)) {
+                if (!r || EAGAIN == errno || EINPROGRESS == errno) {
 #endif
                     s->_f |= BAL_F_PENDCONN;
                     r = BAL_TRUE;
@@ -306,7 +332,8 @@ int bal_recv(const bal_socket* s, void* data, size_t len, int flags)
         return BAL_FALSE;
 }
 
-int bal_sendto(const bal_socket* s, const char* host, const char* port, const void* data, size_t len, int flags)
+int bal_sendto(const bal_socket* s, const char* host, const char* port,
+    const void* data, size_t len, int flags)
 {
     int r = BAL_FALSE;
 
@@ -322,7 +349,8 @@ int bal_sendto(const bal_socket* s, const char* host, const char* port, const vo
     return r;
 }
 
-int bal_sendtoaddr(const bal_socket* s, const bal_sockaddr* sa, const void* data, size_t len, int flags)
+int bal_sendtoaddr(const bal_socket* s, const bal_sockaddr* sa, const void* data,
+    size_t len, int flags)
 {
     if (s && sa && data && len)
         return sendto(s->sd, data, len, flags, (const struct sockaddr*)sa, BAL_SASIZE(*sa));
@@ -364,9 +392,16 @@ int bal_bind(const bal_socket* s, const char* addr, const char* port)
     return r;
 }
 
-int bal_listen(const bal_socket* s, int backlog)
+int bal_listen(bal_socket* s, int backlog)
 {
-    return ((NULL != s) ? listen(s->sd, backlog) : BAL_FALSE);
+    int r = BAL_FALSE;
+    if (s) {
+        r = listen(s->sd, backlog);
+        if (0 == r)
+            s->_f |= BAL_F_LISTENING;
+    }
+
+    return r;
 }
 
 int bal_accept(const bal_socket* s, bal_socket* res, bal_sockaddr* resaddr)
@@ -375,7 +410,13 @@ int bal_accept(const bal_socket* s, bal_socket* res, bal_sockaddr* resaddr)
 
     if (s && res && resaddr) {
         socklen_t sasize = sizeof(bal_sockaddr);
-        if (-1 != (res->sd = accept(s->sd, (struct sockaddr*)resaddr, &sasize)))
+        res->sd = accept(s->sd, (struct sockaddr*)resaddr, &sasize);
+        if (res->sd > 0 ||
+#if defined(__WIN__)
+        WSAEWOULDBLOCK == WSAGetLastError())
+#else
+        EAGAIN == errno || EINPROGRESS == errno)
+#endif
             r = BAL_TRUE;
     }
 
@@ -579,17 +620,6 @@ int bal_geterror(const bal_socket* s)
     return r;
 }
 
-int bal_islistening(const bal_socket* s)
-{
-    int r = BAL_FALSE;
-    int l = 0;
-
-    if ((BAL_TRUE == bal_getoption(s, SOL_SOCKET, SO_ACCEPTCONN, &l, sizeof(int))) && 0 != l)
-        r = BAL_TRUE;
-
-    return r;
-}
-
 int bal_isreadable(const bal_socket* s)
 {
     int r = BAL_FALSE;
@@ -787,7 +817,7 @@ int bal_freeaddrlist(bal_addrlist* al)
     return r;
 }
 
-int bal_getaddrstrings(const bal_sockaddr* in, int dns, bal_addrstrings* out)
+int bal_getaddrstrings(const bal_sockaddr* in, bool dns, bal_addrstrings* out)
 {
     int r = BAL_FALSE;
 
@@ -934,7 +964,7 @@ int _bal_getlasterror(const bal_socket* s, bal_error* err)
         }
 
 #if defined(__WIN__)
-        if (0 != FormatMessage(0x00001200u, NULL, err->code, 0u, err->desc,
+        if (0 != FormatMessageA(0x00001200u, NULL, err->code, 0u, err->desc,
             BAL_MAXERROR, NULL))
             r = BAL_TRUE;
 #else
@@ -949,7 +979,6 @@ int _bal_getlasterror(const bal_socket* s, bal_error* err)
             if (0 == _bal_retstr(err->desc, (const char*)strerror(err->code)))
                 r = BAL_TRUE;
         }
-
 #endif
     }
 
@@ -978,8 +1007,12 @@ int _bal_retstr(char* out, const char* in)
 
 int _bal_haspendingconnect(const bal_socket* s)
 {
-    return (s && _bal_isbitset(s->_f, BAL_F_PENDCONN))
-        ? BAL_TRUE : BAL_FALSE;
+    return (s && bal_isbitset(s->_f, BAL_F_PENDCONN)) ? BAL_TRUE : BAL_FALSE;
+}
+
+int _bal_islistening(const bal_socket* s)
+{
+    return (s && bal_isbitset(s->_f, BAL_F_LISTENING)) ? BAL_TRUE : BAL_FALSE;
 }
 
 int _bal_isclosedcircuit(const bal_socket* s)
@@ -1042,6 +1075,11 @@ BALTHREAD _bal_eventthread(void* p)
                         if (BAL_TRUE == _bal_haspendingconnect(t->s)) {
                             t->mask |= BAL_S_CONNECT;
                             t->s->_f &= ~BAL_F_PENDCONN;
+                        }
+
+                        if (BAL_TRUE == _bal_islistening(t->s)) {
+                            t->mask |= BAL_S_LISTEN;
+                            t->s->_f &= ~BAL_F_LISTENING;
                         }
 
                         if (t->s->sd > highsd)
@@ -1128,11 +1166,11 @@ void _bal_dispatchevents(fd_set* set, bal_eventthread_data* td, int type)
 
                 switch (type) {
                     case BAL_S_READ:
-                        if (_bal_isbitset(t->mask, BAL_E_READ)) {
-                            if (BAL_TRUE == _bal_isclosedcircuit(t->s))
-                                event = BAL_E_CLOSE;
-                            else if (BAL_TRUE == bal_islistening(t->s))
+                        if (bal_isbitset(t->mask, BAL_E_READ)) {
+                            if (bal_isbitset(t->mask, BAL_S_LISTEN))
                                 event = BAL_E_ACCEPT;
+                            else if (BAL_TRUE == _bal_isclosedcircuit(t->s))
+                                event = BAL_E_CLOSE;
                             else
                                 event = BAL_E_READ;
 
@@ -1140,28 +1178,29 @@ void _bal_dispatchevents(fd_set* set, bal_eventthread_data* td, int type)
                         }
                     break;
                     case BAL_S_WRITE:
-                        if (_bal_isbitset(t->mask, BAL_E_WRITE)) {
-                            if (_bal_isbitset(t->mask, BAL_S_CONNECT)) {
+                        if (bal_isbitset(t->mask, BAL_E_WRITE)) {
+                            if (bal_isbitset(t->mask, BAL_S_CONNECT)) {
                                 event = BAL_E_CONNECT;
                                 t->mask &= ~BAL_S_CONNECT;
-                            } else {
+                            } else
                                 event = BAL_E_WRITE;
-                            }
 
                             snd = true;
                         }
                     break;
                     case BAL_S_EXCEPT:
-                        if (_bal_isbitset(t->mask, BAL_S_CONNECT)) {
-                            event = BAL_E_CONNFAIL;
-                            t->mask &= ~BAL_S_CONNECT;
-                        } else {
-                            event = BAL_E_EXCEPTION;
-                        }
+                        if (bal_isbitset(t->mask, BAL_E_EXCEPTION)) {
+                            if (bal_isbitset(t->mask, BAL_S_CONNECT)) {
+                                event = BAL_E_CONNFAIL;
+                                t->mask &= ~BAL_S_CONNECT;
+                            } else
+                                event = BAL_E_EXCEPTION;
 
-                        snd = true;
+                            snd = true;
+                        }
                     break;
                     default:
+                        assert(!"invalid event type");
                         _bal_setlasterror(EINVAL);
                     break;
                 }
@@ -1347,12 +1386,18 @@ int _bal_mutex_init(bal_mutex* m)
 
     if (m) {
 #if defined(__WIN__)
-        *m = CreateMutex(NULL, FALSE, NULL);
-        if (*m)
-            r = BAL_TRUE;
+        InitializeCriticalSection(m);
+        r = BAL_TRUE;
 #else
-        if (0 == pthread_mutex_init(m, NULL))
-            r = BAL_TRUE;
+        pthread_mutexattr_t attr;
+        int op = pthread_mutexattr_init(&attr);
+        if (0 == op) {
+            op = pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
+            if (0 == op) {
+                op = pthread_mutex_init(m, &attr);
+                r = 0 == op ? BAL_TRUE : BAL_FALSE;
+            }
+        }
 #endif
     }
 
@@ -1365,8 +1410,8 @@ int _bal_mutex_lock(bal_mutex* m)
 
     if (m) {
 #if defined(__WIN__)
-        if (WAIT_OBJECT_0 == WaitForSingleObject(*m, INFINITE))
-            r = BAL_TRUE;
+        EnterCriticalSection(m);
+        r = BAL_TRUE;
 #else
         if (0 == pthread_mutex_lock(m))
             r = BAL_TRUE;
@@ -1382,8 +1427,8 @@ int _bal_mutex_unlock(bal_mutex* m)
 
     if (m) {
 #if defined(__WIN__)
-        if (ReleaseMutex(*m))
-            r = BAL_TRUE;
+        LeaveCriticalSection(m);
+        r = BAL_TRUE;
 #else
         if (0 == pthread_mutex_unlock(m))
             r = BAL_TRUE;
@@ -1399,11 +1444,8 @@ int _bal_mutex_destroy(bal_mutex* m)
 
     if (m) {
 #if defined(__WIN__)
-        if (*m && INVALID_HANDLE_VALUE != *m) {
-            if (CloseHandle(*m))
-                r = BAL_TRUE;
-            *m = NULL;
-        }
+        DeleteCriticalSection(m);
+        r = BAL_TRUE;
 #else
         if (0 == pthread_mutex_destroy(m))
             r = BAL_TRUE;

@@ -36,15 +36,15 @@ int main(int argc, char** argv)
     if (!balcommon::initialize())
         return EXIT_FAILURE;
 
-    int ret = bal_initialize();
-    EXIT_IF_FAILED(ret, nullptr, "bal_initialize");
-
     bal_socket s;
-    ret = bal_sock_create(&s, AF_INET, IPPROTO_TCP, SOCK_STREAM);
+    int ret = bal_sock_create(&s, AF_INET, IPPROTO_TCP, SOCK_STREAM);
     EXIT_IF_FAILED(ret, nullptr, "bal_sock_create");
 
     ret = bal_bind(&s, balcommon::localaddr, balcommon::portnum);
     EXIT_IF_FAILED(ret, nullptr, "bal_bind");
+
+    ret = bal_asyncselect(&s, &balserver::async_events_cb, BAL_E_ALL);
+    EXIT_IF_FAILED(ret, nullptr, "bal_asyncselect");
 
     ret = bal_listen(&s, 0);
     EXIT_IF_FAILED(ret, nullptr, "bal_listen");
@@ -53,15 +53,9 @@ int main(int argc, char** argv)
         balcommon::localaddr, balcommon::portnum);
 
     do {
-        //bal_socket client_sock   = {0};
-        //bal_sockaddr client_addr = {0};
-
-    //    bal_accept(&s, &client_sock, &client_addr);
-
         int yield = sched_yield();
         assert(0 == yield);
     } while (balcommon::should_run());
-
 
     ret = bal_close(&s);
     EXIT_IF_FAILED(ret, nullptr, "bal_close");
@@ -72,4 +66,52 @@ int main(int argc, char** argv)
     return EXIT_SUCCESS;
 }
 
+void balserver::async_events_cb(const bal_socket* s, uint32_t events)
+{
+    if (bal_isbitset(events, BAL_E_ACCEPT))
+    {
+        bal_socket client_socket;
+        bal_sockaddr client_addr;
 
+        int ret = bal_accept(s, &client_socket, &client_addr);
+        if (BAL_TRUE != ret) {
+            balcommon::print_last_lib_error(nullptr, "bal_accept");
+            return;
+        }
+
+        bal_addrstrings client_strings;
+        ret = bal_getaddrstrings(&client_addr, 0, &client_strings);
+        if (BAL_TRUE != ret) {
+            balcommon::print_last_lib_error(nullptr, "bal_getaddrstrings");
+            bal_close(&client_socket);
+            return;
+        }
+
+        ret = bal_asyncselect(&client_socket, &async_events_cb, BAL_E_ALL);
+        if (BAL_TRUE != ret) {
+            balcommon::print_last_lib_error(nullptr, "bal_asyncselect");
+            bal_close(&client_socket);
+            return;
+        }
+
+        printf("[%d] got connection from %s %s:%s; sd = %d\n", s->sd,
+            client_strings.type, client_strings.ip, client_strings.port,
+            client_socket.sd);
+    }
+
+    if (bal_isbitset(events, BAL_E_READ))
+    {
+        char read_buf[2048] = {0};
+        int read = bal_recv(s, &read_buf[0], 2047, 0);
+        if (read > 0)
+            printf("[%d] read %d bytes: '%s'\n", s->sd, read, read_buf);
+        else
+            printf("[%d] read error %d!\n", s->sd, bal_geterror(s));
+    }
+
+    if (bal_isbitset(events, BAL_E_EXCEPTION)) {
+        printf("[%d] error: got exception condition! err: %d\n", s->sd,
+            bal_geterror(s));
+        return;
+    }
+}
