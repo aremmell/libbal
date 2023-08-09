@@ -187,6 +187,7 @@ int bal_sock_create(bal_socket* s, int af, int pt, int st)
         s->af = af;
         s->pf = pt;
         s->st = st;
+        s->_f = 0u;
         r     = BAL_TRUE;
     }
 
