@@ -251,7 +251,7 @@ int bal_connectaddrlist(balst* s, bal_addrlist* al)
             const bal_sockaddr* sa = NULL;
 
             while (NULL != (sa = bal_enumaddrlist(al))) {
-                r = connect(s->sd, (const struct sockaddr*)sa, BAL_SASIZE((*sa)));
+                r = connect(s->sd, (const struct sockaddr*)sa, BAL_SASIZE(*sa));
 
 #if defined(__WIN__)
                 if (!r || (-1 == r && WSAEWOULDBLOCK == WSAGetLastError())) {
