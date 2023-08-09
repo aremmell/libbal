@@ -131,7 +131,7 @@ int bal_asyncselect(const bal_socket* s, bal_async_callback proc, uint32_t mask)
     return r;
 }
 
-int bal_autosocket(bal_socket* s, int af, int pt, cbstr host, cbstr port)
+int bal_autosocket(bal_socket* s, int af, int pt, const char* host, const char* port)
 {
     int r = BAL_FALSE;
 
@@ -219,7 +219,7 @@ int bal_shutdown(bal_socket* s, int how)
     }
 }
 
-int bal_connect(const bal_socket* s, cbstr host, cbstr port)
+int bal_connect(const bal_socket* s, const char* host, const char* port)
 {
     int r = BAL_FALSE;
 
@@ -284,7 +284,7 @@ int bal_recv(const bal_socket* s, void* data, size_t len, int flags)
         return BAL_FALSE;
 }
 
-int bal_sendto(const bal_socket* s, cbstr host, cbstr port, const void* data, size_t len, int flags)
+int bal_sendto(const bal_socket* s, const char* host, const char* port, const void* data, size_t len, int flags)
 {
     int r = BAL_FALSE;
 
@@ -318,7 +318,7 @@ int bal_recvfrom(const bal_socket* s, void* data, size_t len, int flags, bal_soc
     }
 }
 
-int bal_bind(const bal_socket* s, cbstr addr, cbstr port)
+int bal_bind(const bal_socket* s, const char* addr, const char* port)
 {
     int r = BAL_FALSE;
 
@@ -645,7 +645,7 @@ int bal_lastsockerror(const bal_socket* s, bal_error* err)
     return _bal_getlasterror(s, err);
 }
 
-int bal_resolvehost(cbstr host, bal_addrlist* out)
+int bal_resolvehost(const char* host, bal_addrlist* out)
 {
     int r = BAL_FALSE;
 
@@ -798,7 +798,7 @@ int bal_getaddrstrings(const bal_sockaddr* in, int dns, bal_addrstrings* out)
 ╰─────────────────────────────────────────────────────────────────────────────*/
 
 
-int _bal_getaddrinfo(int f, int af, int st, cbstr host, cbstr port, bal_addrinfo* res)
+int _bal_getaddrinfo(int f, int af, int st, const char* host, const char* port, bal_addrinfo* res)
 {
     int r = BAL_FALSE;
 
@@ -827,7 +827,7 @@ int _bal_getaddrinfo(int f, int af, int st, cbstr host, cbstr port, bal_addrinfo
     return r;
 }
 
-int _bal_getnameinfo(int f, const bal_sockaddr* in, bstr host, bstr port)
+int _bal_getnameinfo(int f, const bal_sockaddr* in, char* host, char* port)
 {
     int r = BAL_FALSE;
 
