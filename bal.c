@@ -1240,12 +1240,12 @@ int _bal_sdl_rem(bal_selectdata_list* sdl, bal_socket sd)
             if (t == sdl->_h) {
                 sdl->_h = t->_n;
             } else {
-                t->_p->_n = (t->_n ? t->_n : NULL);
+                t->_p->_n = t->_n;
 
                 if (t == sdl->_t)
                     sdl->_t = t->_p;
                 else
-                    t->_n->_p = (t->_p ? t->_p : NULL);
+                    t->_n->_p = t->_p;
             }
 
             free(t);
