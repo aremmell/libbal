@@ -1,5 +1,5 @@
 /*
- * balserver.cc
+ * balcommon.hh
  *
  * Author:    Ryan M. Lederman <lederman@gmail.com>
  * Copyright: Copyright (c) 2004-2023
@@ -23,53 +23,39 @@
  * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-#include "balserver.hh"
-#include <cstdio>
+#ifndef _BAL_COMMON_HH_INCLUDED
+# define _BAL_COMMON_HH_INCLUDED
 
-using namespace std;
+# include "bal.h"
+# include <atomic>
 
-int main(int argc, char** argv)
+# if !defined(__WIN__)
+#  include <signal.h>
+# endif
+
+namespace balcommon
 {
-    BAL_UNUSED(argc);
-    BAL_UNUSED(argv);
+    constexpr const char* localaddr = "127.0.0.1";
+    constexpr const char* portnum = "9000";
 
-    if (!balcommon::initialize())
-        return EXIT_FAILURE;
+    bool initialize();
+    bool should_run();
+    bool install_ctrl_c_handler();
+    void ctrl_c_handler_impl();
+    void print_last_lib_error(const bal_socket* s = nullptr,
+        const char* func = nullptr);
 
-    int ret = bal_initialize();
-    EXIT_IF_FAILED(ret, nullptr, "bal_initialize");
+# define EXIT_IF_FAILED(retval, s, func) \
+    if (BAL_TRUE != retval) { \
+        balcommon::print_last_lib_error(s, func); \
+        return EXIT_FAILURE; \
+    }
 
-    bal_socket s;
-    ret = bal_sock_create(&s, AF_INET, IPPROTO_TCP, SOCK_STREAM);
-    EXIT_IF_FAILED(ret, nullptr, "bal_sock_create");
+# if defined(__WIN__)
+    BOOL WINAPI on_ctrl_c(DWORD ctl_type);
+# else
+    void on_ctrl_c(int sig);
+# endif
+} // !namespace balcommon
 
-    ret = bal_bind(&s, balcommon::localaddr, balcommon::portnum);
-    EXIT_IF_FAILED(ret, nullptr, "bal_bind");
-
-    ret = bal_listen(&s, 0);
-    EXIT_IF_FAILED(ret, nullptr, "bal_listen");
-
-    printf("listening on %s:%s; ctrl+c to exit...\n",
-        balcommon::localaddr, balcommon::portnum);
-
-    do {
-        //bal_socket client_sock   = {0};
-        //bal_sockaddr client_addr = {0};
-
-    //    bal_accept(&s, &client_sock, &client_addr);
-
-        int yield = sched_yield();
-        assert(0 == yield);
-    } while (balcommon::should_run());
-
-
-    ret = bal_close(&s);
-    EXIT_IF_FAILED(ret, nullptr, "bal_close");
-
-    ret = bal_finalize();
-    EXIT_IF_FAILED(ret, nullptr, "bal_finalize");
-
-    return EXIT_SUCCESS;
-}
-
-
+#endif // !_BAL_COMMON_HH_INCLUDED

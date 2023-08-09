@@ -1,5 +1,5 @@
 /*
- * balserver.cc
+ * balclient.hh
  *
  * Author:    Ryan M. Lederman <lederman@gmail.com>
  * Copyright: Copyright (c) 2004-2023
@@ -23,53 +23,13 @@
  * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-#include "balserver.hh"
-#include <cstdio>
+#ifndef _BAL_CLIENT_HH_INCLUDED
+#define _BAL_CLIENT_HH_INCLUDED
 
-using namespace std;
+#include "balcommon.hh"
 
-int main(int argc, char** argv)
+namespace balclient
 {
-    BAL_UNUSED(argc);
-    BAL_UNUSED(argv);
+} // !namespace balclient
 
-    if (!balcommon::initialize())
-        return EXIT_FAILURE;
-
-    int ret = bal_initialize();
-    EXIT_IF_FAILED(ret, nullptr, "bal_initialize");
-
-    bal_socket s;
-    ret = bal_sock_create(&s, AF_INET, IPPROTO_TCP, SOCK_STREAM);
-    EXIT_IF_FAILED(ret, nullptr, "bal_sock_create");
-
-    ret = bal_bind(&s, balcommon::localaddr, balcommon::portnum);
-    EXIT_IF_FAILED(ret, nullptr, "bal_bind");
-
-    ret = bal_listen(&s, 0);
-    EXIT_IF_FAILED(ret, nullptr, "bal_listen");
-
-    printf("listening on %s:%s; ctrl+c to exit...\n",
-        balcommon::localaddr, balcommon::portnum);
-
-    do {
-        //bal_socket client_sock   = {0};
-        //bal_sockaddr client_addr = {0};
-
-    //    bal_accept(&s, &client_sock, &client_addr);
-
-        int yield = sched_yield();
-        assert(0 == yield);
-    } while (balcommon::should_run());
-
-
-    ret = bal_close(&s);
-    EXIT_IF_FAILED(ret, nullptr, "bal_close");
-
-    ret = bal_finalize();
-    EXIT_IF_FAILED(ret, nullptr, "bal_finalize");
-
-    return EXIT_SUCCESS;
-}
-
-
+#endif // !_BAL_CLIENT_HH_INCLUDED
