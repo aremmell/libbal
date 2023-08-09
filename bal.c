@@ -25,9 +25,9 @@
  */
 #include "bal.h"
 
-/*
-  Exported functions
- */
+/*─────────────────────────────────────────────────────────────────────────────╮
+│                            Exported Functions                                │
+╰─────────────────────────────────────────────────────────────────────────────*/
 
 int bal_initialize(void)
 {
@@ -60,7 +60,7 @@ int bal_finalize(void)
     return r;
 }
 
-int bal_asyncselect(const balst* s, bal_async_callback proc, uint32_t mask)
+int bal_asyncselect(const bal_socket* s, bal_async_callback proc, uint32_t mask)
 {
     int r                          = BAL_FALSE;
     static bal_selectdata_list l   = {0};
@@ -112,7 +112,7 @@ int bal_asyncselect(const balst* s, bal_async_callback proc, uint32_t mask)
                     if (BAL_TRUE == bal_setiomode(s, 1)) {
                         d.mask = mask;
                         d.proc = proc;
-                        d.s    = (balst*)s;
+                        d.s    = (bal_socket*)s;
                         d._n   = NULL;
                         d._p   = NULL;
 
@@ -131,7 +131,7 @@ int bal_asyncselect(const balst* s, bal_async_callback proc, uint32_t mask)
     return r;
 }
 
-int bal_autosocket(balst* s, int af, int pt, cbstr host, cbstr port)
+int bal_autosocket(bal_socket* s, int af, int pt, cbstr host, cbstr port)
 {
     int r = BAL_FALSE;
 
@@ -158,7 +158,7 @@ int bal_autosocket(balst* s, int af, int pt, cbstr host, cbstr port)
     return r;
 }
 
-int bal_sock_create(balst* s, int af, int pt, int st)
+int bal_sock_create(bal_socket* s, int af, int pt, int st)
 {
     int r = BAL_FALSE;
 
@@ -172,7 +172,7 @@ int bal_sock_create(balst* s, int af, int pt, int st)
     return r;
 }
 
-int bal_reset(balst* s)
+int bal_reset(bal_socket* s)
 {
     int r = BAL_FALSE;
 
@@ -181,14 +181,13 @@ int bal_reset(balst* s)
         s->pf = -1;
         s->sd = -1;
         s->st = -1;
-        s->ud = (unsigned long)-1;
         r     = BAL_TRUE;
     }
 
     return r;
 }
 
-int bal_close(balst* s)
+int bal_close(bal_socket* s)
 {
     int r = BAL_FALSE;
 
@@ -206,7 +205,7 @@ int bal_close(balst* s)
     return r;
 }
 
-int bal_shutdown(balst* s, int how)
+int bal_shutdown(bal_socket* s, int how)
 {
     if (s) {
         s->_f &= ~BAL_F_PENDCONN;
@@ -220,7 +219,7 @@ int bal_shutdown(balst* s, int how)
     }
 }
 
-int bal_connect(const balst* s, cbstr host, cbstr port)
+int bal_connect(const bal_socket* s, cbstr host, cbstr port)
 {
     int r = BAL_FALSE;
 
@@ -231,7 +230,7 @@ int bal_connect(const balst* s, cbstr host, cbstr port)
             bal_addrlist al = {NULL, NULL};
 
             if (BAL_TRUE == _bal_aitoal(&ai, &al)) {
-                r = bal_connectaddrlist((balst*)s, &al);
+                r = bal_connectaddrlist((bal_socket*)s, &al);
                 bal_freeaddrlist(&al);
             }
 
@@ -242,7 +241,7 @@ int bal_connect(const balst* s, cbstr host, cbstr port)
     return r;
 }
 
-int bal_connectaddrlist(balst* s, bal_addrlist* al)
+int bal_connectaddrlist(bal_socket* s, bal_addrlist* al)
 {
     int r = BAL_FALSE;
 
@@ -269,7 +268,7 @@ int bal_connectaddrlist(balst* s, bal_addrlist* al)
     return r;
 }
 
-int bal_send(const balst* s, const void* data, size_t len, int flags)
+int bal_send(const bal_socket* s, const void* data, size_t len, int flags)
 {
     if (s && data && len)
         return send(s->sd, (const char*)data, len, flags);
@@ -277,7 +276,7 @@ int bal_send(const balst* s, const void* data, size_t len, int flags)
         return BAL_FALSE;
 }
 
-int bal_recv(const balst* s, void* data, size_t len, int flags)
+int bal_recv(const bal_socket* s, void* data, size_t len, int flags)
 {
     if (s && data && len)
         return recv(s->sd, (char*)data, len, flags);
@@ -285,7 +284,7 @@ int bal_recv(const balst* s, void* data, size_t len, int flags)
         return BAL_FALSE;
 }
 
-int bal_sendto(const balst* s, cbstr host, cbstr port, const void* data, size_t len, int flags)
+int bal_sendto(const bal_socket* s, cbstr host, cbstr port, const void* data, size_t len, int flags)
 {
     int r = BAL_FALSE;
 
@@ -301,7 +300,7 @@ int bal_sendto(const balst* s, cbstr host, cbstr port, const void* data, size_t 
     return r;
 }
 
-int bal_sendtoaddr(const balst* s, const bal_sockaddr* sa, const void* data, size_t len, int flags)
+int bal_sendtoaddr(const bal_socket* s, const bal_sockaddr* sa, const void* data, size_t len, int flags)
 {
     if (s && sa && data && len)
         return sendto(s->sd, data, len, flags, (const struct sockaddr*)sa, BAL_SASIZE(*sa));
@@ -309,7 +308,7 @@ int bal_sendtoaddr(const balst* s, const bal_sockaddr* sa, const void* data, siz
         return BAL_FALSE;
 }
 
-int bal_recvfrom(const balst* s, void* data, size_t len, int flags, bal_sockaddr* res)
+int bal_recvfrom(const bal_socket* s, void* data, size_t len, int flags, bal_sockaddr* res)
 {
     if (s && data && len) {
         socklen_t sasize = sizeof(bal_sockaddr);
@@ -319,7 +318,7 @@ int bal_recvfrom(const balst* s, void* data, size_t len, int flags, bal_sockaddr
     }
 }
 
-int bal_bind(const balst* s, cbstr addr, cbstr port)
+int bal_bind(const bal_socket* s, cbstr addr, cbstr port)
 {
     int r = BAL_FALSE;
 
@@ -343,12 +342,12 @@ int bal_bind(const balst* s, cbstr addr, cbstr port)
     return r;
 }
 
-int bal_listen(const balst* s, int backlog)
+int bal_listen(const bal_socket* s, int backlog)
 {
     return ((NULL != s) ? listen(s->sd, backlog) : BAL_FALSE);
 }
 
-int bal_accept(const balst* s, balst* res, bal_sockaddr* resaddr)
+int bal_accept(const bal_socket* s, bal_socket* res, bal_sockaddr* resaddr)
 {
     int r = BAL_FALSE;
 
@@ -362,22 +361,22 @@ int bal_accept(const balst* s, balst* res, bal_sockaddr* resaddr)
     return r;
 }
 
-int bal_getoption(const balst* s, int level, int name, void* optval, socklen_t len)
+int bal_getoption(const bal_socket* s, int level, int name, void* optval, socklen_t len)
 {
     return ((NULL != s) ? getsockopt(s->sd, level, name, optval, &len) : BAL_FALSE);
 }
 
-int bal_setoption(const balst* s, int level, int name, const void* optval, socklen_t len)
+int bal_setoption(const bal_socket* s, int level, int name, const void* optval, socklen_t len)
 {
     return ((NULL != s) ? setsockopt(s->sd, level, name, optval, len) : BAL_FALSE);
 }
 
-int bal_setbroadcast(const balst* s, int flag)
+int bal_setbroadcast(const bal_socket* s, int flag)
 {
     return bal_setoption(s, SOL_SOCKET, SO_BROADCAST, &flag, sizeof(int));
 }
 
-int bal_getbroadcast(const balst* s)
+int bal_getbroadcast(const bal_socket* s)
 {
     int r = BAL_FALSE;
 
@@ -387,12 +386,12 @@ int bal_getbroadcast(const balst* s)
     return r;
 }
 
-int bal_setdebug(const balst* s, int flag)
+int bal_setdebug(const bal_socket* s, int flag)
 {
     return bal_setoption(s, SOL_SOCKET, SO_DEBUG, &flag, sizeof(int));
 }
 
-int bal_getdebug(const balst* s)
+int bal_getdebug(const bal_socket* s)
 {
     int r = BAL_FALSE;
 
@@ -402,7 +401,7 @@ int bal_getdebug(const balst* s)
     return r;
 }
 
-int bal_setlinger(const balst* s, int sec)
+int bal_setlinger(const bal_socket* s, int sec)
 {
     struct linger l;
 
@@ -412,7 +411,7 @@ int bal_setlinger(const balst* s, int sec)
     return bal_setoption(s, SOL_SOCKET, SO_LINGER, &l, sizeof(l));
 }
 
-int bal_getlinger(const balst* s, int* sec)
+int bal_getlinger(const bal_socket* s, int* sec)
 {
     int r = BAL_FALSE;
 
@@ -428,12 +427,12 @@ int bal_getlinger(const balst* s, int* sec)
     return r;
 }
 
-int bal_setkeepalive(const balst* s, int flag)
+int bal_setkeepalive(const bal_socket* s, int flag)
 {
     return bal_setoption(s, SOL_SOCKET, SO_KEEPALIVE, &flag, sizeof(int));
 }
 
-int bal_getkeepalive(const balst* s)
+int bal_getkeepalive(const bal_socket* s)
 {
     int r = BAL_FALSE;
 
@@ -443,12 +442,12 @@ int bal_getkeepalive(const balst* s)
     return r;
 }
 
-int bal_setoobinline(const balst* s, int flag)
+int bal_setoobinline(const bal_socket* s, int flag)
 {
     return bal_setoption(s, SOL_SOCKET, SO_OOBINLINE, &flag, sizeof(int));
 }
 
-int bal_getoobinline(const balst* s)
+int bal_getoobinline(const bal_socket* s)
 {
     int r = BAL_FALSE;
 
@@ -458,12 +457,12 @@ int bal_getoobinline(const balst* s)
     return r;
 }
 
-int bal_setreuseaddr(const balst* s, int flag)
+int bal_setreuseaddr(const bal_socket* s, int flag)
 {
     return bal_setoption(s, SOL_SOCKET, SO_REUSEADDR, &flag, sizeof(int));
 }
 
-int bal_getreuseaddr(const balst* s)
+int bal_getreuseaddr(const bal_socket* s)
 {
     int r = BAL_FALSE;
 
@@ -473,12 +472,12 @@ int bal_getreuseaddr(const balst* s)
     return r;
 }
 
-int bal_setsendbufsize(const balst* s, int size)
+int bal_setsendbufsize(const bal_socket* s, int size)
 {
     return bal_setoption(s, SOL_SOCKET, SO_SNDBUF, &size, sizeof(int));
 }
 
-int bal_getsendbufsize(const balst* s)
+int bal_getsendbufsize(const bal_socket* s)
 {
     int r = BAL_FALSE;
 
@@ -488,12 +487,12 @@ int bal_getsendbufsize(const balst* s)
     return r;
 }
 
-int bal_setrecvbufsize(const balst* s, int size)
+int bal_setrecvbufsize(const bal_socket* s, int size)
 {
     return bal_setoption(s, SOL_SOCKET, SO_RCVBUF, &size, sizeof(int));
 }
 
-int bal_getrecvbufsize(const balst* s)
+int bal_getrecvbufsize(const bal_socket* s)
 {
     int r = BAL_FALSE;
 
@@ -503,13 +502,13 @@ int bal_getrecvbufsize(const balst* s)
     return r;
 }
 
-int bal_setsendtimeout(const balst* s, long sec, long usec)
+int bal_setsendtimeout(const bal_socket* s, long sec, long usec)
 {
     struct timeval t = {sec, usec};
     return bal_setoption(s, SOL_SOCKET, SO_SNDTIMEO, &t, sizeof(t));
 }
 
-int bal_getsendtimeout(const balst* s, long* sec, long* usec)
+int bal_getsendtimeout(const bal_socket* s, long* sec, long* usec)
 {
     int r = BAL_FALSE;
 
@@ -526,13 +525,13 @@ int bal_getsendtimeout(const balst* s, long* sec, long* usec)
     return r;
 }
 
-int bal_setrecvtimeout(const balst* s, long sec, long usec)
+int bal_setrecvtimeout(const bal_socket* s, long sec, long usec)
 {
     struct timeval t = {sec, usec};
     return bal_setoption(s, SOL_SOCKET, SO_RCVTIMEO, &t, sizeof(t));
 }
 
-int bal_getrecvtimeout(const balst* s, long* sec, long* usec)
+int bal_getrecvtimeout(const bal_socket* s, long* sec, long* usec)
 {
     int r = BAL_FALSE;
 
@@ -549,7 +548,7 @@ int bal_getrecvtimeout(const balst* s, long* sec, long* usec)
     return r;
 }
 
-int bal_geterror(const balst* s)
+int bal_geterror(const bal_socket* s)
 {
     int r = BAL_FALSE;
 
@@ -559,7 +558,7 @@ int bal_geterror(const balst* s)
     return r;
 }
 
-int bal_islistening(const balst* s)
+int bal_islistening(const bal_socket* s)
 {
     int r = BAL_FALSE;
     int l = 0;
@@ -570,7 +569,7 @@ int bal_islistening(const balst* s)
     return r;
 }
 
-int bal_isreadable(const balst* s)
+int bal_isreadable(const bal_socket* s)
 {
     int r = BAL_FALSE;
 
@@ -590,7 +589,7 @@ int bal_isreadable(const balst* s)
     return r;
 }
 
-int bal_iswritable(const balst* s)
+int bal_iswritable(const bal_socket* s)
 {
     int r = BAL_FALSE;
 
@@ -610,7 +609,7 @@ int bal_iswritable(const balst* s)
     return r;
 }
 
-int bal_setiomode(const balst* s, unsigned long flag)
+int bal_setiomode(const bal_socket* s, unsigned long flag)
 {
 #if defined(__WIN__)
     return ((NULL != s) ? ioctlsocket(s->sd, FIONBIO, &flag) : BAL_FALSE);
@@ -619,7 +618,7 @@ int bal_setiomode(const balst* s, unsigned long flag)
 #endif
 }
 
-size_t bal_recvqueuesize(const balst* s)
+size_t bal_recvqueuesize(const bal_socket* s)
 {
     size_t r = 0UL;
 
@@ -641,7 +640,7 @@ int bal_lastliberror(bal_error* err)
     return _bal_getlasterror(NULL, err);
 }
 
-int bal_lastsockerror(const balst* s, bal_error* err)
+int bal_lastsockerror(const bal_socket* s, bal_error* err)
 {
     return _bal_getlasterror(s, err);
 }
@@ -663,7 +662,7 @@ int bal_resolvehost(cbstr host, bal_addrlist* out)
     return r;
 }
 
-int bal_getremotehostaddr(const balst* s, bal_sockaddr* out)
+int bal_getremotehostaddr(const bal_socket* s, bal_sockaddr* out)
 {
     int r = BAL_FALSE;
 
@@ -678,7 +677,7 @@ int bal_getremotehostaddr(const balst* s, bal_sockaddr* out)
     return r;
 }
 
-int bal_getremotehoststrings(const balst* s, int dns, bal_addrstrings* out)
+int bal_getremotehoststrings(const bal_socket* s, int dns, bal_addrstrings* out)
 {
     int r = BAL_FALSE;
     bal_sockaddr sa;
@@ -689,7 +688,7 @@ int bal_getremotehoststrings(const balst* s, int dns, bal_addrstrings* out)
     return r;
 }
 
-int bal_getlocalhostaddr(const balst* s, bal_sockaddr* out)
+int bal_getlocalhostaddr(const bal_socket* s, bal_sockaddr* out)
 {
     int r = BAL_FALSE;
 
@@ -704,7 +703,7 @@ int bal_getlocalhostaddr(const balst* s, bal_sockaddr* out)
     return r;
 }
 
-int bal_getlocalhoststrings(const balst* s, int dns, bal_addrstrings* out)
+int bal_getlocalhoststrings(const bal_socket* s, int dns, bal_addrstrings* out)
 {
     int r = BAL_FALSE;
     bal_sockaddr sa;
@@ -798,9 +797,9 @@ int bal_getaddrstrings(const bal_sockaddr* in, int dns, bal_addrstrings* out)
 }
 
 
-/*
-  Internal functions
- */
+/*─────────────────────────────────────────────────────────────────────────────╮
+│                            Internal Functions                                │
+╰─────────────────────────────────────────────────────────────────────────────*/
 
 
 int _bal_getaddrinfo(int f, int af, int st, cbstr host, cbstr port, bal_addrinfo* res)
@@ -925,7 +924,7 @@ int _bal_aitoal(bal_addrinfo* in, bal_addrlist* out)
     return r;
 }
 
-int _bal_getlasterror(const balst* s, bal_error* err)
+int _bal_getlasterror(const bal_socket* s, bal_error* err)
 {
     int r = BAL_FALSE;
 
@@ -1007,12 +1006,12 @@ int _bal_retstr(bstr out, const char* in)
     return r;
 }
 
-int _bal_haspendingconnect(const balst* s)
+int _bal_haspendingconnect(const bal_socket* s)
 {
     return (s && ((s->_f & BAL_F_PENDCONN) == BAL_F_PENDCONN)) ? BAL_TRUE : BAL_FALSE;
 }
 
-int _bal_isclosedcircuit(const balst* s)
+int _bal_isclosedcircuit(const bal_socket* s)
 {
     int r = BAL_FALSE;
 

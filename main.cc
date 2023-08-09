@@ -6,7 +6,7 @@
 
 using namespace std;
 
-void async_cb(const balst* st, int event)
+void async_cb(const bal_socket* st, int event)
 {
     //printf("async_cb: event: %08X\n", event);
 
@@ -56,7 +56,7 @@ void async_cb(const balst* st, int event)
 
 int main(int argc, char** argv)
 {
-    balst bs = {0};
+    bal_socket bs = {0};
     bal_addrlist al = {0};
     bal_addrstrings as = {0};
     const bal_sockaddr* psa = NULL;
@@ -90,7 +90,7 @@ int main(int argc, char** argv)
     }
 
     printf("Now asynchronously receiving events; press ctrl+C to exit\n");
-    sleep(5000);
+    sleep(5);
 
 /*     if (BAL_TRUE != bal_bind(&bs, "127.0.0.1", "1337")) {
         perror("bal_bindaddrany");
@@ -111,12 +111,11 @@ int main(int argc, char** argv)
         goto _cleanup;
     } */
 
-/*     // resolve
+     // resolve
     if (BAL_TRUE != bal_resolvehost("ulfberht.local", &al)) {
         perror("bal_resolvehost");
         goto _cleanup;
     }
-
 
     do {
         psa = bal_enumaddrlist(&al);
@@ -127,7 +126,7 @@ int main(int argc, char** argv)
         }
     } while (psa);
 
-    bal_freeaddrlist(&al); */
+    bal_freeaddrlist(&al);
 
 _cleanup:
     printf("cleaning up...\n");
