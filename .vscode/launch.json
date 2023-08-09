@@ -1,0 +1,29 @@
+{
+    "configurations": [
+        {
+            "name": "(lldb) Launch balserver",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/balserver",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "lldb"
+        },
+        {
+            "name": "(lldb) Launch balclient",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/balclient",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "lldb"
+        }
+    ],
+    "version": "2.0.0"
+}
