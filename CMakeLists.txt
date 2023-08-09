@@ -33,6 +33,10 @@ else()
     set(C_FLAGS_BASE "-Wall -Wextra -Wpedantic -Werror")
     set(CMAKE_C_FLAGS_DEBUG "${C_FLAGS_BASE} -g3 -O0 -DDEBUG")
     set(CMAKE_C_FLAGS_RELEASE "${C_FLAGS_BASE} -O3 -D_FORTIFY_SOURCE=2 -DNDEBUG")
+
+    set(CXX_FLAGS_BASE "-Wall -Wextra -Wpedantic -Werror")
+    set(CMAKE_CXX_FLAGS_DEBUG "${C_FLAGS_BASE} -g3 -O0 -DDEBUG")
+    set(CMAKE_CXX_FLAGS_RELEASE "${C_FLAGS_BASE} -O3 -D_FORTIFY_SOURCE=2 -DNDEBUG")
 endif()
 
 # define the project
@@ -60,11 +64,13 @@ configure_file(
 add_executable(
     ${CLIENT_EXECUTABLE_NAME}
     balclient.cc
+    balcommon.cc
 )
 
 add_executable(
     ${SERVER_EXECUTABLE_NAME}
     balserver.cc
+    balcommon.cc
 )
 
 add_library(
@@ -111,13 +117,13 @@ target_link_libraries(
 target_compile_features(
     ${CLIENT_EXECUTABLE_NAME}
     PUBLIC
-    c_std_17
+    cxx_std_20
 )
 
 target_compile_features(
     ${SERVER_EXECUTABLE_NAME}
     PUBLIC
-    c_std_17
+    cxx_std_20
 )
 
 target_compile_features(
