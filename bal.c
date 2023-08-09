@@ -1182,7 +1182,6 @@ void _bal_dispatchevents(fd_set* set, bal_eventthread_data* td, int type)
                         }
 
                         snd = 1;
-
                     break;
                     default:
                         _bal_setlasterror(EINVAL);
