@@ -64,7 +64,7 @@ bool balcommon::install_ctrl_c_handler()
 #else
     struct sigaction sa;
     sa.sa_flags   = 0;
-    sa.sa_mask    = 0;
+    sa.sa_mask    = {0};
     sa.sa_handler = &on_ctrl_c;
 
     int ret = sigaction(SIGINT, &sa, nullptr);

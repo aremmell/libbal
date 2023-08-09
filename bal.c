@@ -995,7 +995,7 @@ void __bal_setlasterror(int err, const char* func, const char* file, int line)
 #else
         lasterr.code = errno;
 #endif
-        strncpy(lasterr.desc, BAL_AS_UNKNWN, strlen(BAL_AS_UNKNWN));
+        strncpy(lasterr.desc, BAL_AS_UNKNWN, strnlen(BAL_AS_UNKNWN, BAL_MAXERROR));
     }
 
     __bal_selflog(func, file, line, "error: %d (%s)", lasterr.code, lasterr.desc);
