@@ -36,14 +36,7 @@
 #  elif defined (__FreeBSD__)
 #   undef _BSD_SOURCE
 #   define _BSD_SOURCE
-#  else
 #  endif
-#  undef _POSIX_C_SOURCE
-#  define _POSIX_C_SOURCE 199309L
-#  undef _DEFAULT_SOURCE
-#  define _DEFAULT_SOURCE 1
-#  undef _XOPEN_SOURCE
-#  define _XOPEN_SOURCE 700
 
 #  include <sys/types.h>
 #  include <sys/socket.h>
