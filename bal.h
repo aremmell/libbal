@@ -195,13 +195,15 @@ void __dummy_func(const char* dummy, ...) { BAL_UNUSED(dummy); }
 #endif
 
 static inline
-void bal_safefree(void** pp)
+void _bal_safefree(void** pp)
 {
     if (pp && *pp) {
         free(*pp);
         *pp = NULL;
     }
 }
+
+# define bal_safefree(pp) _bal_safefree((void**)pp)
 
 bool _bal_once(bal_once* once, bal_once_fn func);
 

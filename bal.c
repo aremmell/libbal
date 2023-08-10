@@ -1063,7 +1063,6 @@ BALTHREAD _bal_eventthread(void* p)
         fd_set r = {0};
         fd_set w = {0};
         fd_set e = {0};
-        size_t n = 0ul;
 
         if (BAL_TRUE == _bal_mutex_lock(td->m)) {
             bal_selectdata* t     = NULL;
@@ -1092,8 +1091,6 @@ BALTHREAD _bal_eventthread(void* p)
                 FD_SET(t->s->sd, &r);
                 FD_SET(t->s->sd, &w);
                 FD_SET(t->s->sd, &e);
-
-                n++;
             }
 
             struct timeval tv = {0, 0};
@@ -1204,7 +1201,7 @@ void _bal_dispatchevents(fd_set* set, bal_eventthread_data* td, int type)
 
                 if (BAL_E_CLOSE == event) {
                     bal_descriptor sd = t->s->sd;
-                    
+
                     int ret = bal_close(t->s);
                     BAL_ASSERT_UNUSED(ret, BAL_TRUE == ret);
 
@@ -1516,7 +1513,7 @@ void __bal_selflog(const char* func, const char* file, uint32_t line,
     va_copy(args2, args);
 
     int prnt_len = vsnprintf(NULL, 0, format, args);
-    
+
     va_end(args);
     assert(prnt_len > 0);
 
