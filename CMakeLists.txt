@@ -39,6 +39,8 @@ else()
     set(CXX_FLAGS_BASE "-Wall -Wextra -Wpedantic -Werror")
     set(CMAKE_CXX_FLAGS_DEBUG "${C_FLAGS_BASE} -g3 -O0 -DDEBUG -DBAL_SELFLOG")
     set(CMAKE_CXX_FLAGS_RELEASE "${C_FLAGS_BASE} -O3 -D_FORTIFY_SOURCE=2 -DNDEBUG")
+
+    set(CMAKE_EXE_LINKER_FLAGS, "${CMAKE_EXE_LINKER_FLAGS} -pthread")
 endif()
 
 # define the project
