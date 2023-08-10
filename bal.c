@@ -195,10 +195,11 @@ int bal_sock_create(bal_socket* s, int af, int pt, int st)
 void bal_reset(bal_socket* s)
 {
     if (s) {
-        s->af = -1;
-        s->pf = -1;
-        s->sd = -1;
-        s->st = -1;
+        s->af = 0;
+        s->pf = 0;
+        s->sd = BAL_BADSOCKET;
+        s->st = 0;
+        s->_f = 0u;
     }
 }
 
@@ -209,24 +210,19 @@ int bal_close(bal_socket* s)
     if (s) {
 #if defined(__WIN__)
         if (0 == closesocket(s->sd)) {
-            bal_reset(s);
             r = BAL_TRUE;
         }
     } else {
-        r = SOCKET_ERROR;
+        r = WSAENOTSOCK;
     }
 #else
         if (0 == close(s->sd)) {
-            bal_reset(s);
             r = BAL_TRUE;
         }
     } else {
         r = ENOTSOCK;
     }
 #endif
-
-    if (s)
-        s->_f &= ~(BAL_F_PENDCONN | BAL_F_LISTENING);
 
     return r;
 }
@@ -1067,45 +1063,44 @@ BALTHREAD _bal_eventthread(void* p)
         fd_set r = {0};
         fd_set w = {0};
         fd_set e = {0};
+        size_t n = 0ul;
 
         if (BAL_TRUE == _bal_mutex_lock(td->m)) {
-            int size = _bal_sdl_size(td->sdl);
-            if (0 < size) {
-                bal_selectdata* t     = NULL;
-                bal_descriptor highsd = 0;
+            bal_selectdata* t     = NULL;
+            bal_descriptor highsd = 0;
 
-                FD_ZERO(&r);
-                FD_ZERO(&w);
-                FD_ZERO(&e);
+            FD_ZERO(&r);
+            FD_ZERO(&w);
+            FD_ZERO(&e);
 
-                _bal_sdl_reset(td->sdl);
+            _bal_sdl_reset(td->sdl);
 
-                while (BAL_TRUE == _bal_sdl_enum(td->sdl, &t)) {
-
-                    if (BAL_TRUE == _bal_haspendingconnect(t->s)) {
-                        t->mask |= BAL_S_CONNECT;
-                        t->s->_f &= ~BAL_F_PENDCONN;
-                    }
-
-                    if (BAL_TRUE == _bal_islistening(t->s)) {
-                        t->mask |= BAL_S_LISTEN;
-                        t->s->_f &= ~BAL_F_LISTENING;
-                    }
-
-                    if (t->s->sd > highsd)
-                        highsd = t->s->sd;
-
-                    FD_SET(t->s->sd, &r);
-                    FD_SET(t->s->sd, &w);
-                    FD_SET(t->s->sd, &e);
+            while (BAL_TRUE == _bal_sdl_enum(td->sdl, &t)) {
+                if (BAL_TRUE == _bal_haspendingconnect(t->s)) {
+                    t->mask |= BAL_S_CONNECT;
+                    t->s->_f &= ~BAL_F_PENDCONN;
                 }
 
-                struct timeval tv = {0, 0};
-                if (-1 != select(highsd + 1, &r, &w, &e, &tv)) {
-                    _bal_dispatchevents(&r, td, BAL_S_READ);
-                    _bal_dispatchevents(&w, td, BAL_S_WRITE);
-                    _bal_dispatchevents(&e, td, BAL_S_EXCEPT);
+                if (BAL_TRUE == _bal_islistening(t->s)) {
+                    t->mask |= BAL_S_LISTEN;
+                    t->s->_f &= ~BAL_F_LISTENING;
                 }
+
+                if (t->s->sd > highsd)
+                    highsd = t->s->sd;
+
+                FD_SET(t->s->sd, &r);
+                FD_SET(t->s->sd, &w);
+                FD_SET(t->s->sd, &e);
+
+                n++;
+            }
+
+            struct timeval tv = {0, 0};
+            if (-1 != select(highsd + 1, &r, &w, &e, &tv)) {
+                _bal_dispatchevents(&r, td, BAL_S_READ);
+                _bal_dispatchevents(&w, td, BAL_S_WRITE);
+                _bal_dispatchevents(&e, td, BAL_S_EXCEPT);
             }
 
             int unlock = _bal_mutex_unlock(td->m);
@@ -1207,8 +1202,17 @@ void _bal_dispatchevents(fd_set* set, bal_eventthread_data* td, int type)
                 if (snd)
                     t->proc(t->s, event);
 
-                if (BAL_E_CLOSE == event)
-                    _bal_sdl_rem(td->sdl, t->s->sd);
+                if (BAL_E_CLOSE == event) {
+                    bal_descriptor sd = t->s->sd;
+                    
+                    int ret = bal_close(t->s);
+                    BAL_ASSERT_UNUSED(ret, BAL_TRUE == ret);
+
+                    ret = _bal_sdl_rem(td->sdl, sd);
+                    BAL_ASSERT_UNUSED(ret, BAL_TRUE == ret);
+
+                    _bal_selflog("removed and closed descriptor " BAL_SOCKET_SPEC, sd);
+                }
             }
         }
     }
@@ -1263,6 +1267,7 @@ int _bal_sdl_rem(bal_selectdata_list* sdl, bal_descriptor sd)
                     t->_n->_p = t->_p;
             }
 
+            bal_reset(t->s);
             bal_safefree(&t);
             r = BAL_TRUE;
         }

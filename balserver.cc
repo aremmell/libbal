@@ -125,12 +125,10 @@ void balserver::async_events_cb(bal_socket* s, uint32_t events)
 
     if (bal_isbitset(events, BAL_E_CLOSE)) {
         printf("[" BAL_SOCKET_SPEC "] connection closed.\n", s->sd);
-        bal_close(s);
     }
 
     if (bal_isbitset(events, BAL_E_EXCEPTION)) {
         printf("[" BAL_SOCKET_SPEC "] error: got exception condition! err: %d\n", s->sd,
             bal_geterror(s));
-        return;
     }
 }
