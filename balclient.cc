@@ -86,8 +86,9 @@ void balclient::async_events_cb(bal_socket* s, uint32_t events)
             printf("[" BAL_SOCKET_SPEC "] read error %d!\n", s->sd, bal_geterror(s));
     }
 
-    static bool wrote_helo = false;
     if (bal_isbitset(events, BAL_E_WRITE)) {
+        static bool wrote_helo = false;
+
         int err = bal_geterror(s);
         if (0 != err) {
             printf("[" BAL_SOCKET_SPEC "] write error %d!\n", s->sd, err);
