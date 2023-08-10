@@ -126,7 +126,7 @@ int bal_asyncselect(const bal_socket* s, bal_async_callback proc, uint32_t mask)
                     d->proc = proc;
                     r       = BAL_TRUE;
                 } else {
-                    bal_selectdata d;
+                    bal_selectdata d = {0};
 
                     if (BAL_TRUE == bal_setiomode(s, true)) {
                         d.mask = mask;
@@ -726,8 +726,8 @@ int bal_getremotehostaddr(const bal_socket* s, bal_sockaddr* out)
 
 int bal_getremotehoststrings(const bal_socket* s, int dns, bal_addrstrings* out)
 {
-    int r = BAL_FALSE;
-    bal_sockaddr sa;
+    int r           = BAL_FALSE;
+    bal_sockaddr sa = {0};
 
     if (BAL_TRUE == bal_getremotehostaddr(s, &sa))
         r = bal_getaddrstrings(&sa, dns, out);
@@ -752,8 +752,8 @@ int bal_getlocalhostaddr(const bal_socket* s, bal_sockaddr* out)
 
 int bal_getlocalhoststrings(const bal_socket* s, int dns, bal_addrstrings* out)
 {
-    int r = BAL_FALSE;
-    bal_sockaddr sa;
+    int r           = BAL_FALSE;
+    bal_sockaddr sa = {0};
 
     if (BAL_TRUE == bal_getlocalhostaddr(s, &sa))
         r = bal_getaddrstrings(&sa, dns, out);

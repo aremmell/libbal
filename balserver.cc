@@ -36,7 +36,7 @@ int main(int argc, char** argv)
     if (!balcommon::initialize())
         return EXIT_FAILURE;
 
-    bal_socket s;
+    bal_socket s {};
     int ret = bal_sock_create(&s, AF_INET, IPPROTO_TCP, SOCK_STREAM);
     EXIT_IF_FAILED(ret, nullptr, "bal_sock_create");
 
@@ -81,7 +81,7 @@ void balserver::async_events_cb(bal_socket* s, uint32_t events)
             return;
         }
 
-        bal_addrstrings client_strings;
+        bal_addrstrings client_strings {};
         ret = bal_getaddrstrings(&client_addr, 0, &client_strings);
         if (BAL_TRUE != ret) {
             balcommon::print_last_lib_error(nullptr, "bal_getaddrstrings");
@@ -118,8 +118,9 @@ void balserver::async_events_cb(bal_socket* s, uint32_t events)
                     printf("[" BAL_SOCKET_SPEC "] wrote %d bytes\n", s->sd, 11);
                 }
             }
-        } else
+        } else {
             printf("[" BAL_SOCKET_SPEC "] read error %d!\n", s->sd, bal_geterror(s));
+        }
     }
 
     if (bal_isbitset(events, BAL_E_CLOSE)) {
