@@ -799,7 +799,7 @@ int bal_freeaddrlist(bal_addrlist* al)
 
         while (al->_p) {
             a = al->_p->_n;
-            free(al->_p);
+            bal_safefree(&al->_p);
             al->_p = a;
         }
 
@@ -1061,65 +1061,63 @@ BALTHREAD _bal_eventthread(void* p)
         return (void*)1;
 #endif
     }
-        bal_selectdata* t = NULL;
+
+    while (!_bal_get_boolean(&td->die)) {
+
         fd_set r = {0};
         fd_set w = {0};
         fd_set e = {0};
 
-        while (!_bal_get_boolean(&td->die)) {
-            if (BAL_TRUE == _bal_mutex_lock(td->m)) {
-                int size = _bal_sdl_size(td->sdl);
+        if (BAL_TRUE == _bal_mutex_lock(td->m)) {
+            int size = _bal_sdl_size(td->sdl);
+            if (0 < size) {
+                bal_selectdata* t     = NULL;
+                bal_descriptor highsd = 0;
 
-                if (0 < size) {
-                    struct timeval tv = {0, 0};
-                    int ret           = -1;
-                    bal_descriptor highsd = (bal_descriptor)-1;
+                FD_ZERO(&r);
+                FD_ZERO(&w);
+                FD_ZERO(&e);
 
-                    FD_ZERO(&r);
-                    FD_ZERO(&w);
-                    FD_ZERO(&e);
+                _bal_sdl_reset(td->sdl);
 
-                    _bal_sdl_reset(td->sdl);
+                while (BAL_TRUE == _bal_sdl_enum(td->sdl, &t)) {
 
-                    while (BAL_TRUE == _bal_sdl_enum(td->sdl, &t)) {
-                        if (BAL_TRUE == _bal_haspendingconnect(t->s)) {
-                            t->mask |= BAL_S_CONNECT;
-                            t->s->_f &= ~BAL_F_PENDCONN;
-                        }
-
-                        if (BAL_TRUE == _bal_islistening(t->s)) {
-                            t->mask |= BAL_S_LISTEN;
-                            t->s->_f &= ~BAL_F_LISTENING;
-                        }
-
-                        if (t->s->sd > highsd)
-                            highsd = t->s->sd;
-
-                        FD_SET(t->s->sd, &r);
-                        FD_SET(t->s->sd, &w);
-                        FD_SET(t->s->sd, &e);
+                    if (BAL_TRUE == _bal_haspendingconnect(t->s)) {
+                        t->mask |= BAL_S_CONNECT;
+                        t->s->_f &= ~BAL_F_PENDCONN;
                     }
 
-                    ret = select(highsd + 1, &r, &w, &e, &tv);
-
-                    if (-1 != ret) {
-                        _bal_dispatchevents(&r, td, BAL_S_READ);
-                        _bal_dispatchevents(&w, td, BAL_S_WRITE);
-                        _bal_dispatchevents(&e, td, BAL_S_EXCEPT);
+                    if (BAL_TRUE == _bal_islistening(t->s)) {
+                        t->mask |= BAL_S_LISTEN;
+                        t->s->_f &= ~BAL_F_LISTENING;
                     }
+
+                    if (t->s->sd > highsd)
+                        highsd = t->s->sd;
+
+                    FD_SET(t->s->sd, &r);
+                    FD_SET(t->s->sd, &w);
+                    FD_SET(t->s->sd, &e);
                 }
 
-                int unlock = _bal_mutex_unlock(td->m);
-                assert(BAL_TRUE == unlock);
-                BAL_UNUSED(unlock);
+                struct timeval tv = {0, 0};
+                if (-1 != select(highsd + 1, &r, &w, &e, &tv)) {
+                    _bal_dispatchevents(&r, td, BAL_S_READ);
+                    _bal_dispatchevents(&w, td, BAL_S_WRITE);
+                    _bal_dispatchevents(&e, td, BAL_S_EXCEPT);
+                }
             }
 
-            FD_ZERO(&r);
-            FD_ZERO(&w);
-            FD_ZERO(&e);
-
-            _bal_yield_thread();
+            int unlock = _bal_mutex_unlock(td->m);
+            BAL_ASSERT_UNUSED(unlock, BAL_TRUE == unlock);
         }
+
+        FD_ZERO(&r);
+        FD_ZERO(&w);
+        FD_ZERO(&e);
+
+        _bal_yield_thread();
+    }
 
 #if defined(__WIN__)
     return 0u;
@@ -1265,7 +1263,7 @@ int _bal_sdl_rem(bal_selectdata_list* sdl, bal_descriptor sd)
                     t->_n->_p = t->_p;
             }
 
-            free(t);
+            bal_safefree(&t);
             r = BAL_TRUE;
         }
     }
@@ -1286,7 +1284,7 @@ int _bal_sdl_clr(bal_selectdata_list* sdl)
 
             while (t) {
                 t2 = t->_n;
-                free(t);
+                bal_safefree(&t);
                 t = t2;
             }
 
@@ -1511,11 +1509,13 @@ void __bal_selflog(const char* func, const char* file, uint32_t line,
     va_list args2;
     va_start(args, format);
     va_copy(args2, args);
+
     int prnt_len = vsnprintf(NULL, 0, format, args);
+    
     va_end(args);
     assert(prnt_len > 0);
 
-    char* buf = calloc(prnt_len + 257, sizeof(char));
+    char* buf = calloc(prnt_len + 1, sizeof(char));
     assert(NULL != buf);
 
     if (buf) {
@@ -1523,17 +1523,13 @@ void __bal_selflog(const char* func, const char* file, uint32_t line,
         int pfx_len = snprintf(prefix, 256, "%s (%s:%"PRIu32"): ", func, file, line);
         assert(pfx_len > 0 && pfx_len < 256);
 
-        (void)strncpy(buf, prefix, pfx_len);
-
         va_start(args2, format);
-        (void)vsnprintf(&buf[pfx_len], prnt_len + 1, format, args2);
+        (void)vsnprintf(buf, prnt_len + 1, format, args2);
         va_end(args2);
 
-        int put = puts(buf);
-        BAL_ASSERT_UNUSED(put, EOF != put);
+        printf("%s%s\n", prefix, buf);
 
-        free(buf);
-        buf = NULL;
+        bal_safefree(&buf);
     }
 }
 #endif

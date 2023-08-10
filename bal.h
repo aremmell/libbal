@@ -189,9 +189,19 @@ void __bal_selflog(const char* func, const char* file, uint32_t line,
 # define _bal_selflog(...) \
     __bal_selflog(__func__, __file__, __LINE__, __VA_ARGS__);
 #else
+static inline
 void __dummy_func(const char* dummy, ...) { BAL_UNUSED(dummy); }
 # define _bal_selflog(...) __dummy_func(__VA_ARGS__)
 #endif
+
+static inline
+void bal_safefree(void** pp)
+{
+    if (pp && *pp) {
+        free(*pp);
+        *pp = NULL;
+    }
+}
 
 bool _bal_once(bal_once* once, bal_once_fn func);
 
