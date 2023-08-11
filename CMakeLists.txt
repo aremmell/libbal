@@ -82,6 +82,7 @@ add_library(
     STATIC
     bal.c
     balinternal.c
+    balerrors.c
 )
 
 add_library(
@@ -89,6 +90,7 @@ add_library(
     SHARED
     bal.c
     balinternal.c
+    balerrors.c
 )
 
 if(!WIN32)

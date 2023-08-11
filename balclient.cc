@@ -53,11 +53,11 @@ int main(int argc, char** argv)
         bal_yield_thread();
     } while (balcommon::should_run());
 
-    ret = bal_close(&s);
-    EXIT_IF_FAILED(ret, nullptr, "bal_close");
+    if (!bal_close(&s))
+        balcommon::print_last_lib_error(nullptr, "bal_close");
 
-    ret = bal_cleanup();
-    EXIT_IF_FAILED(ret, nullptr, "bal_cleanup");
+    if (!bal_cleanup())
+        balcommon::print_last_lib_error(nullptr, "bal_cleanup");
 
     return EXIT_SUCCESS;
 }

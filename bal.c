@@ -510,6 +510,18 @@ int bal_geterror(const bal_socket* s)
     return r;
 }
 
+/* void bal_assert(bool cond, const char* desc, const char* func, const char* file,
+    uint32_t line)
+{
+#if defined(BAL_SELFLOG)
+    if (!cond) {
+        _bal_selflog("!!! assert "
+    }
+#else
+    BAL_UNUSED(cond);
+#endif
+}
+ */
 int bal_isreadable(const bal_socket* s)
 {
     int r = BAL_FALSE;
@@ -741,6 +753,6 @@ void bal_yield_thread(void)
     Sleep(1);
 #else
     int yield = sched_yield();
-    assert(0 == yield);
+    BAL_ASSERT(0 == yield);
 #endif
 }

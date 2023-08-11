@@ -28,6 +28,7 @@
 
 # include "balplatform.h"
 # include "baltypes.h"
+# include "balerrors.h"
 
 
 /*─────────────────────────────────────────────────────────────────────────────╮

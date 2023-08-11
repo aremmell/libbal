@@ -55,7 +55,7 @@ const struct addrinfo* _bal_enumaddrinfo(bal_addrinfo* ai);
 int _bal_aitoal(bal_addrinfo* in, bal_addrlist* out);
 
 int _bal_getlasterror(const bal_socket* s, bal_error* err);
-bool __bal_setlasterror(int err, const char* func, const char* file, int line);
+bool __bal_setlasterror(int err, const char* func, const char* file, uint32_t line);
 # define _bal_setlasterror(err) __bal_setlasterror(err, __func__, __file__, __LINE__)
 # define _bal_handleerr(err) __bal_setlasterror(err, __func__, __file__, __LINE__)
 # define _bal_handlewin32err(err) __bal_setlasterror(err, __func__, __file__, __LINE__)
@@ -151,13 +151,13 @@ bool _bal_cond_wait(bal_condition* cond, bal_mutex* mutex);
 /** Waits a given amount of time for a condition variable to become signaled. */
 bool _bal_condwait_timeout(bal_condition* cond, bal_mutex* mutex, bal_wait* how_long);
 
-#if defined(__HAVE_STDATOMICS__)
+# if defined(__HAVE_STDATOMICS__)
 bool _bal_get_boolean(atomic_bool* boolean);
 void _bal_set_boolean(atomic_bool* boolean, bool value);
-#else
+# else
 bool _bal_get_boolean(bool* boolean);
 void _bal_set_boolean(bool* boolean, bool value);
-#endif
+# endif
 
 bool _bal_once(bal_once* once, bal_once_fn func);
 
@@ -166,17 +166,6 @@ BOOL CALLBACK _bal_static_once_init_func(PINIT_ONCE ponce, PVOID param, PVOID* c
 # else
 void _bal_static_once_init_func(void);
 # endif
-
-#if defined(BAL_SELFLOG)
-void __bal_selflog(const char* func, const char* file, uint32_t line,
-    const char* format, ...);
-# define _bal_selflog(...) \
-    __bal_selflog(__func__, __file__, __LINE__, __VA_ARGS__);
-#else
-static inline
-void __dummy_func(const char* dummy, ...) { BAL_UNUSED(dummy); }
-# define _bal_selflog(...) __dummy_func(__VA_ARGS__)
-#endif
 
 static inline
 void _bal_safefree(void** pp)
@@ -187,13 +176,12 @@ void _bal_safefree(void** pp)
     }
 }
 
-# define bal_safefree(pp) _bal_safefree((void**)pp)
+# define bal_safefree(pp) _bal_safefree((void**)(pp))
 
-static inline
-bool _bal_validptr(void* p) {
-    return NULL != p;
-}
+# define _bal_validptr(p) (NULL != (p))
 
-# define bal_countof(arr) (sizeof(arr) / sizeof(arr[0]))
+# define bal_countof(arr) (sizeof((arr)) / sizeof((arr)[0]))
+
+# define _bal_validstr(str) ((str) && (*str))
 
 #endif /* !_BAL_INTERNAL_H_INCLUDED */

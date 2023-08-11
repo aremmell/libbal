@@ -59,7 +59,7 @@ bool balcommon::install_ctrl_c_handler()
 {
 #if defined(__WIN__)
     BOOL ret = SetConsoleCtrlHandler(&on_ctrl_c, TRUE);
-    assert(FALSE != ret);
+    BAL_ASSERT(FALSE != ret);
     return FALSE != ret;
 #else
     struct sigaction sa;
@@ -68,7 +68,7 @@ bool balcommon::install_ctrl_c_handler()
     sa.sa_handler = &on_ctrl_c;
 
     int ret = sigaction(SIGINT, &sa, nullptr);
-    assert(0 == ret);
+    BAL_ASSERT(0 == ret);
     return 0 == ret;
 #endif
 }
@@ -84,7 +84,7 @@ void balcommon::print_last_lib_error(const bal_socket* s /* = nullptr */,
 {
     bal_error err = {0, {0}};
     int get = bal_lastsockerror(s, &err);
-    assert(BAL_TRUE == get);
+    BAL_ASSERT(BAL_TRUE == get);
 
     fprintf(stderr, "libbal error: %s %d (%s)\n", (func ? func : ""), err.code, err.desc);
 }

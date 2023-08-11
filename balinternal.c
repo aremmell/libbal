@@ -1,5 +1,31 @@
+/*
+ * balinternal.c
+ *
+ * Author:    Ryan M. Lederman <lederman@gmail.com>
+ * Copyright: Copyright (c) 2004-2023
+ * Version:   0.2.0
+ * License:   The MIT License (MIT)
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+ * the Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+ * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+ * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
 #include "balinternal.h"
 #include "bal.h"
+
 
 /*─────────────────────────────────────────────────────────────────────────────╮
 │                              Static globals                                  │
@@ -28,7 +54,7 @@ static bal_as_container _bal_as_container = {0};
 bool _bal_init(void)
 {
 #if defined(__WIN__)
-    WORD wVer  = MAKEWORD(WSOCK_MINVER, WSOCK_MAJVER);
+    WORD wVer  = MAKEWORD(2, 2);
     WSADATA wd = {0};
 
     if (0 != WSAStartup(wVer, &wd)) {
@@ -38,7 +64,7 @@ bool _bal_init(void)
 #endif
 
     bool init = _bal_once(&_bal_static_once_init, &_bal_static_once_init_func);
-    assert(init);
+    BAL_ASSERT(init);
 
     if (!init) {
         _bal_selflog("error: _bal_static_once_init_func failed");
@@ -46,12 +72,12 @@ bool _bal_init(void)
     }
 
     init = _bal_initasyncselect();
-    assert(init);
+    BAL_ASSERT(init);
 
     if (!init) {
         _bal_selflog("error: _bal_initasyncselect failed");
         bool cleanup = _bal_cleanupasyncselect();
-        assert(cleanup);
+        BAL_ASSERT(cleanup);
         return false;
     }
 
@@ -80,12 +106,12 @@ int _bal_asyncselect(const bal_socket* s, bal_async_callback proc, uint32_t mask
      * processed after any potential iteration has finished. */
 
     if (!_bal_get_boolean(&_bal_asyncselect_init)) {
-        assert(!"async I/O not initialized");
+        BAL_ASSERT(!"async I/O not initialized");
         return BAL_FALSE;
     }
 
     int r = BAL_FALSE;
-    assert(s && proc);
+    BAL_ASSERT(s && proc);
 
     if (s && proc) {
         if (_bal_mutex_lock(&_bal_as_container.mutex)) {
@@ -98,7 +124,7 @@ int _bal_asyncselect(const bal_socket* s, bal_async_callback proc, uint32_t mask
                         _bal_selflog("added socket "BAL_SOCKET_SPEC" to defer "
                                      " remove list", s->sd);
                     } else {
-                        assert(!"failed to add socket to defer remove list");
+                        BAL_ASSERT(!"failed to add socket to defer remove list");
                     }
                 } else {
                     _bal_selflog("failed to find socket "BAL_SOCKET_SPEC" in"
@@ -107,7 +133,7 @@ int _bal_asyncselect(const bal_socket* s, bal_async_callback proc, uint32_t mask
             } else {
                 bal_selectdata* d = NULL;
                 if (_bal_list_find(_bal_as_container.lst, s->sd, &d)) {
-                    assert(NULL != d);
+                    BAL_ASSERT(NULL != d);
                     if (d) {
                         d->mask = mask;
                         d->proc = proc;
@@ -116,7 +142,7 @@ int _bal_asyncselect(const bal_socket* s, bal_async_callback proc, uint32_t mask
                     }
                 } else {
                     bal_selectdata* d = calloc(1, sizeof(bal_selectdata));
-                    assert(NULL != d);
+                    BAL_ASSERT(NULL != d);
 
                     if (d) {
                         bool success = false;
@@ -134,7 +160,7 @@ int _bal_asyncselect(const bal_socket* s, bal_async_callback proc, uint32_t mask
                                          " defer add list", s->sd);
                         } else {
                             bal_safefree(&d);
-                            assert(!"failed to add socket to defer add list");
+                            BAL_ASSERT(!"failed to add socket to defer add list");
                         }
                     }
                 }
@@ -159,7 +185,7 @@ bool _bal_initasyncselect(void)
     bool create = false;
     for (size_t n = 0; n < bal_countof(lists); n++) {
         create = _bal_list_create(lists[n]);
-        assert(create);
+        BAL_ASSERT(create);
 
         if (!create) {
             (void)_bal_handleerr(errno);
@@ -175,7 +201,7 @@ bool _bal_initasyncselect(void)
 
     for (size_t n = 0; n < bal_countof(mutexes); n++) {
         create = _bal_mutex_create(mutexes[n]);
-        assert(create);
+        BAL_ASSERT(create);
 
         if (!create) {
             _bal_selflog("error: failed to create mutex(es)");
@@ -189,7 +215,7 @@ bool _bal_initasyncselect(void)
 
     for (size_t n = 0; n < bal_countof(conditions); n++) {
         create = _bal_cond_create(conditions[n]);
-        assert(create);
+        BAL_ASSERT(create);
 
         if (!create) {
             _bal_selflog("error: failed to create condition variable(s)");
@@ -197,20 +223,25 @@ bool _bal_initasyncselect(void)
         }
     }
 
-    struct
-    {
+    struct {
         bal_thread* thread;
         bal_thread_func func;
     } threads[] = {
-        { &_bal_as_container.thread, &_bal_eventthread },
-        { &_bal_as_container.s_thread, &_bal_syncthread }
+        {
+            &_bal_as_container.thread,
+            &_bal_eventthread
+        },
+        {
+            &_bal_as_container.s_thread,
+            &_bal_syncthread
+        }
     };
 
     for (size_t n = 0; n < bal_countof(threads); n++) {
 #if defined(__WIN__)
         *threads[n].thread = _beginthreadex(NULL, 0u, threads[n].func,
             &_bal_as_container, 0u, NULL);
-        assert(0ull != *threads[n].thread);
+        BAL_ASSERT(0ull != *threads[n].thread);
 
         if (0ull == *threads[n].thread) {
             (void)_bal_handleerr(errno);
@@ -220,7 +251,7 @@ bool _bal_initasyncselect(void)
 #else
         int op = pthread_create(threads[n].thread, NULL, threads[n].func,
             &_bal_as_container);
-        assert(0 == op);
+        BAL_ASSERT(0 == op);
 
         if (0 != op) {
             (void)_bal_handleerr(op);
@@ -248,11 +279,15 @@ bool _bal_cleanupasyncselect(void)
     for (size_t n = 0; n < bal_countof(threads); n++) {
         _bal_selflog("joining thread %zu/%zu...", n + 1, bal_countof(threads));
 #if defined(__WIN__)
-        (void)WaitForSingleObject((HANDLE)_bal_as_container.thread, INFINITE);
+        DWORD wait = WaitForSingleObject((HANDLE)*threads[n], INFINITE);
+        BAL_ASSERT_UNUSED(wait, WAIT_OBJECT_0 == wait);
 #else
-        (void)pthread_join(_bal_as_container.thread, NULL);
+        int wait = pthread_join(*threads[n], NULL);
+        BAL_ASSERT_UNUSED(wait, 0 == wait);
+        if (0 != wait)
+            (void)_bal_handleerr(wait);
 #endif
-        _bal_selflog("joined thread %zu/%zu successfully", n + 1, bal_countof(threads));
+        _bal_selflog("joined thread %zu/%zu", n + 1, bal_countof(threads));
     }
 
     bool cleanup = true;
@@ -264,7 +299,7 @@ bool _bal_cleanupasyncselect(void)
 
     for (size_t n = 0; n < bal_countof(lists); n++) {
         bool destroy = _bal_list_destroy(&lists[n]);
-        assert(destroy);
+        BAL_ASSERT(destroy);
         cleanup &= destroy;
     }
 
@@ -275,7 +310,7 @@ bool _bal_cleanupasyncselect(void)
 
     for (size_t n = 0; n < bal_countof(mutexes); n++) {
         bool destroy = _bal_mutex_destroy(mutexes[n]);
-        assert(destroy);
+        BAL_ASSERT(destroy);
         cleanup &= destroy;
     }
 
@@ -285,7 +320,7 @@ bool _bal_cleanupasyncselect(void)
 
     for (size_t n = 0; n < bal_countof(conditions); n++) {
         bool destroy = _bal_cond_destroy(conditions[n]);
-        assert(destroy);
+        BAL_ASSERT(destroy);
         cleanup &= destroy;
     }
 
@@ -302,7 +337,7 @@ bool _bal_defer_add_socket(bal_selectdata* d)
 
     if (d) {
         bool locked = _bal_mutex_lock(&_bal_as_container.s_mutex);
-        assert(locked);
+        BAL_ASSERT(locked);
 
         if (locked) {
             retval = _bal_list_add(_bal_as_container.lst_add, d->s->sd, d) &&
@@ -321,7 +356,7 @@ bool _bal_defer_remove_socket(bal_selectdata* d)
 
     if (d) {
         bool locked = _bal_mutex_lock(&_bal_as_container.s_mutex);
-        assert(locked);
+        BAL_ASSERT(locked);
 
         if (locked) {
             retval = _bal_list_add(_bal_as_container.lst_rem, d->s->sd, d) &&
@@ -445,29 +480,47 @@ int _bal_getlasterror(const bal_socket* s, bal_error* err)
         }
 
 #if defined(__WIN__)
-        if (0 != FormatMessageA(0x00001200u, NULL, err->code, 0u, err->desc,
-            BAL_MAXERROR, NULL))
+        DWORD flags = FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS;
+        if (0 != FormatMessageA(flags, NULL, err->code, 0u, err->desc, BAL_MAXERROR, NULL))
             r = BAL_TRUE;
 #else
-        if (err->code == EAI_AGAIN  || err->code == EAI_BADFLAGS ||
+        switch (err->code) {
+            case EAI_AGAIN:
+            case EAI_FAIL:
+            case EAI_MEMORY:
+            case EAI_NODATA:
+            case EAI_SOCKTYPE:
+            case EAI_BADFLAGS:
+            case EAI_BADHINTS:
+            case EAI_FAMILY:
+            case EAI_ADDRFAMILY:
+            case EAI_NONAME:
+            case EAI_SERVICE:
+                if (0 == _bal_retstr(err->desc, gai_strerror(err->code), BAL_MAXERROR))
+                    r = BAL_TRUE;
+            break;
+            default:
+                if (0 == _bal_retstr(err->desc, strerror(err->code), BAL_MAXERROR))
+                    r = BAL_TRUE;
+            break;
+
+        }
+        /* if (err->code == EAI_AGAIN  || err->code == EAI_BADFLAGS ||
             err->code == EAI_FAIL   || err->code == EAI_FAMILY   ||
             err->code == EAI_MEMORY || err->code == EAI_NONAME   ||
             err->code == EAI_NODATA || err->code == EAI_SERVICE  ||
             err->code == EAI_SOCKTYPE) {
-            if (0 == _bal_retstr(err->desc, gai_strerror(err->code), BAL_MAXERROR))
-                r = BAL_TRUE;
+
         } else {
-            if (0 == _bal_retstr(err->desc, (const char*)strerror(err->code),
-                BAL_MAXERROR))
-                r = BAL_TRUE;
-        }
+
+        } */
 #endif
     }
 
     return r;
 }
 
-bool __bal_setlasterror(int err, const char* func, const char* file, int line)
+bool __bal_setlasterror(int err, const char* func, const char* file, uint32_t line)
 {
 #if defined(__WIN__)
     WSASetLastError(err);
@@ -475,7 +528,15 @@ bool __bal_setlasterror(int err, const char* func, const char* file, int line)
     errno = err;
 #endif
 
-return false;
+#if defined(BAL_SELFLOG)
+    __bal_selflog(func, file, line, "error %d (%s)", err, strerror(err));
+#else
+    BAL_UNUSED(func);
+    BAL_UNUSED(file);
+    BAL_UNUSED(line);
+#endif
+
+    return false;
 }
 
 int _bal_retstr(char* out, const char* in, size_t destlen)
@@ -529,7 +590,7 @@ int _bal_isclosedcircuit(const bal_socket* s)
 BALTHREAD _bal_eventthread(void* ctx)
 {
     bal_as_container* asc = (bal_as_container*)ctx;
-    assert(NULL != asc);
+    BAL_ASSERT(NULL != asc);
 
     while (!_bal_get_boolean(&asc->die)) {
         if (_bal_mutex_lock(&asc->mutex)) {
@@ -551,7 +612,7 @@ BALTHREAD _bal_eventthread(void* ctx)
 
                 bool iterate = _bal_list_iterate(asc->lst, &epd,
                     &__bal_list_event_prepare);
-                assert(iterate);
+                BAL_ASSERT(iterate);
 
                 struct timeval tv = {0, 0};
                 int poll_res = select(epd.high_watermark + 1, &fd_read, &fd_write,
@@ -581,7 +642,7 @@ BALTHREAD _bal_eventthread(void* ctx)
 BALTHREAD _bal_syncthread(void* ctx)
 {
     bal_as_container* asc = (bal_as_container*)ctx;
-    assert(NULL != asc);
+    BAL_ASSERT(NULL != asc);
 
     while (!_bal_get_boolean(&asc->die)) {
         if (_bal_mutex_lock(&asc->s_mutex)) {
@@ -589,16 +650,12 @@ BALTHREAD _bal_syncthread(void* ctx)
                   !_bal_get_boolean(&asc->die)) {
 #if !defined(__WIN__)
                 /* seconds; absolute fixed time. */
-                bal_wait wait = {time(NULL) + 2, 0};
+                bal_wait wait = {time(NULL) + 1, 0};
 #else
                 /* msec; relative from now. */
-                bal_wait wait = 2000;
+                bal_wait wait = 1000;
 #endif
-                (void)_bal_condwait_timeout(
-                    &asc->s_cond,
-                    &asc->s_mutex,
-                    &wait
-                );
+                (void)_bal_condwait_timeout(&asc->s_cond, &asc->s_mutex, &wait);
             }
 
             if (_bal_get_boolean(&asc->die)) {
@@ -650,7 +707,7 @@ BALTHREAD _bal_syncthread(void* ctx)
 
 void _bal_dispatchevents(fd_set* set, bal_as_container* asc, uint32_t type)
 {
-    assert(set && asc);
+    BAL_ASSERT(set && asc);
     if (set && asc) {
         _bal_list_dispatch_data ldd = {
             set,
@@ -658,7 +715,7 @@ void _bal_dispatchevents(fd_set* set, bal_as_container* asc, uint32_t type)
         };
 
         bool iterate = _bal_list_iterate(asc->lst, &ldd, &__bal_list_dispatch_events);
-        assert(iterate);
+        BAL_ASSERT(iterate);
     }
 }
 
@@ -871,7 +928,7 @@ bool __bal_list_dispatch_events(bal_descriptor key, bal_selectdata* val, void* c
                 }
             break;
             default:
-                assert(!"invalid event type");
+                BAL_ASSERT(!"invalid event type");
             break;
         }
 
@@ -888,7 +945,7 @@ bool __bal_list_dispatch_events(bal_descriptor key, bal_selectdata* val, void* c
                 _bal_selflog("added socket "BAL_SOCKET_SPEC" to defer"
                              " remove list", key);
             } else {
-                assert(!"failed to add socket to defer remove list");
+                BAL_ASSERT(!"failed to add socket to defer remove list");
             }
         }
     }
@@ -1208,39 +1265,6 @@ void _bal_set_boolean(bool* boolean, bool value)
 {
     if (boolean)
         *boolean = value;
-}
-#endif
-
-#if defined(BAL_SELFLOG)
-void __bal_selflog(const char* func, const char* file, uint32_t line,
-    const char* format, ...)
-{
-    va_list args;
-    va_list args2;
-    va_start(args, format);
-    va_copy(args2, args);
-
-    int prnt_len = vsnprintf(NULL, 0, format, args);
-
-    va_end(args);
-    assert(prnt_len > 0);
-
-    char* buf = calloc(prnt_len + 1, sizeof(char));
-    assert(NULL != buf);
-
-    if (buf) {
-        char prefix[256] = {0};
-        int pfx_len = snprintf(prefix, 256, "%s (%s:%"PRIu32"): ", func, file, line);
-        assert(pfx_len > 0 && pfx_len < 256);
-
-        va_start(args2, format);
-        (void)vsnprintf(buf, prnt_len + 1, format, args2);
-        va_end(args2);
-
-        printf("%s%s\n", prefix, buf);
-
-        bal_safefree(&buf);
-    }
 }
 #endif
 
