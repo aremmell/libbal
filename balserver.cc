@@ -56,7 +56,7 @@ int main(int argc, char** argv)
         balcommon::localaddr, balcommon::portnum);
 
     do {
-        _bal_yield_thread();
+        bal_yield_thread();
     } while (balcommon::should_run());
 
     ret = bal_close(&s);

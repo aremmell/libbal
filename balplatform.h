@@ -188,6 +188,7 @@ typedef struct sockaddr_storage bal_sockaddr;
 # define BAL_S_DIE       0x0D1E0D1Eu
 # define BAL_S_CONNECT   0x10000000u
 # define BAL_S_LISTEN    0x20000000u
+# define BAL_S_CLOSE     0x40000000u
 # define BAL_S_READ      0x00000001u
 # define BAL_S_WRITE     0x00000002u
 # define BAL_S_EXCEPT    0x00000003u

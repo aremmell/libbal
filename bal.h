@@ -39,8 +39,8 @@
 extern "C" {
 # endif
 
-int bal_init(void);
-int bal_cleanup(void);
+bool bal_init(void);
+bool bal_cleanup(void);
 
 int bal_asyncselect(const bal_socket* s, bal_async_callback proc, uint32_t mask);
 
@@ -126,6 +126,8 @@ int bal_resetaddrlist(bal_addrlist* al);
 const bal_sockaddr* bal_enumaddrlist(bal_addrlist* al);
 int bal_freeaddrlist(bal_addrlist* al);
 int bal_getaddrstrings(const bal_sockaddr* in, bool dns, bal_addrstrings* out);
+
+void bal_yield_thread(void);
 
 static inline
 bool bal_isbitset(uint32_t bitmask, uint32_t bit)

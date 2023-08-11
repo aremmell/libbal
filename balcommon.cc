@@ -35,7 +35,7 @@ bool balcommon::initialize()
     if (!balcommon::install_ctrl_c_handler())
         return false;
 
-    if (BAL_TRUE != bal_init()) {
+    if (!bal_init()) {
         print_last_lib_error(nullptr, "bal_init");
         return false;
     }

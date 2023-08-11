@@ -50,7 +50,7 @@ int main(int argc, char** argv)
     printf("running; ctrl+c to exit...\n");
 
     do {
-        _bal_yield_thread();
+        bal_yield_thread();
     } while (balcommon::should_run());
 
     ret = bal_close(&s);

@@ -29,10 +29,22 @@
 # include "balplatform.h"
 # include "baltypes.h"
 
+
 /*─────────────────────────────────────────────────────────────────────────────╮
 │                             Internal functions                               │
 ╰─────────────────────────────────────────────────────────────────────────────*/
 
+
+bool _bal_init(void);
+bool _bal_cleanup(void);
+
+int _bal_asyncselect(const bal_socket* s, bal_async_callback proc, uint32_t mask);
+
+bool _bal_initasyncselect(void);
+bool _bal_cleanupasyncselect(void);
+
+bool _bal_defer_add_socket(bal_selectdata* d);
+bool _bal_defer_remove_socket(bal_selectdata* d);
 
 int _bal_bindany(const bal_socket* s, unsigned short port);
 int _bal_getaddrinfo(int f, int af, int st, const char* host, const char* port,
@@ -45,7 +57,6 @@ int _bal_aitoal(bal_addrinfo* in, bal_addrlist* out);
 int _bal_getlasterror(const bal_socket* s, bal_error* err);
 bool __bal_setlasterror(int err, const char* func, const char* file, int line);
 # define _bal_setlasterror(err) __bal_setlasterror(err, __func__, __file__, __LINE__)
-# pragma message("TODO: implement __bal_setlasterror like sir's _handleerr")
 # define _bal_handleerr(err) __bal_setlasterror(err, __func__, __file__, __LINE__)
 # define _bal_handlewin32err(err) __bal_setlasterror(err, __func__, __file__, __LINE__)
 
@@ -54,11 +65,12 @@ int _bal_retstr(char* out, const char* in, size_t destlen);
 int _bal_haspendingconnect(const bal_socket* s);
 int _bal_isclosedcircuit(const bal_socket* s);
 
-BALTHREAD _bal_eventthread(void* p);
-bool _bal_initasyncselect(bal_asyncselect_data* td);
-bool _bal_cleanupasyncselect(bal_asyncselect_data* td);
+BALTHREAD _bal_eventthread(void* ctx);
+BALTHREAD _bal_syncthread(void* ctx);
 
-void _bal_dispatchevents(fd_set* set, bal_asyncselect_data * td, uint32_t type);
+typedef BALTHREAD (*bal_thread_func)(void*);
+
+void _bal_dispatchevents(fd_set* set, bal_as_container * td, uint32_t type);
 
 /** Creates a new list. */
 bool _bal_list_create(bal_list** lst);
@@ -99,6 +111,9 @@ bool __bal_list_dispatch_events(bal_descriptor key, bal_selectdata* val, void* c
 
 /** Callback for removing entries from a list. */
 bool __bal_list_remove_entries(bal_descriptor key, bal_selectdata* val, void* ctx);
+
+/** Callback for adding entries to a list. */
+bool __bal_list_add_entries(bal_descriptor key, bal_selectdata* val, void* ctx);
 
 /** Callback for the event handler thread. */
 bool __bal_list_event_prepare(bal_descriptor key, bal_selectdata* val, void* ctx);
@@ -147,12 +162,10 @@ void _bal_set_boolean(bool* boolean, bool value);
 bool _bal_once(bal_once* once, bal_once_fn func);
 
 # if defined(__WIN__)
-BOOL CALLBACK _bal_static_once_init(PINIT_ONCE ponce, PVOID param, PVOID* ctx);
+BOOL CALLBACK _bal_static_once_init_func(PINIT_ONCE ponce, PVOID param, PVOID* ctx);
 # else
-void _bal_static_once_init(void);
+void _bal_static_once_init_func(void);
 # endif
-
-void _bal_yield_thread(void);
 
 #if defined(BAL_SELFLOG)
 void __bal_selflog(const char* func, const char* file, uint32_t line,
@@ -180,5 +193,7 @@ static inline
 bool _bal_validptr(void* p) {
     return NULL != p;
 }
+
+# define bal_countof(arr) (sizeof(arr) / sizeof(arr[0]))
 
 #endif /* !_BAL_INTERNAL_H_INCLUDED */

@@ -24,6 +24,7 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 #include "bal.h"
+#include "balinternal.h"
 
 #if defined(__WIN__)
 # pragma comment(lib, "ws2_32.lib")
@@ -31,147 +32,23 @@
 
 
 /*─────────────────────────────────────────────────────────────────────────────╮
-│                              Static globals                                  │
-╰─────────────────────────────────────────────────────────────────────────────*/
-
-
-/* one-time initializer for async select handler. */
-static bal_once _bal_asyncselect_once = BAL_ONCE_INIT;
-
-/* whether or not the async select handler is initialized. */
-#if defined(__HAVE_STDATOMICS__)
-    static atomic_bool _bal_asyncselect_init;
-#else
-    static volatile bool _bal_asyncselect_init = false;
-#endif
-
-/* async select handler data. */
-static bal_asyncselect_data _bal_asyncselect_data = {0};
-
-
-/*─────────────────────────────────────────────────────────────────────────────╮
 │                            Exported Functions                                │
 ╰─────────────────────────────────────────────────────────────────────────────*/
 
 
-int bal_init(void)
+bool bal_init(void)
 {
-    int r = BAL_FALSE;
-
-#if defined(__WIN__)
-    WORD wVer  = MAKEWORD(WSOCK_MINVER, WSOCK_MAJVER);
-    WSADATA wd = {0};
-
-    if (0 == WSAStartup(wVer, &wd))
-        r = BAL_TRUE;
-#else
-    r = BAL_TRUE;
-#endif
-
-    return r;
+    return _bal_init();
 }
 
-int bal_cleanup(void)
+bool bal_cleanup(void)
 {
-    int r = BAL_FALSE;
-
-#if defined(__WIN__)
-    (void)WSACleanup();
-#endif
-
-    r = bal_asyncselect(NULL, NULL, BAL_S_DIE);
-
-    return r;
+    return _bal_cleanup();
 }
 
 int bal_asyncselect(const bal_socket* s, bal_async_callback proc, uint32_t mask)
 {
-    /* it is possible that the call to this function is in response to a call
-     * made during the iteration of lst_active. we cannot add
-     * or remove entries here; instead, add them to separate lists that are
-     * processed after any potential iteration has finished. */
-
-    /*static bal_list lst_active     = {0};
-    static bal_mutex m             = BAL_MUTEX_INIT;
-    static bal_asyncselect_data td = {&lst_active, &m, false};
-    static bal_thread t            = BAL_THREAD_INIT;
-
-    bool static_init = _bal_once(&_bal_asyncselect_once, &_bal_static_once_init);
-    BAL_ASSERT_UNUSED(static_init, static_init);*/
-
-    /* time to shut down the event thread and clean up? */
-    if (BAL_S_DIE == mask)
-        return _bal_cleanupasyncselect(&_bal_asyncselect_data);
-
-    int r = BAL_FALSE;
-    assert(s && proc);
-
-    if (s && proc) {
-        if (!_bal_get_boolean(&_bal_asyncselect_init)) {
-            int init = _bal_initasyncselect(&_bal_asyncselect_data);
-            assert(BAL_TRUE == init);
-
-            if (BAL_TRUE != init) {
-                _bal_selflog("error: failed to initialize async select handler");
-                return BAL_FALSE;
-            }
-
-            _bal_set_boolean(&_bal_asyncselect_init, true);
-            _bal_selflog("async select handler initialized");
-        }
-
-        if (_bal_mutex_lock(&_bal_asyncselect_data.mutex)) {
-            if (0u == mask) {
-#pragma message("TODO: remove sockets somehow, somewhere")
-/*                 bal_selectdata* d = NULL;
-                r = _bal_list_remove(&l, s->sd, &d) ? BAL_TRUE : BAL_FALSE;
-                _bal_selflog("removed socket " BAL_SOCKET_SPEC " from list;"
-                             " freeing selectdata %p", s->sd, d);
-                bal_safefree(&d); */
-            } else {
-                bal_selectdata* d = NULL;
-                if (_bal_list_find(&_bal_asyncselect_data.lst, s->sd, &d)) {
-                    assert(NULL != d);
-
-                    if (d) {
-                        d->mask = mask;
-                        d->proc = proc;
-                        r       = BAL_TRUE;
-                        _bal_selflog("updated socket " BAL_SOCKET_SPEC, s->sd);
-                    }
-                } else {
-#pragma message("TODO: add sockets somehow, somewhere")
-                    /* bal_selectdata* d = calloc(1, sizeof(bal_selectdata));
-                    assert(NULL != d);
-
-                    if (d) {
-                        bool success = false;
-                        if (BAL_TRUE == bal_setiomode(s, true)) {
-                            d->mask = mask;
-                            d->proc = proc;
-                            d->s    = (bal_socket*)s;
-
-                            success = _bal_list_add(&l, d->s, d);
-                            r = success ? BAL_TRUE : BAL_FALSE;
-                        }
-
-                        if (success) {
-                            _bal_selflog("added socket " BAL_SOCKET_SPEC " to list",
-                                s->sd);
-                        } else {
-                            bal_safefree(&d);
-                            assert(!"failed to add socket to list");
-                        }
-                    } */
-                }
-            }
-
-            int unlocked = _bal_mutex_unlock(&m);
-            BAL_ASSERT_UNUSED(unlocked, BAL_TRUE == unlocked);
-        }
-    }
-
-    return r;
+    return _bal_asyncselect(s, proc, mask);
 }
 
 int bal_autosocket(bal_socket* s, int af, int pt, const char* host, const char* port)
@@ -856,4 +733,14 @@ int bal_getaddrstrings(const bal_sockaddr* in, bool dns, bal_addrstrings* out)
     }
 
     return r;
+}
+
+void bal_yield_thread(void)
+{
+#if defined(__WIN__)
+    Sleep(1);
+#else
+    int yield = sched_yield();
+    assert(0 == yield);
+#endif
 }

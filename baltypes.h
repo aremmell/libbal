@@ -70,16 +70,16 @@ typedef struct {
 /* bal_asyncselect callback. */
 typedef void (*bal_async_callback)(bal_socket*, uint32_t);
 
-/* Iteration callback. Returns false to stop iteration. */
-typedef bool (*bal_list_iter_callback)(bal_descriptor /*key*/,
-    bal_selectdata* /*val*/, void* /*ctx*/);
-
 /* Value storage for bal_list. */
 typedef struct {
     bal_socket* s;
     uint32_t mask;
     bal_async_callback proc;
 } bal_selectdata;
+
+/* Iteration callback. Returns false to stop iteration. */
+typedef bool (*bal_list_iter_callback)(bal_descriptor /*key*/,
+    bal_selectdata* /*val*/, void* /*ctx*/);
 
 /* Node type for bal_list. */
 typedef struct _bal_list_node {
@@ -95,14 +95,13 @@ typedef struct {
 } bal_list;
 
 typedef struct {
-    void* key;
-    void** val;
+    bal_descriptor key;
+    bal_selectdata** val;
     bool found;
 } _bal_list_find_data;
 
 typedef struct {
     fd_set* set;
-    bal_list* lst;
     uint32_t type;
 } _bal_list_dispatch_data;
 
@@ -114,15 +113,21 @@ typedef struct {
 } _bal_list_event_prepare_data;
 
 typedef struct {
-    bal_list* lst;
-    bal_thread thread;
-    bal_mutex mutex;
-    bal_condition cond;
+    bal_list* lst;        /** List of active socket descriptors and their states. */
+    bal_mutex mutex;      /** Mutex for access to `lst`. */
+    bal_thread thread;    /** Asynchronous I/O events thread. */
+
+    bal_list* lst_add;    /** List of socket descriptors to add to `lst`. */
+    bal_list* lst_rem;    /** List of socket descriptors to remove from `lst`. */
+    bal_condition s_cond; /** Condition variable for `lst_add` and `lst_rem`. */
+    bal_mutex s_mutex;    /** Mutex for access to `lst_add` and `lst_rem`. */
+    bal_thread s_thread;  /** Data synchronization thread. */
+
 #if defined(__HAVE_STDATOMICS__) && !defined(__cplusplus)
     atomic_bool die;
 #else
     volatile bool die;
 #endif
-} bal_asyncselect_data;
+} bal_as_container;
 
 #endif /* !_BAL_TYPES_H_INCLUDED */
