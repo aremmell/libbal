@@ -43,8 +43,11 @@ const struct addrinfo* _bal_enumaddrinfo(bal_addrinfo* ai);
 int _bal_aitoal(bal_addrinfo* in, bal_addrlist* out);
 
 int _bal_getlasterror(const bal_socket* s, bal_error* err);
-void __bal_setlasterror(int err, const char* func, const char* file, int line);
-# define _bal_setlasterror(err) __bal_setlasterror(err, __func__, __file__, __LINE__);
+bool __bal_setlasterror(int err, const char* func, const char* file, int line);
+# define _bal_setlasterror(err) __bal_setlasterror(err, __func__, __file__, __LINE__)
+# pragma message("TODO: implement __bal_setlasterror like sir's _handleerr")
+# define _bal_handleerr(err) __bal_setlasterror(err, __func__, __file__, __LINE__)
+# define _bal_handlewin32err(err) __bal_setlasterror(err, __func__, __file__, __LINE__)
 
 int _bal_retstr(char* out, const char* in, size_t destlen);
 
@@ -52,10 +55,10 @@ int _bal_haspendingconnect(const bal_socket* s);
 int _bal_isclosedcircuit(const bal_socket* s);
 
 BALTHREAD _bal_eventthread(void* p);
-int _bal_initasyncselect(bal_thread* t, bal_mutex* m, bal_eventthread_data* td);
-int _bal_cleanupasyncselect(bal_thread* t, bal_mutex* m, bal_eventthread_data* td);
+bool _bal_initasyncselect(bal_asyncselect_data* td);
+bool _bal_cleanupasyncselect(bal_asyncselect_data* td);
 
-void _bal_dispatchevents(fd_set* set, bal_eventthread_data * td, uint32_t type);
+void _bal_dispatchevents(fd_set* set, bal_asyncselect_data * td, uint32_t type);
 
 /** Creates a new list. */
 bool _bal_list_create(bal_list** lst);
@@ -100,25 +103,35 @@ bool __bal_list_remove_entries(bal_descriptor key, bal_selectdata* val, void* ct
 /** Callback for the event handler thread. */
 bool __bal_list_event_prepare(bal_descriptor key, bal_selectdata* val, void* ctx);
 
-int _bal_mutex_init(bal_mutex* m);
-int _bal_mutex_lock(bal_mutex* m);
-int _bal_mutex_unlock(bal_mutex* m);
-int _bal_mutex_destroy(bal_mutex* m);
+/** Creates/initializes a new mutex. */
+bool _bal_mutex_create(bal_mutex* mutex);
+
+/** Attempts to lock a mutex and waits indefinitely. */
+bool _bal_mutex_lock(bal_mutex* mutex);
+
+/** Determines if a mutex is locked without waiting. */
+bool _bal_mutex_trylock(bal_mutex* mutex);
+
+/** Unlocks a previously locked mutex. */
+bool _bal_mutex_unlock(bal_mutex* mutex);
+
+/** Destroys a mutex. */
+bool _bal_mutex_destroy(bal_mutex* mutex);
 
 /** Creates/initializes a new condition variable. */
-bool _bal_condcreate(bal_condition* cond);
+bool _bal_cond_create(bal_condition* cond);
 
 /** Signals a condition variable. */
-bool _bal_condsignal(bal_condition* cond);
+bool _bal_cond_signal(bal_condition* cond);
 
 /** Broadcast signals a condition variable. */
-bool _bal_condbroadcast(bal_condition* cond);
+bool _bal_cond_broadcast(bal_condition* cond);
 
 /** Destroys a condition variable. */
-bool _bal_conddestroy(bal_condition* cond);
+bool _bal_cond_destroy(bal_condition* cond);
 
 /** Waits indefinitely for a condition variable to become signaled. */
-bool _bal_condwait(bal_condition* cond, bal_mutex* mutex);
+bool _bal_cond_wait(bal_condition* cond, bal_mutex* mutex);
 
 /** Waits a given amount of time for a condition variable to become signaled. */
 bool _bal_condwait_timeout(bal_condition* cond, bal_mutex* mutex, bal_wait* how_long);
@@ -130,6 +143,14 @@ void _bal_set_boolean(atomic_bool* boolean, bool value);
 bool _bal_get_boolean(bool* boolean);
 void _bal_set_boolean(bool* boolean, bool value);
 #endif
+
+bool _bal_once(bal_once* once, bal_once_fn func);
+
+# if defined(__WIN__)
+BOOL CALLBACK _bal_static_once_init(PINIT_ONCE ponce, PVOID param, PVOID* ctx);
+# else
+void _bal_static_once_init(void);
+# endif
 
 void _bal_yield_thread(void);
 
@@ -159,13 +180,5 @@ static inline
 bool _bal_validptr(void* p) {
     return NULL != p;
 }
-
-bool _bal_once(bal_once* once, bal_once_fn func);
-
-# if defined(__WIN__)
-BOOL CALLBACK _bal_static_once_init(PINIT_ONCE ponce, PVOID param, PVOID* ctx);
-# else
-void _bal_static_once_init(void);
-# endif
 
 #endif /* !_BAL_INTERNAL_H_INCLUDED */

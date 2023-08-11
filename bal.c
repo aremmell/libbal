@@ -45,7 +45,8 @@ static bal_once _bal_asyncselect_once = BAL_ONCE_INIT;
     static volatile bool _bal_asyncselect_init = false;
 #endif
 
-/*
+/* async select handler data. */
+static bal_asyncselect_data _bal_asyncselect_data = {0};
 
 
 /*─────────────────────────────────────────────────────────────────────────────╮
@@ -90,24 +91,24 @@ int bal_asyncselect(const bal_socket* s, bal_async_callback proc, uint32_t mask)
      * or remove entries here; instead, add them to separate lists that are
      * processed after any potential iteration has finished. */
 
-    static bal_list lst_active     = {0};
+    /*static bal_list lst_active     = {0};
     static bal_mutex m             = BAL_MUTEX_INIT;
-    static bal_eventthread_data td = {&lst_active, &m, false};
+    static bal_asyncselect_data td = {&lst_active, &m, false};
     static bal_thread t            = BAL_THREAD_INIT;
 
     bool static_init = _bal_once(&_bal_asyncselect_once, &_bal_static_once_init);
-    BAL_ASSERT_UNUSED(static_init, static_init);
+    BAL_ASSERT_UNUSED(static_init, static_init);*/
 
     /* time to shut down the event thread and clean up? */
     if (BAL_S_DIE == mask)
-        return _bal_cleanupasyncselect(&t, &m, &td);
+        return _bal_cleanupasyncselect(&_bal_asyncselect_data);
 
     int r = BAL_FALSE;
     assert(s && proc);
 
     if (s && proc) {
         if (!_bal_get_boolean(&_bal_asyncselect_init)) {
-            int init = _bal_initasyncselect(&t, &m, &td);
+            int init = _bal_initasyncselect(&_bal_asyncselect_data);
             assert(BAL_TRUE == init);
 
             if (BAL_TRUE != init) {
@@ -119,8 +120,9 @@ int bal_asyncselect(const bal_socket* s, bal_async_callback proc, uint32_t mask)
             _bal_selflog("async select handler initialized");
         }
 
-        if (BAL_TRUE == _bal_mutex_lock(&m)) {
+        if (_bal_mutex_lock(&_bal_asyncselect_data.mutex)) {
             if (0u == mask) {
+#pragma message("TODO: remove sockets somehow, somewhere")
 /*                 bal_selectdata* d = NULL;
                 r = _bal_list_remove(&l, s->sd, &d) ? BAL_TRUE : BAL_FALSE;
                 _bal_selflog("removed socket " BAL_SOCKET_SPEC " from list;"
@@ -128,7 +130,7 @@ int bal_asyncselect(const bal_socket* s, bal_async_callback proc, uint32_t mask)
                 bal_safefree(&d); */
             } else {
                 bal_selectdata* d = NULL;
-                if (_bal_list_find(&lst_active, s->sd, &d)) {
+                if (_bal_list_find(&_bal_asyncselect_data.lst, s->sd, &d)) {
                     assert(NULL != d);
 
                     if (d) {
@@ -138,6 +140,7 @@ int bal_asyncselect(const bal_socket* s, bal_async_callback proc, uint32_t mask)
                         _bal_selflog("updated socket " BAL_SOCKET_SPEC, s->sd);
                     }
                 } else {
+#pragma message("TODO: add sockets somehow, somewhere")
                     /* bal_selectdata* d = calloc(1, sizeof(bal_selectdata));
                     assert(NULL != d);
 

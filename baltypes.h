@@ -115,17 +115,14 @@ typedef struct {
 
 typedef struct {
     bal_list* lst;
-    bal_mutex* m;
+    bal_thread thread;
+    bal_mutex mutex;
+    bal_condition cond;
 #if defined(__HAVE_STDATOMICS__) && !defined(__cplusplus)
     atomic_bool die;
 #else
     volatile bool die;
 #endif
-} bal_eventthread_data;
-
-typedef struct {
-    bal_thread thread;
-    bal_mutex mutex;
-    bal_condition cond;
+} bal_asyncselect_data;
 
 #endif /* !_BAL_TYPES_H_INCLUDED */
