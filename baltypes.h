@@ -26,7 +26,7 @@
 #ifndef _BAL_TYPES_H_INCLUDED
 # define _BAL_TYPES_H_INCLUDED
 
-#include "balplatform.h"
+# include "balplatform.h"
 
 /**
  * @struct bal_socket
@@ -123,11 +123,11 @@ typedef struct {
     bal_mutex s_mutex;    /** Mutex for access to `lst_add` and `lst_rem`. */
     bal_thread s_thread;  /** Data synchronization thread. */
 
-#if defined(__HAVE_STDATOMICS__) && !defined(__cplusplus)
+# if defined(__HAVE_STDATOMICS__) && !defined(__cplusplus)
     atomic_bool die;
-#else
+# else
     volatile bool die;
-#endif
+# endif
 } bal_as_container;
 
 #endif /* !_BAL_TYPES_H_INCLUDED */
