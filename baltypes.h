@@ -67,24 +67,54 @@ typedef struct {
     char desc[BAL_MAXERROR];
 } bal_error;
 
+/* bal_asyncselect callback. */
 typedef void (*bal_async_callback)(bal_socket*, uint32_t);
 
-typedef struct bal_selectdata {
+/* Iteration callback. Returns false to stop iteration. */
+typedef bool (*bal_list_iter_callback)(bal_descriptor /*key*/,
+    bal_selectdata* /*val*/, void* /*ctx*/);
+
+/* Value storage for bal_list. */
+typedef struct {
     bal_socket* s;
     uint32_t mask;
     bal_async_callback proc;
-    struct bal_selectdata* _p;
-    struct bal_selectdata* _n;
 } bal_selectdata;
 
+/* Node type for bal_list. */
+typedef struct _bal_list_node {
+    bal_descriptor key;
+    bal_selectdata* val;
+    struct _bal_list_node *prev;
+    struct _bal_list_node *next;
+} bal_list_node;
+
+/* List of socket descriptors and associated state data. */
 typedef struct {
-    bal_selectdata* _h;
-    bal_selectdata* _t;
-    bal_selectdata* _c;
-} bal_selectdata_list;
+    bal_list_node* head;
+} bal_list;
 
 typedef struct {
-    bal_selectdata_list* sdl;
+    void* key;
+    void** val;
+    bool found;
+} _bal_list_find_data;
+
+typedef struct {
+    fd_set* set;
+    bal_list* lst;
+    uint32_t type;
+} _bal_list_dispatch_data;
+
+typedef struct {
+    fd_set* fd_read;
+    fd_set* fd_write;
+    fd_set* fd_except;
+    bal_descriptor high_watermark;
+} _bal_list_event_prepare_data;
+
+typedef struct {
+    bal_list* lst;
     bal_mutex* m;
 #if defined(__HAVE_STDATOMICS__) && !defined(__cplusplus)
     atomic_bool die;
@@ -92,5 +122,10 @@ typedef struct {
     volatile bool die;
 #endif
 } bal_eventthread_data;
+
+typedef struct {
+    bal_thread thread;
+    bal_mutex mutex;
+    bal_condition cond;
 
 #endif /* !_BAL_TYPES_H_INCLUDED */

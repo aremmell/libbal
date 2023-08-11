@@ -70,7 +70,11 @@
 
 typedef int bal_descriptor;
 typedef pthread_mutex_t bal_mutex;
+typedef pthread_cond_t bal_condition;
 typedef pthread_t bal_thread;
+
+/** The mutex/condition variable wait time type. */
+typedef struct timespec bal_wait;
 
 /** The one-time type. */
 typedef pthread_once_t bal_once;
@@ -98,10 +102,10 @@ typedef void (*bal_once_fn)(void);
 
 #  undef __HAVE_STDATOMICS__
 
-# if defined(_MSC_VER) && _MSC_VER >= 1933 && !defined(__cplusplus)
-#  include <stdatomic.h>
-#  define __HAVE_STDATOMICS__
-# endif
+#  if defined(_MSC_VER) && _MSC_VER >= 1933 && !defined(__cplusplus)
+#   include <stdatomic.h>
+#   define __HAVE_STDATOMICS__
+#  endif
 
 #  define WSOCK_MAJVER 2
 #  define WSOCK_MINVER 2
@@ -110,7 +114,11 @@ typedef void (*bal_once_fn)(void);
 
 typedef SOCKET bal_descriptor;
 typedef CRITICAL_SECTION bal_mutex;
+typedef CONDITION_VARIABLE bal_condition;
 typedef uintptr_t bal_thread;
+
+/** The mutex/condition variable wait time type. */
+typedef DWORD bal_wait;
 
 /** The one-time type. */
 typedef INIT_ONCE bal_once;
@@ -126,8 +134,7 @@ typedef BOOL(CALLBACK* bal_once_fn)(PINIT_ONCE, PVOID, PVOID*);
 
 /** The mutex initializer. */
 #  define BAL_MUTEX_INIT {0}
-
-# endif
+# endif /* !_WIN32 */
 
 # include "version.h"
 

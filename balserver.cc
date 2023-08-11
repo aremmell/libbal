@@ -62,8 +62,8 @@ int main(int argc, char** argv)
     ret = bal_close(&s);
     EXIT_IF_FAILED(ret, nullptr, "bal_close");
 
-    ret = bal_finalize();
-    EXIT_IF_FAILED(ret, nullptr, "bal_finalize");
+    ret = bal_cleanup();
+    EXIT_IF_FAILED(ret, nullptr, "bal_cleanup");
 
     return EXIT_SUCCESS;
 }
@@ -105,7 +105,7 @@ void balserver::async_events_cb(bal_socket* s, uint32_t events)
     {
         static bool sent_reply = false;
         static const char* reply = "O, HELO 2 U";
-        
+
         char read_buf[2048] = {0};
         int read = bal_recv(s, &read_buf[0], 2047, 0);
         if (read > 0) {

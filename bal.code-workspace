@@ -71,7 +71,8 @@
 			"complex": "cpp",
 			"mutex": "cpp",
 			"system_error": "cpp",
-			"stdatomic.h": "c"
+			"stdatomic.h": "c",
+			"balplatform.h": "c"
 		}
 	}
 }

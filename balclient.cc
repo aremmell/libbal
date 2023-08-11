@@ -56,8 +56,8 @@ int main(int argc, char** argv)
     ret = bal_close(&s);
     EXIT_IF_FAILED(ret, nullptr, "bal_close");
 
-    ret = bal_finalize();
-    EXIT_IF_FAILED(ret, nullptr, "bal_finalize");
+    ret = bal_cleanup();
+    EXIT_IF_FAILED(ret, nullptr, "bal_cleanup");
 
     return EXIT_SUCCESS;
 }

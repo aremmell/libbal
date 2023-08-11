@@ -35,13 +35,17 @@
 ╰─────────────────────────────────────────────────────────────────────────────*/
 
 
-bal_once _bal_asyncselect_once = BAL_ONCE_INIT;
+/* one-time initializer for async select handler. */
+static bal_once _bal_asyncselect_once = BAL_ONCE_INIT;
 
+/* whether or not the async select handler is initialized. */
 #if defined(__HAVE_STDATOMICS__)
-    atomic_bool _bal_asyncselect_init;
+    static atomic_bool _bal_asyncselect_init;
 #else
-    volatile bool _bal_asyncselect_init = false;
+    static volatile bool _bal_asyncselect_init = false;
 #endif
+
+/*
 
 
 /*─────────────────────────────────────────────────────────────────────────────╮
@@ -49,7 +53,7 @@ bal_once _bal_asyncselect_once = BAL_ONCE_INIT;
 ╰─────────────────────────────────────────────────────────────────────────────*/
 
 
-int bal_initialize(void)
+int bal_init(void)
 {
     int r = BAL_FALSE;
 
@@ -66,7 +70,7 @@ int bal_initialize(void)
     return r;
 }
 
-int bal_finalize(void)
+int bal_cleanup(void)
 {
     int r = BAL_FALSE;
 
@@ -81,69 +85,86 @@ int bal_finalize(void)
 
 int bal_asyncselect(const bal_socket* s, bal_async_callback proc, uint32_t mask)
 {
-    static bal_selectdata_list l   = {0};
+    /* it is possible that the call to this function is in response to a call
+     * made during the iteration of lst_active. we cannot add
+     * or remove entries here; instead, add them to separate lists that are
+     * processed after any potential iteration has finished. */
+
+    static bal_list lst_active     = {0};
     static bal_mutex m             = BAL_MUTEX_INIT;
-    static bal_eventthread_data td = {&l, &m, false};
+    static bal_eventthread_data td = {&lst_active, &m, false};
     static bal_thread t            = BAL_THREAD_INIT;
 
     bool static_init = _bal_once(&_bal_asyncselect_once, &_bal_static_once_init);
-    assert(static_init);
-    BAL_UNUSED(static_init);
+    BAL_ASSERT_UNUSED(static_init, static_init);
+
+    /* time to shut down the event thread and clean up? */
+    if (BAL_S_DIE == mask)
+        return _bal_cleanupasyncselect(&t, &m, &td);
 
     int r = BAL_FALSE;
-    if (BAL_S_DIE == mask) {
-        _bal_set_boolean(&td.die, true);
-
-#if defined(__WIN__)
-        (void)WaitForSingleObject((HANDLE)t, INFINITE);
-#else
-        (void)pthread_join(t, NULL);
-#endif
-
-        if (BAL_TRUE == _bal_mutex_destroy(&m)) {
-            if (BAL_TRUE == _bal_sdl_clr(&l)) {
-                _bal_set_boolean(&_bal_asyncselect_init, false);
-                return r = BAL_TRUE;
-            }
-        }
-    }
+    assert(s && proc);
 
     if (s && proc) {
         if (!_bal_get_boolean(&_bal_asyncselect_init)) {
-            if (BAL_FALSE == _bal_initasyncselect(&t, &m, &td))
-                return r = BAL_FALSE;
+            int init = _bal_initasyncselect(&t, &m, &td);
+            assert(BAL_TRUE == init);
+
+            if (BAL_TRUE != init) {
+                _bal_selflog("error: failed to initialize async select handler");
+                return BAL_FALSE;
+            }
+
             _bal_set_boolean(&_bal_asyncselect_init, true);
+            _bal_selflog("async select handler initialized");
         }
 
         if (BAL_TRUE == _bal_mutex_lock(&m)) {
             if (0u == mask) {
-                r = _bal_sdl_rem(&l, s->sd);
-            } else if (_bal_sdl_size(&l) < FD_SETSIZE - 1) {
-                bal_selectdata* d = _bal_sdl_find(&l, s->sd);
+/*                 bal_selectdata* d = NULL;
+                r = _bal_list_remove(&l, s->sd, &d) ? BAL_TRUE : BAL_FALSE;
+                _bal_selflog("removed socket " BAL_SOCKET_SPEC " from list;"
+                             " freeing selectdata %p", s->sd, d);
+                bal_safefree(&d); */
+            } else {
+                bal_selectdata* d = NULL;
+                if (_bal_list_find(&lst_active, s->sd, &d)) {
+                    assert(NULL != d);
 
-                if (d) {
-                    d->mask = mask;
-                    d->proc = proc;
-                    r       = BAL_TRUE;
-                } else {
-                    bal_selectdata d = {0};
-
-                    if (BAL_TRUE == bal_setiomode(s, true)) {
-                        d.mask = mask;
-                        d.proc = proc;
-                        d.s    = (bal_socket*)s;
-                        d._n   = NULL;
-                        d._p   = NULL;
-
-                        r = _bal_sdl_add(&l, &d);
+                    if (d) {
+                        d->mask = mask;
+                        d->proc = proc;
+                        r       = BAL_TRUE;
+                        _bal_selflog("updated socket " BAL_SOCKET_SPEC, s->sd);
                     }
+                } else {
+                    /* bal_selectdata* d = calloc(1, sizeof(bal_selectdata));
+                    assert(NULL != d);
+
+                    if (d) {
+                        bool success = false;
+                        if (BAL_TRUE == bal_setiomode(s, true)) {
+                            d->mask = mask;
+                            d->proc = proc;
+                            d->s    = (bal_socket*)s;
+
+                            success = _bal_list_add(&l, d->s, d);
+                            r = success ? BAL_TRUE : BAL_FALSE;
+                        }
+
+                        if (success) {
+                            _bal_selflog("added socket " BAL_SOCKET_SPEC " to list",
+                                s->sd);
+                        } else {
+                            bal_safefree(&d);
+                            assert(!"failed to add socket to list");
+                        }
+                    } */
                 }
             }
 
-            if (BAL_TRUE == r)
-                r = _bal_mutex_unlock(&m);
-            else
-                (void)_bal_mutex_unlock(&m);
+            int unlocked = _bal_mutex_unlock(&m);
+            BAL_ASSERT_UNUSED(unlocked, BAL_TRUE == unlocked);
         }
     }
 
@@ -833,738 +854,3 @@ int bal_getaddrstrings(const bal_sockaddr* in, bool dns, bal_addrstrings* out)
 
     return r;
 }
-
-
-/*─────────────────────────────────────────────────────────────────────────────╮
-│                            Internal Functions                                │
-╰─────────────────────────────────────────────────────────────────────────────*/
-
-
-int _bal_getaddrinfo(int f, int af, int st, const char* host, const char* port,
-    bal_addrinfo* res)
-{
-    int r = BAL_FALSE;
-
-    if (_bal_validstr(host) && res) {
-        if (host) {
-            struct addrinfo hints = {0};
-
-            hints.ai_flags    = f;
-            hints.ai_family   = af;
-            hints.ai_socktype = st;
-
-            r = getaddrinfo(host, port, (const struct addrinfo*)&hints, &res->_ai);
-
-            if (!r)
-                res->_p = res->_ai;
-            else
-                res->_p = res->_ai = NULL;
-        }
-    }
-
-    if (BAL_TRUE != r && BAL_FALSE != r) {
-        _bal_setlasterror(r);
-        r = BAL_FALSE;
-    }
-
-    return r;
-}
-
-int _bal_getnameinfo(int f, const bal_sockaddr* in, char* host, char* port)
-{
-    int r = BAL_FALSE;
-
-    if (in && host) {
-        socklen_t inlen = BAL_SASIZE(*in);
-        r = getnameinfo((const struct sockaddr*)in, inlen, host, NI_MAXHOST,
-            port, NI_MAXSERV, f);
-    }
-
-    if (BAL_TRUE != r && BAL_FALSE != r) {
-        _bal_setlasterror(r);
-        r = BAL_FALSE;
-    }
-
-    return r;
-}
-
-const struct addrinfo* _bal_enumaddrinfo(bal_addrinfo* ai)
-{
-    const struct addrinfo* r = NULL;
-
-    if (ai && ai->_ai) {
-        if (ai->_p) {
-            r      = ai->_p;
-            ai->_p = ai->_p->ai_next;
-        } else {
-            ai->_p = ai->_ai;
-        }
-    }
-
-    return r;
-}
-
-int _bal_aitoal(bal_addrinfo* in, bal_addrlist* out)
-{
-    int r = BAL_FALSE;
-
-    if (in && in->_ai && out) {
-        const struct addrinfo* ai = NULL;
-        bal_addr** a              = &out->_a;
-        r                         = BAL_TRUE;
-
-        in->_p = in->_ai;
-
-        while (NULL != (ai = _bal_enumaddrinfo(in))) {
-            *a = calloc(1ul, sizeof(bal_addr));
-
-            if (!*a) {
-                r = BAL_FALSE;
-                break;
-            }
-
-            memcpy(&(*a)->_sa, ai->ai_addr, ai->ai_addrlen);
-            a = &(*a)->_n;
-        }
-
-        bal_resetaddrlist(out);
-    }
-
-    return r;
-}
-
-int _bal_getlasterror(const bal_socket* s, bal_error* err)
-{
-    int r = BAL_FALSE;
-
-    if (err) {
-        memset(err, 0, sizeof(bal_error));
-
-        if (s) {
-            err->code = bal_geterror(s);
-        } else {
-#if defined(__WIN__)
-            err->code = WSAGetLastError();
-#else
-            err->code = errno;
-#endif
-        }
-
-#if defined(__WIN__)
-        if (0 != FormatMessageA(0x00001200u, NULL, err->code, 0u, err->desc,
-            BAL_MAXERROR, NULL))
-            r = BAL_TRUE;
-#else
-        if (err->code == EAI_AGAIN  || err->code == EAI_BADFLAGS ||
-            err->code == EAI_FAIL   || err->code == EAI_FAMILY   ||
-            err->code == EAI_MEMORY || err->code == EAI_NONAME   ||
-            err->code == EAI_NODATA || err->code == EAI_SERVICE  ||
-            err->code == EAI_SOCKTYPE) {
-            if (0 == _bal_retstr(err->desc, gai_strerror(err->code), BAL_MAXERROR))
-                r = BAL_TRUE;
-        } else {
-            if (0 == _bal_retstr(err->desc, (const char*)strerror(err->code),
-                BAL_MAXERROR))
-                r = BAL_TRUE;
-        }
-#endif
-    }
-
-    return r;
-}
-
-void __bal_setlasterror(int err, const char* func, const char* file, int line)
-{
-#if defined(__WIN__)
-    WSASetLastError(err);
-#else
-    errno = err;
-#endif
-
-#if defined(BAL_SELFLOG)
-    bal_error lasterr = {0};
-    int get_err = _bal_getlasterror(NULL, &lasterr);
-
-    if (BAL_TRUE != get_err) {
-#if defined(__WIN__)
-        lasterr.code = WSAGetLastError();
-#else
-        lasterr.code = errno;
-#endif
-        strncpy(lasterr.desc, BAL_AS_UNKNWN, strnlen(BAL_AS_UNKNWN, BAL_MAXERROR));
-    }
-
-    __bal_selflog(func, file, line, "error: %d (%s)", lasterr.code, lasterr.desc);
-#endif
-}
-
-int _bal_retstr(char* out, const char* in, size_t destlen)
-{
-    int r = BAL_FALSE;
-
-    strncpy(out, in, destlen - 1);
-    out[destlen - 1] = '\0';
-    r = BAL_TRUE;
-
-    return r;
-}
-
-int _bal_haspendingconnect(const bal_socket* s)
-{
-    return (s && bal_isbitset(s->_f, BAL_F_PENDCONN)) ? BAL_TRUE : BAL_FALSE;
-}
-
-int _bal_islistening(const bal_socket* s)
-{
-    return (s && bal_isbitset(s->_f, BAL_F_LISTENING)) ? BAL_TRUE : BAL_FALSE;
-}
-
-int _bal_isclosedcircuit(const bal_socket* s)
-{
-    int r = BAL_FALSE;
-
-    if (s) {
-        unsigned char buf = '\0';
-        int rcv = recv(s->sd, &buf, sizeof(unsigned char), MSG_PEEK);
-
-        if (0 == rcv)
-            r = BAL_TRUE;
-        else if (-1 == rcv) {
-#if defined(__WIN__)
-            int error = WSAGetLastError();
-            if (WSAENETDOWN == error     || WSAENOTCONN == error  ||
-                WSAEOPNOTSUPP == error   || WSAESHUTDOWN == error ||
-                WSAECONNABORTED == error || WSAECONNRESET == error)
-                r = BAL_TRUE;
-#else
-            if (EBADF == errno || ENOTCONN == errno || ENOTSOCK == errno)
-                r = BAL_TRUE;
-#endif
-        }
-    }
-
-    return r;
-}
-
-BALTHREAD _bal_eventthread(void* p)
-{
-    bal_eventthread_data* td = (bal_eventthread_data*)p;
-
-    if (!td) {
-#if defined(__WIN__)
-        return 1u;
-#else
-        return (void*)1;
-#endif
-    }
-
-    while (!_bal_get_boolean(&td->die)) {
-
-        fd_set r = {0};
-        fd_set w = {0};
-        fd_set e = {0};
-
-        if (BAL_TRUE == _bal_mutex_lock(td->m)) {
-            bal_selectdata* t     = NULL;
-            bal_descriptor highsd = 0;
-
-            FD_ZERO(&r);
-            FD_ZERO(&w);
-            FD_ZERO(&e);
-
-            _bal_sdl_reset(td->sdl);
-
-            while (BAL_TRUE == _bal_sdl_enum(td->sdl, &t)) {
-                if (BAL_TRUE == _bal_haspendingconnect(t->s)) {
-                    t->mask |= BAL_S_CONNECT;
-                    t->s->_f &= ~BAL_F_PENDCONN;
-                }
-
-                if (BAL_TRUE == _bal_islistening(t->s)) {
-                    t->mask |= BAL_S_LISTEN;
-                    t->s->_f &= ~BAL_F_LISTENING;
-                }
-
-                if (t->s->sd > highsd)
-                    highsd = t->s->sd;
-
-                FD_SET(t->s->sd, &r);
-                FD_SET(t->s->sd, &w);
-                FD_SET(t->s->sd, &e);
-            }
-
-            struct timeval tv = {0, 0};
-            if (-1 != select(highsd + 1, &r, &w, &e, &tv)) {
-                _bal_dispatchevents(&r, td, BAL_S_READ);
-                _bal_dispatchevents(&w, td, BAL_S_WRITE);
-                _bal_dispatchevents(&e, td, BAL_S_EXCEPT);
-            }
-
-            int unlock = _bal_mutex_unlock(td->m);
-            BAL_ASSERT_UNUSED(unlock, BAL_TRUE == unlock);
-        }
-
-        FD_ZERO(&r);
-        FD_ZERO(&w);
-        FD_ZERO(&e);
-
-        _bal_yield_thread();
-    }
-
-#if defined(__WIN__)
-    return 0u;
-#else
-    return NULL;
-#endif
-}
-
-int _bal_initasyncselect(bal_thread* t, bal_mutex* m, bal_eventthread_data* td)
-{
-    int r = BAL_FALSE;
-
-    if (t && m && td) {
-#if defined(__HAVE_STDATOMICS__)
-        atomic_init(&td->die, false);
-#else
-        td->die = false;
-#endif
-        if (BAL_TRUE == _bal_mutex_init(m)) {
-#if defined(__WIN__)
-            *t = _beginthreadex(NULL, 0u, _bal_eventthread, td, 0u, NULL);
-            if (0ull != *t)
-                r = BAL_TRUE;
-#else
-            if (0 == pthread_create(t, NULL, _bal_eventthread, td))
-                r = BAL_TRUE;
-#endif
-        }
-    }
-
-    return r;
-}
-
-void _bal_dispatchevents(fd_set* set, bal_eventthread_data* td, int type)
-{
-    if (set && td) {
-        bal_selectdata* t = NULL;
-
-        _bal_sdl_reset(td->sdl);
-
-        while (BAL_TRUE == _bal_sdl_enum(td->sdl, &t)) {
-            if (0 != FD_ISSET(t->s->sd, set)) {
-                uint32_t event = 0u;
-                bool snd       = false;
-
-                switch (type) {
-                    case BAL_S_READ:
-                        if (bal_isbitset(t->mask, BAL_E_READ)) {
-                            if (bal_isbitset(t->mask, BAL_S_LISTEN))
-                                event = BAL_E_ACCEPT;
-                            else if (BAL_TRUE == _bal_isclosedcircuit(t->s))
-                                event = BAL_E_CLOSE;
-                            else
-                                event = BAL_E_READ;
-
-                            snd = true;
-                        }
-                    break;
-                    case BAL_S_WRITE:
-                        if (bal_isbitset(t->mask, BAL_E_WRITE)) {
-                            if (bal_isbitset(t->mask, BAL_S_CONNECT)) {
-                                event = BAL_E_CONNECT;
-                                t->mask &= ~BAL_S_CONNECT;
-                            } else
-                                event = BAL_E_WRITE;
-
-                            snd = true;
-                        }
-                    break;
-                    case BAL_S_EXCEPT:
-                        if (bal_isbitset(t->mask, BAL_E_EXCEPTION)) {
-                            if (bal_isbitset(t->mask, BAL_S_CONNECT)) {
-                                event = BAL_E_CONNFAIL;
-                                t->mask &= ~BAL_S_CONNECT;
-                            } else
-                                event = BAL_E_EXCEPTION;
-
-                            snd = true;
-                        }
-                    break;
-                    default:
-                        assert(!"invalid event type");
-                        _bal_setlasterror(EINVAL);
-                    break;
-                }
-
-                if (snd)
-                    t->proc(t->s, event);
-
-                if (BAL_E_CLOSE == event) {
-                    bal_descriptor sd = t->s->sd;
-
-                    int ret = bal_close(t->s);
-                    BAL_ASSERT_UNUSED(ret, BAL_TRUE == ret);
-
-                    ret = _bal_sdl_rem(td->sdl, sd);
-                    BAL_ASSERT_UNUSED(ret, BAL_TRUE == ret);
-
-                    _bal_selflog("removed and closed descriptor " BAL_SOCKET_SPEC, sd);
-                }
-            }
-        }
-    }
-}
-
-int _bal_sdl_add(bal_selectdata_list* sdl, const bal_selectdata* d)
-{
-    int r = BAL_FALSE;
-
-    if (sdl && d) {
-        bal_selectdata** t = NULL;
-        bal_selectdata* n  = NULL;
-
-        if (sdl->_h) {
-            t = &sdl->_t->_n;
-            n = sdl->_t;
-        } else {
-            t = &sdl->_h;
-        }
-
-        *t = malloc(sizeof(bal_selectdata));
-
-        if (*t) {
-            memcpy(*t, d, sizeof(bal_selectdata));
-
-            (*t)->_n = NULL;
-            (*t)->_p = n;
-            sdl->_t  = *t;
-            r        = BAL_TRUE;
-        }
-    }
-
-    return r;
-}
-
-int _bal_sdl_rem(bal_selectdata_list* sdl, bal_descriptor sd)
-{
-    int r = BAL_FALSE;
-
-    if (sdl && sd != BAL_BADSOCKET) {
-        bal_selectdata* t = _bal_sdl_find(sdl, sd);
-
-        if (t) {
-            if (t == sdl->_h) {
-                sdl->_h = t->_n;
-            } else {
-                t->_p->_n = t->_n;
-
-                if (t == sdl->_t)
-                    sdl->_t = t->_p;
-                else
-                    t->_n->_p = t->_p;
-            }
-
-            bal_reset(t->s);
-            bal_safefree(&t);
-            r = BAL_TRUE;
-        }
-    }
-
-    return r;
-}
-
-int _bal_sdl_clr(bal_selectdata_list* sdl)
-{
-    int r = BAL_FALSE;
-
-    if (sdl) {
-        if (0 == _bal_sdl_size(sdl))
-            r = BAL_TRUE;
-        else if (sdl->_h) {
-            bal_selectdata* t  = sdl->_h;
-            bal_selectdata* t2 = NULL;
-
-            while (t) {
-                t2 = t->_n;
-                bal_safefree(&t);
-                t = t2;
-            }
-
-            sdl->_h = sdl->_t = sdl->_c = NULL;
-            r                           = BAL_TRUE;
-        }
-    }
-
-    return r;
-}
-
-int _bal_sdl_size(bal_selectdata_list* sdl)
-{
-    int r = 0;
-
-    if (sdl) {
-        bal_selectdata* d = sdl->_h;
-
-        while (d) {
-            d = d->_n;
-            r++;
-        }
-    }
-
-    return r;
-}
-
-int _bal_sdl_copy(bal_selectdata_list* dest, bal_selectdata_list* src)
-{
-    int r = BAL_FALSE;
-
-    if (dest && src) {
-        bal_selectdata* d = src->_h;
-        int copied        = 0;
-
-        _bal_sdl_clr(dest);
-        _bal_sdl_reset(src);
-
-        while (d) {
-            if (BAL_TRUE == _bal_sdl_add(dest, d))
-                copied++;
-            d = d->_n;
-        }
-
-        if (0 < copied)
-            r = BAL_TRUE;
-    }
-
-    return r;
-}
-
-int _bal_sdl_enum(bal_selectdata_list* sdl, bal_selectdata** d)
-{
-    int r = BAL_FALSE;
-
-    if (sdl && d) {
-        if (sdl->_c) {
-            *d      = sdl->_c;
-            sdl->_c = sdl->_c->_n;
-            r       = BAL_TRUE;
-        } else {
-            _bal_sdl_reset(sdl);
-        }
-    }
-
-    return r;
-}
-
-void _bal_sdl_reset(bal_selectdata_list* sdl)
-{
-    if (sdl)
-        sdl->_c = sdl->_h;
-}
-
-bal_selectdata* _bal_sdl_find(const bal_selectdata_list* sdl, bal_descriptor sd)
-{
-    bal_selectdata* r = NULL;
-
-    if (sdl && sd != BAL_BADSOCKET) {
-        bal_selectdata* t = sdl->_h;
-
-        while (t) {
-            if (t->s->sd == sd) {
-                r = t;
-                break;
-            }
-
-            t = t->_n;
-        }
-    }
-
-    return r;
-}
-
-int _bal_mutex_init(bal_mutex* m)
-{
-    int r = BAL_FALSE;
-
-    if (m) {
-#if defined(__WIN__)
-        InitializeCriticalSection(m);
-        r = BAL_TRUE;
-#else
-        pthread_mutexattr_t attr;
-        int op = pthread_mutexattr_init(&attr);
-        if (0 == op) {
-            op = pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
-            if (0 == op) {
-                op = pthread_mutex_init(m, &attr);
-                r = 0 == op ? BAL_TRUE : BAL_FALSE;
-            }
-        }
-#endif
-    }
-
-    return r;
-}
-
-int _bal_mutex_lock(bal_mutex* m)
-{
-    int r = BAL_FALSE;
-
-    if (m) {
-#if defined(__WIN__)
-        EnterCriticalSection(m);
-        r = BAL_TRUE;
-#else
-        int op = pthread_mutex_lock(m);
-        if (0 == op)
-            r = BAL_TRUE;
-#endif
-    }
-
-    return r;
-}
-
-int _bal_mutex_unlock(bal_mutex* m)
-{
-    int r = BAL_FALSE;
-
-    if (m) {
-#if defined(__WIN__)
-        LeaveCriticalSection(m);
-        r = BAL_TRUE;
-#else
-        int op = pthread_mutex_unlock(m);
-        if (0 == op)
-            r = BAL_TRUE;
-#endif
-    }
-
-    return r;
-}
-
-int _bal_mutex_destroy(bal_mutex* m)
-{
-    int r = BAL_FALSE;
-
-    if (m) {
-#if defined(__WIN__)
-        DeleteCriticalSection(m);
-        r = BAL_TRUE;
-#else
-        int op = pthread_mutex_destroy(m);
-        if (0 == op)
-            r = BAL_TRUE;
-#endif
-    }
-
-    return r;
-}
-
-#if defined(__HAVE_STDATOMICS__)
-bool _bal_get_boolean(atomic_bool* boolean)
-{
-    bool retval = false;
-
-    if (boolean)
-        retval = atomic_load(boolean);
-
-    return retval;
-}
-
-void _bal_set_boolean(atomic_bool* boolean, bool value)
-{
-    if (boolean)
-        atomic_store(boolean, value);
-}
-#else
-bool _bal_get_boolean(bool* boolean)
-{
-    bool retval = false;
-
-    if (boolean)
-        retval = *boolean;
-
-    return retval;
-}
-
-void _bal_set_boolean(bool* boolean, bool value)
-{
-    if (boolean)
-        *boolean = value;
-}
-#endif
-
-void _bal_yield_thread(void)
-{
-#if defined(__WIN__)
-    Sleep(1);
-#else
-    int yield = sched_yield();
-    assert(0 == yield);
-#endif
-}
-
-#if defined(BAL_SELFLOG)
-void __bal_selflog(const char* func, const char* file, uint32_t line,
-    const char* format, ...)
-{
-    va_list args;
-    va_list args2;
-    va_start(args, format);
-    va_copy(args2, args);
-
-    int prnt_len = vsnprintf(NULL, 0, format, args);
-
-    va_end(args);
-    assert(prnt_len > 0);
-
-    char* buf = calloc(prnt_len + 1, sizeof(char));
-    assert(NULL != buf);
-
-    if (buf) {
-        char prefix[256] = {0};
-        int pfx_len = snprintf(prefix, 256, "%s (%s:%"PRIu32"): ", func, file, line);
-        assert(pfx_len > 0 && pfx_len < 256);
-
-        va_start(args2, format);
-        (void)vsnprintf(buf, prnt_len + 1, format, args2);
-        va_end(args2);
-
-        printf("%s%s\n", prefix, buf);
-
-        bal_safefree(&buf);
-    }
-}
-#endif
-
-bool _bal_once(bal_once* once, bal_once_fn func)
-{
-#if defined(__WIN__)
-    return FALSE != InitOnceExecuteOnce(once, func, NULL, NULL);
-#else
-    return 0 == pthread_once(once, func);
-#endif
-}
-
-#if defined(__WIN__)
-BOOL CALLBACK _bal_static_once_init(PINIT_ONCE ponce, PVOID param, PVOID* ctx)
-{
-    BAL_UNUSED(ponce);
-    BAL_UNUSED(param);
-    BAL_UNUSED(ctx);
-#if defined(__HAVE_STDATOMICS__)
-    atomic_init(&_bal_asyncselect_init, false);
-#else
-    _bal_asyncselect_init = false;
-#endif
-    return TRUE;
-}
-#else
-void _bal_static_once_init(void)
-{
-#if defined(__HAVE_STDATOMICS__)
-    atomic_init(&_bal_asyncselect_init, false);
-#else
-    _bal_asyncselect_init = false;
-#endif
-}
-#endif

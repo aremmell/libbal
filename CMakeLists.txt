@@ -81,12 +81,14 @@ add_library(
     ${STATIC_LIBRARY_NAME}
     STATIC
     bal.c
+    balinternal.c
 )
 
 add_library(
     ${SHARED_LIBRARY_NAME}
     SHARED
     bal.c
+    balinternal.c
 )
 
 if(!WIN32)
