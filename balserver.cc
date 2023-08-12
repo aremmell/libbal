@@ -109,7 +109,9 @@ void balserver::async_events_cb(bal_socket* s, uint32_t events)
         static bool sent_reply = false;
         static const char* reply = "O, HELO 2 U";
 
-        char read_buf[2048] = {0};
+        char read_buf[2048];
+        memset(read_buf, 0, sizeof(read_buf));
+        
         int read = bal_recv(s, &read_buf[0], 2047, 0);
         if (read > 0) {
             sent_reply = false;

@@ -507,7 +507,7 @@ int bal_isreadable(const bal_socket* s)
     int r = BAL_FALSE;
 
     if (s) {
-        fd_set fd;
+        fd_set fd        = {0};
         struct timeval t = {0};
 
         FD_ZERO(&fd);
@@ -527,7 +527,7 @@ int bal_iswritable(const bal_socket* s)
     int r = BAL_FALSE;
 
     if (s) {
-        fd_set fd;
+        fd_set fd        = {0};
         struct timeval t = {0};
 
         FD_ZERO(&fd);
