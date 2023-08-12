@@ -305,6 +305,28 @@ bool _bal_cleanupasyncselect(void)
     };
 
     for (size_t n = 0; n < bal_countof(lists); n++) {
+        /* for the main list, some heap data may still be present;
+         * the other lists contain the same pointers, so it's not necessary to
+         * process them as well. */
+        if (0 == n) {
+            if (!_bal_list_empty(lists[n])) {
+                /* iterate and free allocated data. */
+                bal_descriptor sd  = 0;
+                bal_selectdata* d  = NULL;
+
+                _bal_dbglog("list %zu is not empty; freeing socket data...", n);
+
+                _bal_list_reset_iterator(lists[n]);
+                while (_bal_list_iterate(lists[n], &sd, &d)) {
+                    _bal_dbglog("freeing data for socket "BAL_SOCKET_SPEC" (%p)",
+                        sd, (uintptr_t)d);
+                    _bal_safefree(&d);
+                }
+            } else {
+                _bal_dbglog("list %zu is empty; no socket data to free", n);
+            }
+        }
+
         bool destroy = _bal_list_destroy(&lists[n]);
         BAL_ASSERT(destroy);
         cleanup &= destroy;
@@ -541,7 +563,7 @@ BALTHREAD _bal_eventthread(void* ctx)
                     0
                 };
 
-                bool iterate = _bal_list_iterate(asc->lst, &epd,
+                bool iterate = _bal_list_iterate_func(asc->lst, &epd,
                     &__bal_list_event_prepare);
                 BAL_ASSERT(iterate);
 
@@ -599,7 +621,7 @@ BALTHREAD _bal_syncthread(void* ctx)
                 if (!_bal_list_empty(asc->lst_add)) {
                     _bal_dbglog("processing deferred socket adds...");
 
-                    bool add = _bal_list_iterate(asc->lst_add, asc->lst,
+                    bool add = _bal_list_iterate_func(asc->lst_add, asc->lst,
                         &__bal_list_add_entries);
                     BAL_ASSERT_UNUSED(add, add);
 
@@ -610,7 +632,7 @@ BALTHREAD _bal_syncthread(void* ctx)
                 if (!_bal_list_empty(asc->lst_rem)) {
                     _bal_dbglog("processing deferred socket removals...");
 
-                    bool rem = _bal_list_iterate(asc->lst_rem, asc->lst,
+                    bool rem = _bal_list_iterate_func(asc->lst_rem, asc->lst,
                         &__bal_list_remove_entries);
                     BAL_ASSERT_UNUSED(rem, rem);
 
@@ -645,7 +667,7 @@ void _bal_dispatchevents(fd_set* set, bal_as_container* asc, uint32_t type)
             type
         };
 
-        bool iterate = _bal_list_iterate(asc->lst, &ldd, &__bal_list_dispatch_events);
+        bool iterate = _bal_list_iterate_func(asc->lst, &ldd, &__bal_list_dispatch_events);
         BAL_ASSERT(iterate);
     }
 }
@@ -685,6 +707,7 @@ bool _bal_list_add(bal_list* lst, bal_descriptor key, bal_selectdata* val)
     if (ok) {
         if (_bal_list_empty(lst)) {
             ok = _bal_list_create_node(&lst->head, key, val);
+            lst->iter = lst->head;
         } else {
             bal_list_node* node = lst->head;
             while (node && node->next)
@@ -705,7 +728,7 @@ bool _bal_list_find(bal_list* lst, bal_descriptor key, bal_selectdata** val)
 
     if (ok) {
         _bal_list_find_data lfd = { key, val, false };
-        ok = _bal_list_iterate(lst, &lfd, &__bal_list_find_key) && lfd.found;
+        ok = _bal_list_iterate_func(lst, &lfd, &__bal_list_find_key) && lfd.found;
     }
 
     return ok;
@@ -716,7 +739,29 @@ bool _bal_list_empty(bal_list* lst)
     return !lst || !lst->head;
 }
 
-bool _bal_list_iterate(bal_list* lst, void* ctx, bal_list_iter_callback cb)
+bool _bal_list_iterate(bal_list* lst, bal_descriptor* key, bal_selectdata** val)
+{
+    bool ok = !_bal_list_empty(lst) && NULL != key && NULL != val;
+
+    if (ok) {
+        ok = NULL != lst->iter;
+        if (ok) {
+            *key = lst->iter->key;
+            *val = lst->iter->val;
+            lst->iter = lst->iter->next;
+        }
+    }
+
+    return ok;
+}
+
+void _bal_list_reset_iterator(bal_list* lst)
+{
+    if (NULL != lst)
+        lst->iter = lst->head;
+}
+
+bool _bal_list_iterate_func(bal_list* lst, void* ctx, bal_list_iter_callback cb)
 {
     bool ok = !_bal_list_empty(lst) && NULL != cb;
 
@@ -747,6 +792,8 @@ bool _bal_list_remove(bal_list* lst, bal_descriptor key, bal_selectdata** val)
                 found = true;
                 if (node == lst->head)
                     lst->head = node->next;
+                if (node == lst->iter)
+                    lst->iter = lst->iter->prev;
                 *val = node->val;
                 ok   = _bal_list_destroy_node(&node);
                 break;

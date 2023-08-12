@@ -83,8 +83,15 @@ bool _bal_list_find(bal_list* lst, bal_descriptor key, bal_selectdata** val);
 /** True if the list contains zero nodes. */
 bool _bal_list_empty(bal_list* lst);
 
+/** Retrieves the key and value for the current iterator, if set. If further
+ * nodes exist, advances the iterator. */
+bool _bal_list_iterate(bal_list* lst, bal_descriptor* key, bal_selectdata** val);
+
+/** Resets the iterator to the first node in the list. */
+void _bal_list_reset_iterator(bal_list* lst);
+
 /** Calls `func` for each node in the list, passing `ctx`. */
-bool _bal_list_iterate(bal_list* lst, void* ctx, bal_list_iter_callback cb);
+bool _bal_list_iterate_func(bal_list* lst, void* ctx, bal_list_iter_callback cb);
 
 /** Finds a node by key, and destroys it if found. */
 bool _bal_list_remove(bal_list* lst, bal_descriptor key, bal_selectdata** val);

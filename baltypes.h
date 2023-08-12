@@ -92,6 +92,7 @@ typedef struct _bal_list_node {
 /* List of socket descriptors and associated state data. */
 typedef struct {
     bal_list_node* head;
+    bal_list_node* iter;
 } bal_list;
 
 typedef struct {
