@@ -82,12 +82,13 @@ int bal_sock_create(bal_socket* s, int af, int pt, int st)
 {
     int r = BAL_FALSE;
 
-    if (-1 != (s->sd = socket(af, st, pt))) {
-        s->af = af;
-        s->pf = pt;
-        s->st = st;
-        s->_f = 0u;
-        r     = BAL_TRUE;
+    if (s) {
+        bal_reset(s);
+        s->sd = socket(af, st, pt);
+        if (-1 == s->sd)
+            _bal_setlasterror(errno);
+        else
+            r = BAL_TRUE;
     }
 
     return r;
