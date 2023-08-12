@@ -130,13 +130,13 @@ int _bal_asyncselect(const bal_socket* s, bal_async_callback proc, uint32_t mask
                 if (_bal_defer_remove_socket(d)) {
                     r = BAL_TRUE;
                     _bal_dbglog("added socket "BAL_SOCKET_SPEC" to defer"
-                                 " remove list", s->sd);
+                                " remove list", s->sd);
                 } else {
                     BAL_ASSERT(!"failed to add socket to defer remove list");
                 }
             } else {
                 _bal_dbglog("warning: socket "BAL_SOCKET_SPEC" not in list;"
-                             " ignoring", s->sd);
+                            " ignoring", s->sd);
             }
         } else {
             bal_selectdata* d = NULL;
@@ -165,7 +165,8 @@ int _bal_asyncselect(const bal_socket* s, bal_async_callback proc, uint32_t mask
                     }
                     if (success) {
                         _bal_dbglog("added socket "BAL_SOCKET_SPEC" to defer"
-                                     " add list with mask %08x", s->sd, d->mask);
+                                    " add list (mask = %08x, data = %p)", s->sd,
+                                    d->mask, (uintptr_t)d);
                     } else {
                         _bal_safefree(&d);
                         BAL_ASSERT(!"failed to add socket to defer add list");
@@ -747,7 +748,7 @@ bool _bal_list_remove(bal_list* lst, bal_descriptor key, bal_selectdata** val)
                 if (node == lst->head)
                     lst->head = node->next;
                 *val = node->val;
-                ok = _bal_list_destroy_node(&node);
+                ok   = _bal_list_destroy_node(&node);
                 break;
             }
             node = node->next;
