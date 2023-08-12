@@ -41,16 +41,16 @@ int main(int argc, char** argv)
     EXIT_IF_FAILED(ret, nullptr, "bal_sock_create");
 
     ret = bal_setreuseaddr(&s, 1);
-    EXIT_IF_FAILED(ret, nullptr, "bal_setreuseaddr");
+    EXIT_IF_FAILED(ret, &s, "bal_setreuseaddr");
 
     ret = bal_bind(&s, balcommon::localaddr, balcommon::portnum);
-    EXIT_IF_FAILED(ret, nullptr, "bal_bind");
+    EXIT_IF_FAILED(ret, &s, "bal_bind");
 
     ret = bal_asyncselect(&s, &balserver::async_events_cb, BAL_E_ALL);
-    EXIT_IF_FAILED(ret, nullptr, "bal_asyncselect");
+    EXIT_IF_FAILED(ret, &s, "bal_asyncselect");
 
     ret = bal_listen(&s, 0);
-    EXIT_IF_FAILED(ret, nullptr, "bal_listen");
+    EXIT_IF_FAILED(ret, &s, "bal_listen");
 
     printf("listening on %s:%s; ctrl+c to exit...\n",
         balcommon::localaddr, balcommon::portnum);
@@ -59,8 +59,11 @@ int main(int argc, char** argv)
         bal_yield_thread();
     } while (balcommon::should_run());
 
-    if (!bal_close(&s))
-        balcommon::print_last_lib_error(nullptr, "bal_close");
+    ret = bal_asyncselect(&s, nullptr, 0u);
+    EXIT_IF_FAILED(ret, &s, "bal_asyncselect");
+
+    if (BAL_TRUE != bal_close(&s))
+        balcommon::print_last_lib_error(&s, "bal_close");
 
     if (!bal_cleanup())
         balcommon::print_last_lib_error(nullptr, "bal_cleanup");
@@ -77,7 +80,7 @@ void balserver::async_events_cb(bal_socket* s, uint32_t events)
 
         int ret = bal_accept(s, &client_socket, &client_addr);
         if (BAL_TRUE != ret) {
-            balcommon::print_last_lib_error(nullptr, "bal_accept");
+            balcommon::print_last_lib_error(s, "bal_accept");
             return;
         }
 
@@ -91,7 +94,7 @@ void balserver::async_events_cb(bal_socket* s, uint32_t events)
 
         ret = bal_asyncselect(&client_socket, &async_events_cb, BAL_E_ALL);
         if (BAL_TRUE != ret) {
-            balcommon::print_last_lib_error(nullptr, "bal_asyncselect");
+            balcommon::print_last_lib_error(&client_socket, "bal_asyncselect");
             bal_close(&client_socket);
             return;
         }
@@ -126,6 +129,7 @@ void balserver::async_events_cb(bal_socket* s, uint32_t events)
 
     if (bal_isbitset(events, BAL_E_CLOSE)) {
         printf("[" BAL_SOCKET_SPEC "] connection closed.\n", s->sd);
+        bal_close(s);
     }
 
     if (bal_isbitset(events, BAL_E_EXCEPTION)) {

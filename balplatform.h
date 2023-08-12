@@ -28,14 +28,20 @@
 
 # if !defined(_WIN32)
 #  if defined(__APPLE__) && defined(__MACH__)
+#   define __MACOS__
 #   undef _DARWIN_C_SOURCE
 #   define _DARWIN_C_SOURCE
 #  elif defined(__linux__)
 #   undef _GNU_SOURCE
 #   define _GNU_SOURCE
 #  elif defined (__FreeBSD__)
+#   define __BSD__
 #   undef _BSD_SOURCE
 #   define _BSD_SOURCE
+#  endif
+
+#  if defined(__linux__)
+#  include <sys/syscall.h>
 #  endif
 
 #  include <sys/types.h>
@@ -67,6 +73,7 @@
 #  endif
 
 #  define BAL_SOCKET_SPEC "%d"
+#  define BAL_TID_SPEC "%x"
 
 /** The socket descriptor type. */
 typedef int bal_descriptor;
@@ -115,6 +122,7 @@ typedef void (*bal_once_fn)(void);
 #  endif
 
 #  define BAL_SOCKET_SPEC "%llu"
+#  define BAL_TID_SPEC "%x"
 
 /** The socket descriptor type. */
 typedef SOCKET bal_descriptor;
@@ -163,7 +171,8 @@ typedef struct sockaddr_storage bal_sockaddr;
 # define BAL_FALSE    -1
 # define BAL_MAXERROR 1024
 
-# define BAL_AS_UNKNWN "<unknown>"
+# define BAL_UNKNOWN "<unknown>"
+
 # define BAL_AS_IPV6   "IPv6"
 # define BAL_AS_IPV4   "IPv4"
 
@@ -178,6 +187,16 @@ typedef struct sockaddr_storage bal_sockaddr;
 
 # define BAL_NI_NODNS (NI_NUMERICHOST | NI_NUMERICSERV)
 # define BAL_NI_DNS   (NI_NAMEREQD | NI_NUMERICSERV)
+
+# if defined(__WIN__)
+# define BAL_SHUT_RDWR SD_BOTH
+# define BAL_SHUT_RD   SD_RECEIVE
+# define BAL_SHUT_WR   SD_SEND
+# else
+# define BAL_SHUT_RDWR SHUT_RDWR
+# define BAL_SHUT_RD   SHUT_RD
+# define BAL_SHUT_WR   SHUT_WR
+# endif
 
 # define BAL_E_READ      0x00000001u
 # define BAL_E_WRITE     0x00000002u

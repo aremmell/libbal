@@ -107,7 +107,6 @@ int bal_getrecvtimeout(const bal_socket* s, long* sec, long* usec);
 
 int bal_geterror(const bal_socket* s);
 
-int bal_islistening(const bal_socket* s);
 int bal_isreadable(const bal_socket* s);
 int bal_iswritable(const bal_socket* s);
 

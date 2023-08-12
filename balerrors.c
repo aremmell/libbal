@@ -23,12 +23,11 @@
  * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-#include "balplatform.h"
+#include "bal.h"
 #include "balerrors.h"
 #include "balinternal.h"
 
-#if defined(BAL_SELFLOG)
-void __bal_selflog(const char* func, const char* file, uint32_t line,
+void __bal_dbglog(const char* func, const char* file, uint32_t line,
     const char* format, ...)
 {
     va_list args;
@@ -46,16 +45,88 @@ void __bal_selflog(const char* func, const char* file, uint32_t line,
 
     if (buf) {
         char prefix[256] = {0};
-        int pfx_len = snprintf(prefix, 256, "%s (%s:%"PRIu32"): ", func, file, line);
-        BAL_ASSERT(pfx_len > 0 && pfx_len < 256);
+        int len = snprintf(prefix, 256, "["BAL_TID_SPEC"] %s (%s:%"PRIu32"): ",
+            _bal_gettid(), func, file, line);
+        BAL_ASSERT(len > 0 && len < 256);
 
         va_start(args2, format);
         (void)vsnprintf(buf, prnt_len + 1, format, args2);
         va_end(args2);
 
-        printf("%s%s\n", prefix, buf);
+        const char* color = "0";
+#if defined(__WIN__)
+        if (NULL != StrStrIA(buf, "error") || NULL != StrStrIA(buf, "assert"))
+            color = "91";
+        else if (NULL != StrStrIA(buf, "warn"))
+            color = "33";
+#else
+        if (NULL != strcasestr(buf, "error") || NULL != strcasestr(buf, "assert"))
+            color = "91";
+        else if (NULL != strcasestr(buf, "warn"))
+            color = "33";
+#endif
+        printf("\x1b[%sm%s%s\x1b[0m\n", color, prefix, buf);
 
-        bal_safefree(&buf);
+        _bal_safefree(&buf);
     }
 }
+
+int _bal_getlasterror(const bal_socket* s, bal_error* err)
+{
+    int r = BAL_FALSE;
+
+    if (err) {
+        memset(err, 0, sizeof(bal_error));
+
+        bool resolved = false;
+        if (s) {
+            err->code = bal_geterror(s);
+            resolved  = err->code != -1 && err->code != 0;
+        }
+
+#if defined(__WIN__)
+        if (!resolved)
+            err->code = WSAGetLastError();
+
+        DWORD flags = FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS;
+        if (0 != FormatMessageA(flags, NULL, err->code, 0u, err->desc, BAL_MAXERROR, NULL))
+            r = BAL_TRUE;
+#else
+        if (!resolved)
+            err->code = errno;
+#pragma message("TODO: these error codes are only appplicable when getaddrinfo or getnameinfo fail")
+/*         switch (err->code) {
+            case EAI_AGAIN:
+            case EAI_FAIL:
+            case EAI_MEMORY:
+            case EAI_NODATA:
+            case EAI_SOCKTYPE:
+            case EAI_BADFLAGS:
+            case EAI_BADHINTS:
+            case EAI_FAMILY:
+            case EAI_ADDRFAMILY:
+            case EAI_NONAME:
+            case EAI_SERVICE:
+                if (0 == _bal_retstr(err->desc, gai_strerror(err->code), BAL_MAXERROR))
+                    r = BAL_TRUE;
+            break;
+            default: */
+                if (0 == _bal_retstr(err->desc, strerror(err->code), BAL_MAXERROR))
+                    r = BAL_TRUE;
+         /*    break;
+        } */
 #endif
+    }
+
+    return r;
+}
+
+bool _bal_setlasterror(int err)
+{
+#if defined(__WIN__)
+    WSASetLastError(err);
+#else
+    errno = err;
+#endif
+    return false;
+}

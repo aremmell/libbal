@@ -26,30 +26,27 @@
 #ifndef _BAL_ERRORS_H_INCLUDED
 # define _BAL_ERRORS_H_INCLUDED
 
+# include "baltypes.h"
+
 # if defined(__cplusplus)
 extern "C" {
 # endif
 
 # define BAL_UNUSED(var) (void)(var)
 
-# if defined(BAL_SELFLOG)
-void __bal_selflog(const char* func, const char* file, uint32_t line,
+# if defined(DEBUG) && !defined(BAL_NO_DBGLOG)
+void __bal_dbglog(const char* func, const char* file, uint32_t line,
     const char* format, ...);
-#  define _bal_selflog(...) \
-    __bal_selflog(__func__, __file__, __LINE__, __VA_ARGS__);
-# else
-static inline
-void __dummy_func(const char* dummy, ...) { BAL_UNUSED(dummy); }
-#  define _bal_selflog(...) __dummy_func(__VA_ARGS__)
-# endif
-
-# if defined(BAL_SELFLOG)
+#  define _bal_dbglog(...) \
+    __bal_dbglog(__func__, __file__, __LINE__, __VA_ARGS__)
 #  define BAL_ASSERT(...) \
     if (!(__VA_ARGS__)) { \
-        _bal_selflog("!!! assertion failed: %s", #__VA_ARGS__); \
+        __bal_dbglog(__func__, __file__, __LINE__, \
+            "!!! assertion failed: %s", #__VA_ARGS__ ""); \
     }
 # else
-#  define BAL_ASSERT(...) BAL_UNUSED(__VA_ARGS__)
+#  define _bal_dbglog(...)
+#  define BAL_ASSERT(...)
 # endif
 
 # define BAL_ASSERT_UNUSED(var, expr) \
@@ -57,6 +54,11 @@ void __dummy_func(const char* dummy, ...) { BAL_UNUSED(dummy); }
         BAL_ASSERT(expr); \
         BAL_UNUSED(var); \
     }
+
+int _bal_getlasterror(const bal_socket* s, bal_error* err);
+bool _bal_setlasterror(int err);
+
+# define _bal_handleerr(err) _bal_setlasterror(err)
 
 # if defined(__cplusplus)
 }

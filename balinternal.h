@@ -54,14 +54,9 @@ int _bal_getnameinfo(int f, const bal_sockaddr* in, char* host, char* port);
 const struct addrinfo* _bal_enumaddrinfo(bal_addrinfo* ai);
 int _bal_aitoal(bal_addrinfo* in, bal_addrlist* out);
 
-int _bal_getlasterror(const bal_socket* s, bal_error* err);
-bool __bal_setlasterror(int err, const char* func, const char* file, uint32_t line);
-# define _bal_setlasterror(err) __bal_setlasterror(err, __func__, __file__, __LINE__)
-# define _bal_handleerr(err) __bal_setlasterror(err, __func__, __file__, __LINE__)
-# define _bal_handlewin32err(err) __bal_setlasterror(err, __func__, __file__, __LINE__)
-
 int _bal_retstr(char* out, const char* in, size_t destlen);
 
+int _bal_islistening(const bal_socket* s);
 int _bal_haspendingconnect(const bal_socket* s);
 int _bal_isclosedcircuit(const bal_socket* s);
 
@@ -161,6 +156,8 @@ void _bal_set_boolean(bool* boolean, bool value);
 
 bool _bal_once(bal_once* once, bal_once_fn func);
 
+pid_t _bal_gettid(void);
+
 # if defined(__WIN__)
 BOOL CALLBACK _bal_static_once_init_func(PINIT_ONCE ponce, PVOID param, PVOID* ctx);
 # else
@@ -168,7 +165,7 @@ void _bal_static_once_init_func(void);
 # endif
 
 static inline
-void _bal_safefree(void** pp)
+void __bal_safefree(void** pp)
 {
     if (pp && *pp) {
         free(*pp);
@@ -176,12 +173,15 @@ void _bal_safefree(void** pp)
     }
 }
 
-# define bal_safefree(pp) _bal_safefree((void**)(pp))
+# define _bal_safefree(pp) __bal_safefree((void**)(pp))
 
 # define _bal_validptr(p) (NULL != (p))
 
 # define bal_countof(arr) (sizeof((arr)) / sizeof((arr)[0]))
 
 # define _bal_validstr(str) ((str) && (*str))
+
+/** Converts a bal_socket into human-readable form. */
+void _bal_socket_tostr(const bal_socket* s, char buf[256]);
 
 #endif /* !_BAL_INTERNAL_H_INCLUDED */

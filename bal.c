@@ -106,50 +106,42 @@ void bal_reset(bal_socket* s)
 
 int bal_close(bal_socket* s)
 {
-    int r = BAL_FALSE;
+    BAL_ASSERT(NULL != s && BAL_BADSOCKET != s->sd);
+    if (!_bal_validptr(s) || BAL_BADSOCKET == s->sd) {
+        _bal_dbglog("error: not a valid socket");
+        return BAL_FALSE;
+    }
 
-    if (s) {
 #if defined(__WIN__)
-        if (0 == closesocket(s->sd)) {
-            r = BAL_TRUE;
-        }
-    } else {
-        r = WSAENOTSOCK;
+    if (SOCKET_ERROR == closesocket(s->sd)) {
+        _bal_handleerr(WSAGetLastError());
+        return BAL_FALSE;
     }
 #else
-        if (0 == close(s->sd)) {
-            r = BAL_TRUE;
-        }
-    } else {
-        r = ENOTSOCK;
+    if (-1 == close(s->sd)) {
+        _bal_handleerr(errno);
+        return BAL_FALSE;
     }
 #endif
 
-    return r;
+    return BAL_TRUE;
 }
 
 int bal_shutdown(bal_socket* s, int how)
 {
     int r = BAL_FALSE;
 
-    if (s) {
+    if (_bal_validptr(s)) {
         r = shutdown(s->sd, how);
         if (0 == r) {
-#if defined(__WIN__)
-            int RDWR  = SD_BOTH;
-            int READ  = SD_RECEIVE;
-            int WRITE = SD_SEND;
-#else
-            int RDWR  = SHUT_RDWR;
-            int READ  = SHUT_RD;
-            int WRITE = SHUT_WR;
-#endif
-            if (how == RDWR)
+            if (how == BAL_SHUT_RDWR)
                 s->_f &= ~(BAL_F_PENDCONN | BAL_F_LISTENING);
-            else if (how == READ)
+            else if (how == BAL_SHUT_RD)
                 s->_f &= ~BAL_F_LISTENING;
-            else if (how == WRITE)
+            else if (how == BAL_SHUT_WR)
                 s->_f &= ~BAL_F_PENDCONN;
+        } else {
+            _bal_handleerr(errno);
         }
     }
 
@@ -510,18 +502,6 @@ int bal_geterror(const bal_socket* s)
     return r;
 }
 
-/* void bal_assert(bool cond, const char* desc, const char* func, const char* file,
-    uint32_t line)
-{
-#if defined(BAL_SELFLOG)
-    if (!cond) {
-        _bal_selflog("!!! assert "
-    }
-#else
-    BAL_UNUSED(cond);
-#endif
-}
- */
 int bal_isreadable(const bal_socket* s)
 {
     int r = BAL_FALSE;
@@ -708,7 +688,7 @@ int bal_freeaddrlist(bal_addrlist* al)
 
         while (al->_p) {
             a = al->_p->_n;
-            bal_safefree(&al->_p);
+            _bal_safefree(&al->_p);
             al->_p = a;
         }
 
@@ -730,7 +710,7 @@ int bal_getaddrstrings(const bal_sockaddr* in, bool dns, bal_addrstrings* out)
             if (dns) {
                 int get = _bal_getnameinfo(BAL_NI_DNS, in, out->host, out->port);
                 if (BAL_FALSE == get)
-                    (void)_bal_retstr(out->host, BAL_AS_UNKNWN, NI_MAXHOST);
+                    (void)_bal_retstr(out->host, BAL_UNKNOWN, NI_MAXHOST);
             }
 
             if (PF_INET == ((struct sockaddr*)in)->sa_family)
@@ -738,7 +718,7 @@ int bal_getaddrstrings(const bal_sockaddr* in, bool dns, bal_addrstrings* out)
             else if (PF_INET6 == ((struct sockaddr*)in)->sa_family)
                 out->type = BAL_AS_IPV6;
             else
-                out->type = BAL_AS_UNKNWN;
+                out->type = BAL_UNKNOWN;
 
             r = BAL_TRUE;
         }

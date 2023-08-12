@@ -84,7 +84,7 @@ void balcommon::print_last_lib_error(const bal_socket* s /* = nullptr */,
 {
     bal_error err = {0, {0}};
     int get = bal_lastsockerror(s, &err);
-    BAL_ASSERT(BAL_TRUE == get);
+    BAL_ASSERT_UNUSED(get, BAL_TRUE == get);
 
     fprintf(stderr, "libbal error: %s %d (%s)\n", (func ? func : ""), err.code, err.desc);
 }
