@@ -37,7 +37,7 @@ int main(int argc, char** argv)
     if (!balcommon::initialize())
         return EXIT_FAILURE;
 
-    bal_socket s;
+    bal_socket s {};
     int ret = bal_sock_create(&s, AF_INET, IPPROTO_TCP, SOCK_STREAM);
     EXIT_IF_FAILED(ret, nullptr, "bal_sock_create");
 
@@ -52,9 +52,6 @@ int main(int argc, char** argv)
     do {
         bal_yield_thread();
     } while (balcommon::should_run());
-
-    ret = bal_asyncselect(&s, nullptr, 0u);
-    EXIT_IF_FAILED(ret, &s, "bal_asyncselect");
 
     if (BAL_TRUE != bal_close(&s))
         balcommon::print_last_lib_error(&s, "bal_close");
