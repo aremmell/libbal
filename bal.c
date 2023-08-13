@@ -732,6 +732,6 @@ void bal_yield_thread(void)
     Sleep(1);
 #else
     int yield = sched_yield();
-    BAL_ASSERT(0 == yield);
+    BAL_ASSERT_UNUSED(yield, 0 == yield);
 #endif
 }

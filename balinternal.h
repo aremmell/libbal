@@ -79,7 +79,7 @@ bool _bal_list_add(bal_list* lst, bal_descriptor key, bal_selectdata* val);
 bool _bal_list_find(bal_list* lst, bal_descriptor key, bal_selectdata** val);
 
 /** True if the list contains zero nodes. */
-bool _bal_list_empty(bal_list* lst);
+bool _bal_list_empty(const bal_list* lst);
 
 /** Retrieves the key and value for the current iterator, if set. If further
  * nodes exist, advances the iterator. */

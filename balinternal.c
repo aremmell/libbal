@@ -735,7 +735,7 @@ bool _bal_list_find(bal_list* lst, bal_descriptor key, bal_selectdata** val)
     return ok;
 }
 
-bool _bal_list_empty(bal_list* lst)
+bool _bal_list_empty(const bal_list* lst)
 {
     return !lst || !lst->head;
 }

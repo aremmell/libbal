@@ -112,11 +112,11 @@ void balserver::async_events_cb(bal_socket* s, uint32_t events)
         int read = bal_recv(s, &read_buf[0], 2047, 0);
         if (read > 0) {
             static bool sent_reply = false;
-            static const char* reply = "O, HELO 2 U";
 
             printf("[" BAL_SOCKET_SPEC "] read %d bytes: '%s'\n", s->sd, read, read_buf);
 
             if (bal_iswritable(s) && !sent_reply) {
+                static const char* reply = "O, HELO 2 U";
                 int sent = bal_send(s, reply, 11, 0u);
                 if (sent > 0) {
                     sent_reply = true;
