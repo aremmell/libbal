@@ -15,6 +15,9 @@ set(PROJECT_VERSION_SUFFIX, "-dev")
 # true if this is a development build, false if it is a release build.
 set(PROJECT_IS_DEV_BUILD true)
 
+# create compile commands for static analysis
+set(CMAKE_EXPORT_COMPILE_COMMANDS true)
+
 # policy settings, so CMake doesn't whine.
 cmake_policy(SET CMP0025 NEW) # AppleClang
 cmake_policy(SET CMP0048 NEW) # project VERSION
