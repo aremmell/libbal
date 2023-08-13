@@ -26,11 +26,9 @@
 #include "balinternal.h"
 #include "bal.h"
 
-
-/*─────────────────────────────────────────────────────────────────────────────╮
-│                              Static globals                                  │
-╰─────────────────────────────────────────────────────────────────────────────*/
-
+/******************************************************************************\
+ *                               Static globals                               *
+\******************************************************************************/
 
 /* one-time initializer for async select container. */
 static bal_once _bal_static_once_init = BAL_ONCE_INIT;
@@ -45,11 +43,9 @@ static bal_once _bal_static_once_init = BAL_ONCE_INIT;
 /* async I/O state container. */
 static bal_as_container _bal_as_container = {0};
 
-
-/*─────────────────────────────────────────────────────────────────────────────╮
-│                            Internal functions                                │
-╰─────────────────────────────────────────────────────────────────────────────*/
-
+/******************************************************************************\
+ *                             Internal Functions                             *
+\******************************************************************************/
 
 bool _bal_init(void)
 {
@@ -58,7 +54,7 @@ bool _bal_init(void)
     WSADATA wd = {0};
 
     if (0 != WSAStartup(wVer, &wd)) {
-        _bal_handleerr(WSAGetLastError());
+        (void)_bal_handleerr(WSAGetLastError());
         return false;
     }
 #endif
@@ -77,7 +73,7 @@ bool _bal_init(void)
     if (!init) {
         _bal_dbglog("error: _bal_initasyncselect failed");
         bool cleanup = _bal_cleanupasyncselect();
-        BAL_ASSERT(cleanup);
+        BAL_ASSERT_UNUSED(cleanup, cleanup);
         return false;
     }
 
@@ -154,7 +150,7 @@ int _bal_asyncselect(const bal_socket* s, bal_async_callback proc, uint32_t mask
                 if (d) {
                     bool success = false;
                     if (BAL_FALSE == bal_setiomode(s, true)) {
-                        _bal_handleerr(errno);
+                        (void)_bal_handleerr(errno);
                     } else {
                         d->mask  = mask;
                         d->proc  = proc;
@@ -190,9 +186,9 @@ bool _bal_initasyncselect(void)
         &_bal_as_container.lst_rem
     };
 
-    bool create = false;
+    bool create = true;
     for (size_t n = 0; n < bal_countof(lists); n++) {
-        create = _bal_list_create(lists[n]);
+        create &= _bal_list_create(lists[n]);
         BAL_ASSERT(create);
 
         if (!create) {
@@ -208,7 +204,7 @@ bool _bal_initasyncselect(void)
     };
 
     for (size_t n = 0; n < bal_countof(mutexes); n++) {
-        create = _bal_mutex_create(mutexes[n]);
+        create &= _bal_mutex_create(mutexes[n]);
         BAL_ASSERT(create);
 
         if (!create) {
@@ -222,7 +218,7 @@ bool _bal_initasyncselect(void)
     };
 
     for (size_t n = 0; n < bal_countof(conditions); n++) {
-        create = _bal_cond_create(conditions[n]);
+        create &= _bal_cond_create(conditions[n]);
         BAL_ASSERT(create);
 
         if (!create) {
@@ -251,6 +247,8 @@ bool _bal_initasyncselect(void)
             &_bal_as_container, 0u, NULL);
         BAL_ASSERT(0ull != *threads[n].thread);
 
+        create &= 0ull != *threads[n].thread;
+
         if (0ull == *threads[n].thread) {
             (void)_bal_handleerr(errno);
             _bal_dbglog("error: failed to create thread(s)");
@@ -261,6 +259,8 @@ bool _bal_initasyncselect(void)
             &_bal_as_container);
         BAL_ASSERT(0 == op);
 
+        create &= 0 == op;
+
         if (0 != op) {
             (void)_bal_handleerr(op);
             _bal_dbglog("error: failed to create thread(s)");
@@ -270,9 +270,10 @@ bool _bal_initasyncselect(void)
     }
 
     _bal_set_boolean(&_bal_asyncselect_init, true);
-    _bal_dbglog("async I/O initialized");
+    _bal_dbglog("async I/O initialized %s", create
+        ? "successfully" : "with errors");
 
-    return true;
+    return create;
 }
 
 bool _bal_cleanupasyncselect(void)
@@ -404,19 +405,17 @@ int _bal_getaddrinfo(int f, int af, int st, const char* host, const char* port,
     int r = BAL_FALSE;
 
     if (_bal_validstr(host) && res) {
-        if (host) {
-            struct addrinfo hints = {0};
+        struct addrinfo hints = {0};
 
-            hints.ai_flags    = f;
-            hints.ai_family   = af;
-            hints.ai_socktype = st;
+        hints.ai_flags    = f;
+        hints.ai_family   = af;
+        hints.ai_socktype = st;
 
-            r = getaddrinfo(host, port, (const struct addrinfo*)&hints, &res->_ai);
+        r = getaddrinfo(host, port, (const struct addrinfo*)&hints, &res->_ai);
 
-            if (0 != r)
-                res->_ai = NULL;
-            res->_p = res->_ai;
-        }
+        if (0 != r)
+            res->_ai = NULL;
+        res->_p = res->_ai;
     }
 
     if (BAL_TRUE != r && BAL_FALSE != r) {
@@ -433,7 +432,7 @@ int _bal_getnameinfo(int f, const bal_sockaddr* in, char* host, char* port)
     int r = BAL_FALSE;
 
     if (in && host) {
-        socklen_t inlen = BAL_SASIZE(*in);
+        socklen_t inlen = _BAL_SASIZE(*in);
         r = getnameinfo((const struct sockaddr*)in, inlen, host, NI_MAXHOST,
             port, NI_MAXSERV, f);
     }
@@ -565,7 +564,7 @@ BALTHREAD _bal_eventthread(void* ctx)
 
                 bool iterate = _bal_list_iterate_func(asc->lst, &epd,
                     &__bal_list_event_prepare);
-                BAL_ASSERT(iterate);
+                BAL_ASSERT_UNUSED(iterate, iterate);
 
                 struct timeval tv = {0, 0};
                 int poll_res = select(epd.high_watermark + 1, &fd_read, &fd_write,
@@ -667,8 +666,9 @@ void _bal_dispatchevents(fd_set* set, bal_as_container* asc, uint32_t type)
             type
         };
 
-        bool iterate = _bal_list_iterate_func(asc->lst, &ldd, &__bal_list_dispatch_events);
-        BAL_ASSERT(iterate);
+        bool iterate = _bal_list_iterate_func(asc->lst, &ldd,
+            &__bal_list_dispatch_events);
+        BAL_ASSERT_UNUSED(iterate, iterate);
     }
 }
 
@@ -684,7 +684,8 @@ bool _bal_list_create(bal_list** lst)
     return retval;
 }
 
-bool _bal_list_create_node(bal_list_node** node, bal_descriptor key, bal_selectdata* val)
+bool _bal_list_create_node(bal_list_node** node, bal_descriptor key,
+    bal_selectdata* val)
 {
     bool ok = NULL != node;
 
@@ -1212,7 +1213,7 @@ bool _bal_condwait_timeout(bal_condition* cond, bal_mutex* mutex, bal_wait* how_
 #endif
 
 #if defined(__HAVE_STDATOMICS__)
-bool _bal_get_boolean(atomic_bool* boolean)
+bool _bal_get_boolean(const atomic_bool* boolean)
 {
     bool retval = false;
 
@@ -1228,7 +1229,7 @@ void _bal_set_boolean(atomic_bool* boolean, bool value)
         atomic_store(boolean, value);
 }
 #else
-bool _bal_get_boolean(bool* boolean)
+bool _bal_get_boolean(const bool* boolean)
 {
     bool retval = false;
 

@@ -41,7 +41,10 @@
 #  endif
 
 #  if defined(__linux__)
-#  include <sys/syscall.h>
+#   include <sys/syscall.h>
+#  elif defined(__sun)
+#   include <sys/filio.h>
+#   include <stropts.h>
 #  endif
 
 #  include <sys/types.h>
@@ -60,11 +63,6 @@
 #  include <pthread.h>
 #  include <sched.h>
 #  include <poll.h>
-
-#  if defined(__sun)
-#   include <sys/filio.h>
-#   include <stropts.h>
-#  endif
 
 #  if !defined(__STDC_NO_ATOMICS__) && !defined(__cplusplus)
 #   include <stdatomic.h>
@@ -181,12 +179,7 @@ typedef struct sockaddr_storage bal_sockaddr;
 
 # define BAL_BADSOCKET -1
 
-# define BAL_SASIZE(sa) \
-    ((PF_INET == ((struct sockaddr* )&sa)->sa_family) ? sizeof(struct sockaddr_in) \
-                                                      : sizeof(struct sockaddr_in6))
-
-# define BAL_NI_NODNS (NI_NUMERICHOST | NI_NUMERICSERV)
-# define BAL_NI_DNS   (NI_NAMEREQD | NI_NUMERICSERV)
+# define BAL_UNUSED(var) (void)(var)
 
 # if defined(__WIN__)
 # define BAL_SHUT_RDWR SD_BOTH

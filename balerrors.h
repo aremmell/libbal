@@ -32,8 +32,6 @@
 extern "C" {
 # endif
 
-# define BAL_UNUSED(var) (void)(var)
-
 # if defined(DEBUG) && !defined(BAL_NO_DBGLOG)
 void __bal_dbglog(const char* func, const char* file, uint32_t line,
     const char* format, ...);

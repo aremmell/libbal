@@ -47,9 +47,8 @@ void __bal_dbglog(const char* func, const char* file, uint32_t line,
         char prefix[256] = {0};
         int len = snprintf(prefix, 256, "["BAL_TID_SPEC"] %s (%s:%"PRIu32"): ",
             _bal_gettid(), func, file, line);
-        BAL_ASSERT(len > 0 && len < 256);
+        BAL_ASSERT_UNUSED(len, len > 0 && len < 256);
 
-        va_start(args2, format);
         (void)vsnprintf(buf, prnt_len + 1, format, args2);
         va_end(args2);
 

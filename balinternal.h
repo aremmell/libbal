@@ -29,11 +29,9 @@
 # include "balplatform.h"
 # include "baltypes.h"
 
-
-/*─────────────────────────────────────────────────────────────────────────────╮
-│                             Internal functions                               │
-╰─────────────────────────────────────────────────────────────────────────────*/
-
+/******************************************************************************\
+ *                             Internal Functions                             *
+\******************************************************************************/
 
 bool _bal_init(void);
 bool _bal_cleanup(void);
@@ -154,10 +152,10 @@ bool _bal_cond_wait(bal_condition* cond, bal_mutex* mutex);
 bool _bal_condwait_timeout(bal_condition* cond, bal_mutex* mutex, bal_wait* how_long);
 
 # if defined(__HAVE_STDATOMICS__)
-bool _bal_get_boolean(atomic_bool* boolean);
+bool _bal_get_boolean(const atomic_bool* boolean);
 void _bal_set_boolean(atomic_bool* boolean, bool value);
 # else
-bool _bal_get_boolean(bool* boolean);
+bool _bal_get_boolean(const bool* boolean);
 void _bal_set_boolean(bool* boolean, bool value);
 # endif
 
@@ -170,6 +168,13 @@ BOOL CALLBACK _bal_static_once_init_func(PINIT_ONCE ponce, PVOID param, PVOID* c
 # else
 void _bal_static_once_init_func(void);
 # endif
+
+# define _BAL_SASIZE(sa) \
+    ((PF_INET6 == ((struct sockaddr* )&(sa))->sa_family) \
+        ? sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in))
+
+# define _BAL_NI_NODNS (NI_NUMERICHOST | NI_NUMERICSERV)
+# define _BAL_NI_DNS   (NI_NAMEREQD | NI_NUMERICSERV)
 
 static inline
 void __bal_safefree(void** pp)

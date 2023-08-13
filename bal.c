@@ -30,11 +30,9 @@
 # pragma comment(lib, "ws2_32.lib")
 #endif
 
-
-/*─────────────────────────────────────────────────────────────────────────────╮
-│                            Exported Functions                                │
-╰─────────────────────────────────────────────────────────────────────────────*/
-
+/******************************************************************************\
+ *                             Exported Functions                             *
+\******************************************************************************/
 
 bool bal_init(void)
 {
@@ -115,12 +113,12 @@ int bal_close(bal_socket* s)
 
 #if defined(__WIN__)
     if (SOCKET_ERROR == closesocket(s->sd)) {
-        _bal_handleerr(WSAGetLastError());
+        (void)_bal_handleerr(WSAGetLastError());
         return BAL_FALSE;
     }
 #else
     if (-1 == close(s->sd)) {
-        _bal_handleerr(errno);
+        (void)_bal_handleerr(errno);
         return BAL_FALSE;
     }
 #endif
@@ -142,7 +140,7 @@ int bal_shutdown(bal_socket* s, int how)
             else if (how == BAL_SHUT_WR)
                 s->_f &= ~BAL_F_PENDCONN;
         } else {
-            _bal_handleerr(errno);
+            (void)_bal_handleerr(errno);
         }
     }
 
@@ -180,7 +178,7 @@ int bal_connectaddrlist(bal_socket* s, bal_addrlist* al)
             const bal_sockaddr* sa = NULL;
 
             while (NULL != (sa = bal_enumaddrlist(al))) {
-                r = connect(s->sd, (const struct sockaddr*)sa, BAL_SASIZE(*sa));
+                r = connect(s->sd, (const struct sockaddr*)sa, _BAL_SASIZE(*sa));
 
 #if defined(__WIN__)
                 if (!r || WSAEWOULDBLOCK == WSAGetLastError()) {
@@ -236,7 +234,7 @@ int bal_sendtoaddr(const bal_socket* s, const bal_sockaddr* sa, const void* data
     size_t len, int flags)
 {
     if (s && sa && data && len)
-        return sendto(s->sd, data, len, flags, (const struct sockaddr*)sa, BAL_SASIZE(*sa));
+        return sendto(s->sd, data, len, flags, (const struct sockaddr*)sa, _BAL_SASIZE(*sa));
     else
         return BAL_FALSE;
 }
@@ -707,9 +705,9 @@ int bal_getaddrstrings(const bal_sockaddr* in, bool dns, bal_addrstrings* out)
     if (in && out) {
         memset(out, 0, sizeof(bal_addrstrings));
 
-        if (BAL_TRUE == _bal_getnameinfo(BAL_NI_NODNS, in, out->ip, out->port)) {
+        if (BAL_TRUE == _bal_getnameinfo(_BAL_NI_NODNS, in, out->ip, out->port)) {
             if (dns) {
-                int get = _bal_getnameinfo(BAL_NI_DNS, in, out->host, out->port);
+                int get = _bal_getnameinfo(_BAL_NI_DNS, in, out->host, out->port);
                 if (BAL_FALSE == get)
                     (void)_bal_retstr(out->host, BAL_UNKNOWN, NI_MAXHOST);
             }
