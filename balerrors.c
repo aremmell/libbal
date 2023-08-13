@@ -93,7 +93,7 @@ int _bal_getlasterror(const bal_socket* s, bal_error* err)
 #else
         if (!resolved)
             err->code = errno;
-#pragma message("TODO: these error codes are only appplicable when getaddrinfo or getnameinfo fail")
+# pragma message("TODO: these error codes are only appplicable when getaddrinfo or getnameinfo fail")
 /*         switch (err->code) {
             case EAI_AGAIN:
             case EAI_FAIL:

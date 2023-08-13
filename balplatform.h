@@ -182,13 +182,13 @@ typedef struct sockaddr_storage bal_sockaddr;
 # define BAL_UNUSED(var) (void)(var)
 
 # if defined(__WIN__)
-# define BAL_SHUT_RDWR SD_BOTH
-# define BAL_SHUT_RD   SD_RECEIVE
-# define BAL_SHUT_WR   SD_SEND
+#  define BAL_SHUT_RDWR SD_BOTH
+#  define BAL_SHUT_RD   SD_RECEIVE
+#  define BAL_SHUT_WR   SD_SEND
 # else
-# define BAL_SHUT_RDWR SHUT_RDWR
-# define BAL_SHUT_RD   SHUT_RD
-# define BAL_SHUT_WR   SHUT_WR
+#  define BAL_SHUT_RDWR SHUT_RDWR
+#  define BAL_SHUT_RD   SHUT_RD
+#  define BAL_SHUT_WR   SHUT_WR
 # endif
 
 # define BAL_E_READ      0x00000001u
