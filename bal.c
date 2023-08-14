@@ -53,7 +53,7 @@ int bal_autosocket(bal_socket* s, int af, int pt, const char* host, const char* 
 {
     int r = BAL_FALSE;
 
-    if (s && _bal_validstr(host)) {
+    if (_bal_validptrptr(s) && _bal_validstr(host)) {
         if (0 == af)
             af = PF_UNSPEC;
 
@@ -61,13 +61,15 @@ int bal_autosocket(bal_socket* s, int af, int pt, const char* host, const char* 
         struct addrinfo* ai = NULL;
 
         if (BAL_TRUE == _bal_getaddrinfo(0, af, _st, host, port, &ai) && NULL != ai) {
-            while (NULL != (ai = ai->ai_next)) {
-                if (BAL_TRUE == bal_sock_create(s, ai->ai_family, ai->ai_protocol,
-                    ai->ai_socktype)) {
+            struct addrinfo* cur = ai;
+            do {
+                if (BAL_TRUE == bal_sock_create(s, cur->ai_family, cur->ai_protocol,
+                    cur->ai_socktype)) {
                     r = BAL_TRUE;
                     break;
                 }
-            }
+                cur = cur->ai_next;
+            } while (NULL != cur);
 
             freeaddrinfo(ai);
         }
@@ -261,12 +263,14 @@ int bal_bind(const bal_socket* s, const char* addr, const char* port)
 
         if (BAL_TRUE == _bal_getaddrinfo(AI_NUMERICHOST, s->af, s->st, addr, port, &ai) &&
             NULL != ai) {
-            while (NULL != (ai = ai->ai_next)) {
-                if (0 == bind(s->sd, (const struct sockaddr*)ai->ai_addr, ai->ai_addrlen)) {
+            struct addrinfo* cur = ai;
+            do {
+                if (0 == bind(s->sd, (const struct sockaddr*)cur->ai_addr, cur->ai_addrlen)) {
                     r = BAL_TRUE;
                     break;
                 }
-            }
+                cur = cur->ai_next;
+            } while (NULL != cur);
 
             freeaddrinfo(ai);
         }
@@ -291,9 +295,12 @@ int bal_accept(const bal_socket* s, bal_socket* res, bal_sockaddr* resaddr)
 {
     int r = BAL_FALSE;
 
-    if (s && res && resaddr) {
+    if (_bal_validptr(s) && _bal_validptr(res) && _bal_validptr(resaddr)) {
         socklen_t sasize = sizeof(bal_sockaddr);
         res->sd = accept(s->sd, (struct sockaddr*)resaddr, &sasize);
+        if (-1 == res->sd)
+            _bal_handleerr(errno);
+
         if (res->sd > 0 ||
 #if defined(__WIN__)
             WSAEWOULDBLOCK == WSAGetLastError())
@@ -548,10 +555,10 @@ int bal_setiomode(const bal_socket* s, bool async)
 {
 #if defined(__WIN__)
     unsigned long flag = async ? 1UL : 0UL;
-    return ((NULL != s) ? ioctlsocket(s->sd, FIONBIO, &flag) : BAL_FALSE);
+    return (NULL != s) ? ioctlsocket(s->sd, FIONBIO, &flag) : BAL_FALSE;
 #else
     uint32_t flag = async ? O_NONBLOCK : 0U;
-    return ((NULL != s) ? fcntl(s->sd, F_SETFL, flag) : BAL_FALSE);
+    return (NULL != s) ? fcntl(s->sd, F_SETFL, flag) : BAL_FALSE;
 #endif
 }
 
@@ -604,10 +611,10 @@ int bal_getremotehostaddr(const bal_socket* s, bal_sockaddr* out)
 {
     int r = BAL_FALSE;
 
-    if (s && out) {
-        socklen_t salen = sizeof(bal_sockaddr);
+    if (_bal_validptr(s) && _bal_validptr(out)) {
         memset(out, 0, sizeof(bal_sockaddr));
 
+        socklen_t salen = sizeof(bal_sockaddr);
         if (0 == getpeername(s->sd, (struct sockaddr*)out, &salen))
             r = BAL_TRUE;
     }
@@ -617,7 +624,7 @@ int bal_getremotehostaddr(const bal_socket* s, bal_sockaddr* out)
 
 int bal_getremotehoststrings(const bal_socket* s, int dns, bal_addrstrings* out)
 {
-    int r = BAL_FALSE;
+    int r           = BAL_FALSE;
     bal_sockaddr sa = {0};
 
     if (BAL_TRUE == bal_getremotehostaddr(s, &sa))
@@ -630,7 +637,7 @@ int bal_getlocalhostaddr(const bal_socket* s, bal_sockaddr* out)
 {
     int r = BAL_FALSE;
 
-    if (s && out) {
+    if (_bal_validptr(s) && _bal_validptr(out)) {
         socklen_t salen = sizeof(bal_sockaddr);
         memset(out, 0, sizeof(bal_sockaddr));
 
@@ -659,13 +666,10 @@ int bal_getaddrstrings(const bal_sockaddr* in, bool dns, bal_addrstrings* out)
     if (_bal_validptr(in) && _bal_validptr(out)) {
         memset(out, 0, sizeof(bal_addrstrings));
 
-        static const int no_dns_flags = NI_NUMERICHOST | NI_NUMERICSERV;
-        static const int dns_flags    = NI_NAMEREQD    | NI_NUMERICSERV;
-
-        int get = _bal_getnameinfo(no_dns_flags, in, out->addr, out->port);
+        int get = _bal_getnameinfo(_BAL_NI_NODNS, in, out->addr, out->port);
         if (BAL_TRUE == get) {
             if (dns) {
-                get = _bal_getnameinfo(dns_flags, in, out->host, out->port);
+                get = _bal_getnameinfo(_BAL_NI_DNS, in, out->host, out->port);
                 if (BAL_FALSE == get)
                     (void)_bal_retstr(out->host, BAL_UNKNOWN, NI_MAXHOST);
             }

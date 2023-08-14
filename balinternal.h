@@ -41,8 +41,8 @@ int _bal_asyncselect(const bal_socket* s, bal_async_callback proc, uint32_t mask
 bool _bal_initasyncselect(void);
 bool _bal_cleanupasyncselect(void);
 
-bool _bal_defer_add_socket(bal_selectdata* d);
-bool _bal_defer_remove_socket(bal_selectdata* d);
+bool _bal_defer_add_socket(bal_sockdata* d);
+bool _bal_defer_remove_socket(bal_sockdata* d);
 
 int _bal_bindany(const bal_socket* s, unsigned short port);
 int _bal_getaddrinfo(int f, int af, int st, const char* host, const char* port,
@@ -69,20 +69,20 @@ bool _bal_list_create(bal_list** lst);
 
 /** Creates a node and assigns key and value to it. */
 bool _bal_list_create_node(bal_list_node** node, bal_descriptor key,
-    bal_selectdata* val);
+    bal_sockdata* val);
 
 /** Appends a node with the supplied key and value to the end of the list. */
-bool _bal_list_add(bal_list* lst, bal_descriptor key, bal_selectdata* val);
+bool _bal_list_add(bal_list* lst, bal_descriptor key, bal_sockdata* val);
 
 /** Finds a node by key and sets `val` to its value, if found. */
-bool _bal_list_find(bal_list* lst, bal_descriptor key, bal_selectdata** val);
+bool _bal_list_find(bal_list* lst, bal_descriptor key, bal_sockdata** val);
 
 /** True if the list contains zero nodes. */
 bool _bal_list_empty(const bal_list* lst);
 
 /** Retrieves the key and value for the current iterator, if set. If further
  * nodes exist, advances the iterator. */
-bool _bal_list_iterate(bal_list* lst, bal_descriptor* key, bal_selectdata** val);
+bool _bal_list_iterate(bal_list* lst, bal_descriptor* key, bal_sockdata** val);
 
 /** Resets the iterator to the first node in the list. */
 void _bal_list_reset_iterator(bal_list* lst);
@@ -91,7 +91,7 @@ void _bal_list_reset_iterator(bal_list* lst);
 bool _bal_list_iterate_func(bal_list* lst, void* ctx, bal_list_iter_callback cb);
 
 /** Finds a node by key, and destroys it if found. */
-bool _bal_list_remove(bal_list* lst, bal_descriptor key, bal_selectdata** val);
+bool _bal_list_remove(bal_list* lst, bal_descriptor key, bal_sockdata** val);
 
 /** Removes and deallocates all nodes from the list, leaving the list empty. */
 bool _bal_list_remove_all(bal_list* lst);
@@ -103,19 +103,19 @@ bool _bal_list_destroy(bal_list** lst);
 bool _bal_list_destroy_node(bal_list_node** node);
 
 /** Callback for finding nodes by key. */
-bool __bal_list_find_key(bal_descriptor key, bal_selectdata* val, void* ctx);
+bool __bal_list_find_key(bal_descriptor key, bal_sockdata* val, void* ctx);
 
 /** Callback for dispatching async events. */
-bool __bal_list_dispatch_events(bal_descriptor key, bal_selectdata* val, void* ctx);
+bool __bal_list_dispatch_events(bal_descriptor key, bal_sockdata* val, void* ctx);
 
 /** Callback for removing entries from a list. */
-bool __bal_list_remove_entries(bal_descriptor key, bal_selectdata* val, void* ctx);
+bool __bal_list_remove_entries(bal_descriptor key, bal_sockdata* val, void* ctx);
 
 /** Callback for adding entries to a list. */
-bool __bal_list_add_entries(bal_descriptor key, bal_selectdata* val, void* ctx);
+bool __bal_list_add_entries(bal_descriptor key, bal_sockdata* val, void* ctx);
 
 /** Callback for the event handler thread. */
-bool __bal_list_event_prepare(bal_descriptor key, bal_selectdata* val, void* ctx);
+bool __bal_list_event_prepare(bal_descriptor key, bal_sockdata* val, void* ctx);
 
 /** Creates/initializes a new mutex. */
 bool _bal_mutex_create(bal_mutex* mutex);

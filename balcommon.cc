@@ -82,9 +82,8 @@ void balcommon::ctrl_c_handler_impl()
 void balcommon::print_last_lib_error(const bal_socket* s /* = nullptr */,
     const char* func /* = nullptr */)
 {
-    bal_error err = {0, {0}};
-    int get = bal_lastsockerror(s, &err);
-    BAL_ASSERT_UNUSED(get, BAL_TRUE == get);
+    bal_error err {};
+    [[maybe_unused]] int code = bal_getlasterror(s, &err);
 
     fprintf(stderr, "libbal error: %s %d (%s)\n", (nullptr != func ? func : ""),
         err.code, err.desc);

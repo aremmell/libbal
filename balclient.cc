@@ -72,7 +72,7 @@ void balclient::async_events_cb(bal_socket* s, uint32_t events)
 
     if (bal_isbitset(events, BAL_E_CONNFAIL)) {
         bal_error err;
-        bal_lastsockerror(s, &err);
+        bal_getlasterror(s, &err);
         fprintf(stderr, "[" BAL_SOCKET_SPEC "] error: failed to connect to %s:%s %d (%s)\n",
             s->sd, balcommon::localaddr, balcommon::portnum, err.code, err.desc);
     }
@@ -81,10 +81,13 @@ void balclient::async_events_cb(bal_socket* s, uint32_t events)
         constexpr const size_t buf_size = 2048;
         std::array<char, buf_size> buf;
         int read = bal_recv(s, buf.data(), buf.size() - 1, 0);
-        if (read > 0)
+        if (read > 0) {
             printf("[" BAL_SOCKET_SPEC "] read %d bytes: '%s'\n", s->sd, read, buf.data());
-        else
-            printf("[" BAL_SOCKET_SPEC "] read error %d!\n", s->sd, bal_geterror(s));
+        } else {
+            bal_error err {};
+            printf("[" BAL_SOCKET_SPEC "] read error %d (%s)!\n", s->sd,
+                bal_getlasterror(s, &err), err.desc);
+        }
     }
 
     if (bal_isbitset(events, BAL_E_WRITE)) {
@@ -92,7 +95,9 @@ void balclient::async_events_cb(bal_socket* s, uint32_t events)
 
         int err = bal_geterror(s);
         if (0 != err) {
-            printf("[" BAL_SOCKET_SPEC "] write error %d!\n", s->sd, err);
+            bal_error err {};
+            printf("[" BAL_SOCKET_SPEC "] write error %d (%s)!\n", s->sd,
+                bal_getlasterror(s, &err), err.desc);
         } else {
             if (!wrote_helo) {
                 const char* req = "HELO";

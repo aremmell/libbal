@@ -65,21 +65,21 @@ typedef struct {
 /* bal_asyncselect callback. */
 typedef void (*bal_async_callback)(bal_socket*, uint32_t);
 
-/* Value storage for bal_list. */
-typedef struct {
-    bal_socket* s;
+/* Socket state data (value storage for bal_list). */
+typedef struct bal_sockdata {
+    bal_socket s;
     uint32_t mask;
     bal_async_callback proc;
-} bal_selectdata;
+} bal_sockdata;
 
 /* Iteration callback. Returns false to stop iteration. */
 typedef bool (*bal_list_iter_callback)(bal_descriptor /*key*/,
-    bal_selectdata* /*val*/, void* /*ctx*/);
+    bal_sockdata* /*val*/, void* /*ctx*/);
 
 /* Node type for bal_list. */
 typedef struct _bal_list_node {
     bal_descriptor key;
-    bal_selectdata* val;
+    bal_sockdata* val;
     struct _bal_list_node *prev;
     struct _bal_list_node *next;
 } bal_list_node;
@@ -92,7 +92,7 @@ typedef struct {
 
 typedef struct {
     bal_descriptor key;
-    bal_selectdata** val;
+    bal_sockdata** val;
     bool found;
 } _bal_list_find_data;
 

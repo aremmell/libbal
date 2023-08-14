@@ -110,9 +110,12 @@ void balserver::async_events_cb(bal_socket* s, uint32_t events)
 
         int read = bal_recv(s, buf.data(), buf.size() - 1, 0);
         if (read > 0) {
-            printf("[" BAL_SOCKET_SPEC "] read %d bytes: '%s'\n", s->sd, read, buf.data());
+            printf("[" BAL_SOCKET_SPEC "] read %d bytes: '%s'\n", s->sd, read,
+                buf.data());
         } else {
-            printf("[" BAL_SOCKET_SPEC "] read error %d!\n", s->sd, bal_geterror(s));
+            bal_error err {};
+            printf("[" BAL_SOCKET_SPEC "] read error %d (%s)!\n", s->sd,
+                bal_getlasterror(s, &err), err.desc);
         }
     }
 

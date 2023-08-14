@@ -111,8 +111,7 @@ bool bal_iswritable(const bal_socket* s);
 int bal_setiomode(const bal_socket* s, bool async);
 size_t bal_recvqueuesize(const bal_socket* s);
 
-int bal_lastliberror(bal_error* err);
-int bal_lastsockerror(const bal_socket* s, bal_error* err);
+int bal_getlasterror(const bal_socket* s, bal_error* err);
 
 int bal_resolvehost(const char* host, bal_addrlist* out);
 int bal_getremotehostaddr(const bal_socket* s, bal_sockaddr* out);

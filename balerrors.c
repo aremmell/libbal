@@ -72,15 +72,14 @@ void __bal_dbglog(const char* func, const char* file, uint32_t line,
 
 int _bal_getlasterror(const bal_socket* s, bal_error* err)
 {
-    int r = BAL_FALSE;
-
-    if (err) {
+    int retval = 0;
+    if (_bal_validptr(err)) {
         memset(err, 0, sizeof(bal_error));
 
         bool resolved = false;
         if (s) {
             err->code = bal_geterror(s);
-            resolved  = err->code != -1 && err->code != 0;
+            resolved  = -1 != err->code && 0 != err->code;
         }
 
 #if defined(__WIN__)
@@ -110,14 +109,15 @@ int _bal_getlasterror(const bal_socket* s, bal_error* err)
                     r = BAL_TRUE;
             break;
             default: */
-                if (0 == _bal_retstr(err->desc, strerror(err->code), BAL_MAXERROR))
-                    r = BAL_TRUE;
+                (void)_bal_retstr(err->desc, strerror(err->code), BAL_MAXERROR);
+
          /*    break;
         } */
 #endif
+        retval = err->code;
     }
 
-    return r;
+    return retval;
 }
 
 bool _bal_setlasterror(int err)

@@ -174,8 +174,8 @@ typedef struct sockaddr_storage bal_sockaddr;
 # define BAL_AS_IPV6   "IPv6"
 # define BAL_AS_IPV4   "IPv4"
 
-# define BAL_F_PENDCONN  0x00000001u
-# define BAL_F_LISTENING 0x00000002u
+# define BAL_F_PENDCONN  0x00000001U
+# define BAL_F_LISTENING 0x00000002U
 
 # define BAL_BADSOCKET -1
 
@@ -191,22 +191,22 @@ typedef struct sockaddr_storage bal_sockaddr;
 #  define BAL_SHUT_WR   SHUT_WR
 # endif
 
-# define BAL_E_READ      0x00000001u
-# define BAL_E_WRITE     0x00000002u
-# define BAL_E_CONNECT   0x00000004u
-# define BAL_E_ACCEPT    0x00000008u
-# define BAL_E_CLOSE     0x00000010u
-# define BAL_E_CONNFAIL  0x00000020u
-# define BAL_E_EXCEPTION 0x00000040u
-# define BAL_E_ALL       0x0000007Fu
+# define BAL_E_READ      0x00000001U
+# define BAL_E_WRITE     0x00000002U
+# define BAL_E_CONNECT   0x00000004U
+# define BAL_E_ACCEPT    0x00000008U
+# define BAL_E_CLOSE     0x00000010U
+# define BAL_E_CONNFAIL  0x00000020U
+# define BAL_E_EXCEPTION 0x00000040U
+# define BAL_E_ALL       0x0000007FU
 
-# define BAL_S_DIE       0x0D1E0D1Eu
-# define BAL_S_CONNECT   0x10000000u
-# define BAL_S_LISTEN    0x20000000u
-# define BAL_S_CLOSE     0x40000000u
-# define BAL_S_READ      0x00000001u
-# define BAL_S_WRITE     0x00000002u
-# define BAL_S_EXCEPT    0x00000003u
+# define BAL_S_DIE       0x0D1E0D1EU
+# define BAL_S_CONNECT   0x10000000U
+# define BAL_S_CLOSE     0x20000000U
+# define BAL_S_LISTEN    0x40000000U
+# define BAL_S_READ      0x00000001U
+# define BAL_S_WRITE     0x00000002U
+# define BAL_S_EXCEPT    0x00000003U
 
 # if defined(__WIN__)
 #  define BALTHREAD unsigned __stdcall
