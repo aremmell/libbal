@@ -57,10 +57,10 @@ bool _bal_islistening(bal_socket* s);
 bool _bal_haspendingconnect(bal_socket* s);
 bool _bal_isclosedcircuit(const bal_socket* s);
 
-BALTHREAD _bal_eventthread(void* ctx);
-BALTHREAD _bal_syncthread(void* ctx);
+bal_threadret _bal_eventthread(void* ctx);
+bal_threadret _bal_syncthread(void* ctx);
 
-typedef BALTHREAD (*bal_thread_func)(void*);
+typedef bal_threadret (*bal_thread_func)(void*);
 
 void _bal_dispatchevents(fd_set* set, bal_as_container* td, uint32_t type);
 
@@ -113,9 +113,6 @@ bool __bal_list_remove_entries(bal_descriptor key, bal_sockdata* val, void* ctx)
 
 /** Callback for adding entries to a list. */
 bool __bal_list_add_entries(bal_descriptor key, bal_sockdata* val, void* ctx);
-
-/** Callback for the event handler thread. */
-bool __bal_list_event_prepare(bal_descriptor key, bal_sockdata* val, void* ctx);
 
 /** Creates/initializes a new mutex. */
 bool _bal_mutex_create(bal_mutex* mutex);

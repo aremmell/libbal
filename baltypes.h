@@ -104,13 +104,6 @@ typedef struct {
 } _bal_list_dispatch_data;
 
 typedef struct {
-    fd_set* fd_read;
-    fd_set* fd_write;
-    fd_set* fd_except;
-    bal_descriptor high_watermark;
-} _bal_list_event_prepare_data;
-
-typedef struct {
     bal_list* lst;        /** List of active socket descriptors and their states. */
     bal_mutex mutex;      /** Mutex for access to `lst`. */
     bal_thread thread;    /** Asynchronous I/O events thread. */

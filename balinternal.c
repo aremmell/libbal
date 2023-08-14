@@ -562,7 +562,7 @@ bool _bal_isclosedcircuit(const bal_socket* s)
     return false;
 }
 
-BALTHREAD _bal_eventthread(void* ctx)
+bal_threadret _bal_eventthread(void* ctx)
 {
     bal_as_container* asc = (bal_as_container*)ctx;
     BAL_ASSERT(NULL != asc);
@@ -570,27 +570,31 @@ BALTHREAD _bal_eventthread(void* ctx)
     while (!_bal_get_boolean(&asc->die)) {
         if (_bal_mutex_lock(&asc->mutex)) {
             if (!_bal_list_empty(asc->lst)) {
-                fd_set fd_read   = {0};
-                fd_set fd_write  = {0};
-                fd_set fd_except = {0};
+                bal_descriptor highest = 0;
+                fd_set fd_read         = {0};
+                fd_set fd_write        = {0};
+                fd_set fd_except       = {0};
 
                 FD_ZERO(&fd_read);
                 FD_ZERO(&fd_write);
                 FD_ZERO(&fd_except);
 
-                _bal_list_event_prepare_data epd = {
-                    &fd_read,
-                    &fd_write,
-                    &fd_except,
-                    0
-                };
+                _bal_list_reset_iterator(asc->lst);
+                bal_descriptor key = NULL;
+                bal_sockdata* val  = NULL;
 
-                bool iterate = _bal_list_iterate_func(asc->lst, &epd,
-                    &__bal_list_event_prepare);
-                BAL_ASSERT_UNUSED(iterate, iterate);
+                while (_bal_list_iterate(asc->lst, &key, &val)) {
+
+                    if (key > highest)
+                        highest = key;
+
+                    FD_SET(key, &fd_read);
+                    FD_SET(key, &fd_write);
+                    FD_SET(key, &fd_except);
+                }
 
                 struct timeval tv = {0, 0};
-                int poll_res = select(epd.high_watermark + 1, &fd_read, &fd_write,
+                int poll_res = select(highest + 1, &fd_read, &fd_write,
                     &fd_except, &tv);
 
                 if (-1 != poll_res) {
@@ -608,13 +612,13 @@ BALTHREAD _bal_eventthread(void* ctx)
     }
 
 #if defined(__WIN__)
-    return 0U
+    return 0U;
 #else
     return NULL;
 #endif
 }
 
-BALTHREAD _bal_syncthread(void* ctx)
+bal_threadret _bal_syncthread(void* ctx)
 {
     bal_as_container* asc = (bal_as_container*)ctx;
     BAL_ASSERT(NULL != asc);
@@ -674,7 +678,7 @@ BALTHREAD _bal_syncthread(void* ctx)
     }
 
 #if defined(__WIN__)
-    return 0U
+    return 0U;
 #else
     return NULL;
 #endif
@@ -1010,21 +1014,6 @@ bool __bal_list_add_entries(bal_descriptor key, bal_sockdata* val, void* ctx)
     return true;
 }
 
-bool __bal_list_event_prepare(bal_descriptor key, bal_sockdata* val, void* ctx)
-{
-    _bal_list_event_prepare_data* epd = (_bal_list_event_prepare_data*)ctx;
-    BAL_UNUSED(val);
-
-    if (key > epd->high_watermark)
-        epd->high_watermark = key;
-
-    FD_SET(key, epd->fd_read);
-    FD_SET(key, epd->fd_write);
-    FD_SET(key, epd->fd_except);
-
-    return true;
-}
-
 #if !defined(__WIN__) /* pthread mutex implementation. */
 bool _bal_mutex_create(bal_mutex* mutex)
 {
@@ -1256,7 +1245,7 @@ bool _bal_condwait_timeout(bal_condition* cond, bal_mutex* mutex, bal_wait* how_
 
     if (valid)
         valid = (FALSE != SleepConditionVariableCS(cond, mutex, *how_long))
-            ? true : _bal_handleerr(GetLastError());
+            ? true : (ERROR_TIMEOUT == GetLastError() ? false : _bal_handleerr(GetLastError()));
 
     return valid;
 }

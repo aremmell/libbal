@@ -109,6 +109,7 @@ typedef void (*bal_once_fn)(void);
 #  define _CRT_SECURE_NO_WARNINGS
 #  include <winsock2.h>
 #  include <ws2tcpip.h>
+#  include <shlwapi.h>
 #  include <process.h>
 #  include <time.h>
 
@@ -142,6 +143,9 @@ typedef INIT_ONCE bal_once;
 
 /** The one-time execution function type. */
 typedef BOOL(CALLBACK* bal_once_fn)(PINIT_ONCE, PVOID, PVOID*);
+
+/** The process/thread identifier type. */
+typedef int pid_t;
 
 /** The one-time initializer. */
 #  define BAL_ONCE_INIT INIT_ONCE_STATIC_INIT
@@ -210,9 +214,9 @@ typedef struct sockaddr_storage bal_sockaddr;
 # define BAL_S_EXCEPT    0x00000003U
 
 # if defined(__WIN__)
-#  define BALTHREAD unsigned __stdcall
+#  define bal_threadret unsigned
 # else
-#  define BALTHREAD void*
+#  define bal_threadret void*
 # endif
 
 # if (defined(__clang__) || defined(__GNUC__)) && defined(__FILE_NAME__)
