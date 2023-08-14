@@ -336,15 +336,13 @@ bool _bal_cleanupasyncselect(void)
                     _bal_mutex_lock(&d->m); // FIXME
                     if (_bal_validptr(d->s) && !bal_isbitset(d->mask, BAL_S_CLOSE)) {
                         _bal_dbglog("socket "BAL_SOCKET_SPEC" (%p, data = %p)"
-                                    " not closed; closing...", sd, (uintptr_t)d->s,
-                                    (uintptr_t)d);
+                                    " not closed; closing...", sd, d->s, d);
                         (void)bal_close(&d->s);
                     }
 
                     /* socket already freed by bal_close; only free data.. */
                     BAL_ASSERT(NULL == d->s);
-                    _bal_dbglog("freeing socket "BAL_SOCKET_SPEC" (freed, data = %p)",
-                        sd, (uintptr_t)d);
+                    _bal_dbglog("freeing socket "BAL_SOCKET_SPEC" (freed, data = %p)", sd, d);
                     _bal_mutex_unlock(&d->m); // FIXME
                     _bal_mutex_destroy(&d->m);
                     _bal_safefree(&d);
