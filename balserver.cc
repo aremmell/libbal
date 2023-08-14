@@ -25,6 +25,7 @@
  */
 #include "balserver.hh"
 #include <cstdio>
+#include <array>
 
 using namespace std;
 
@@ -59,7 +60,7 @@ int main(int argc, char** argv)
         bal_yield_thread();
     } while (balcommon::should_run());
 
-    ret = bal_asyncselect(&s, nullptr, 0u);
+    ret = bal_asyncselect(&s, nullptr, 0U);
     EXIT_IF_FAILED(ret, &s, "bal_asyncselect");
 
     if (BAL_TRUE != bal_close(&s))
@@ -85,7 +86,7 @@ void balserver::async_events_cb(bal_socket* s, uint32_t events)
         }
 
         bal_addrstrings client_strings {};
-        ret = bal_getaddrstrings(&client_addr, 0, &client_strings);
+        ret = bal_getaddrstrings(&client_addr, false, &client_strings);
         if (BAL_TRUE != ret) {
             balcommon::print_last_lib_error(nullptr, "bal_getaddrstrings");
             bal_close(&client_socket);
@@ -106,21 +107,23 @@ void balserver::async_events_cb(bal_socket* s, uint32_t events)
 
     if (bal_isbitset(events, BAL_E_READ))
     {
-        char read_buf[2048];
-        memset(read_buf, 0, sizeof(read_buf));
+        constexpr const size_t buf_size = 2048;
+        std::array<char, buf_size> buf {};
 
-        int read = bal_recv(s, &read_buf[0], 2047, 0);
+        int read = bal_recv(s, buf.data(), buf.size() - 1, 0);
         if (read > 0) {
+            printf("[" BAL_SOCKET_SPEC "] read %d bytes: '%s'\n", s->sd, read, buf.data());
+
             static bool sent_reply = false;
-
-            printf("[" BAL_SOCKET_SPEC "] read %d bytes: '%s'\n", s->sd, read, read_buf);
-
             if (bal_iswritable(s) && !sent_reply) {
                 static const char* reply = "O, HELO 2 U";
-                int sent = bal_send(s, reply, 11, 0u);
+                constexpr const size_t reply_size = 11;
+
+                int sent = bal_send(s, reply, reply_size, 0U);
+                BAL_ASSERT(reply_size == sent);
                 if (sent > 0) {
                     sent_reply = true;
-                    printf("[" BAL_SOCKET_SPEC "] wrote %d bytes\n", s->sd, 11);
+                    printf("[" BAL_SOCKET_SPEC "] wrote %d bytes\n", s->sd, sent);
                 }
             }
         } else {

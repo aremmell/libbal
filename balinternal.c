@@ -111,14 +111,14 @@ int _bal_asyncselect(const bal_socket* s, bal_async_callback proc, uint32_t mask
         return BAL_FALSE;
     }
 
-    if (!proc && 0u != mask) {
+    if (!proc && 0U!= mask) {
         BAL_ASSERT(!"null proc with non-zero mask");
         return BAL_FALSE;
     }
 
     int r = BAL_FALSE;
     if (_bal_mutex_lock(&_bal_as_container.mutex)) {
-        if (0u == mask) {
+        if (0U== mask) {
             bal_selectdata* d = NULL;
             bool success      = _bal_list_find(_bal_as_container.lst, s->sd, &d);
             BAL_ASSERT(NULL != d);
@@ -155,7 +155,7 @@ int _bal_asyncselect(const bal_socket* s, bal_async_callback proc, uint32_t mask
                         d->mask  = mask;
                         d->proc  = proc;
                         d->s     = (bal_socket*)s;
-                        d->s->_f = 0u;
+                        d->s->_f = 0U;
                         success  = _bal_defer_add_socket(d);
                         r        = success ? BAL_TRUE : BAL_FALSE;
                     }
@@ -243,13 +243,13 @@ bool _bal_initasyncselect(void)
 
     for (size_t n = 0; n < bal_countof(threads); n++) {
 #if defined(__WIN__)
-        *threads[n].thread = _beginthreadex(NULL, 0u, threads[n].func,
-            &_bal_as_container, 0u, NULL);
-        BAL_ASSERT(0ull != *threads[n].thread);
+        *threads[n].thread = _beginthreadex(NULL, 0U threads[n].func,
+            &_bal_as_container, 0U NULL);
+        BAL_ASSERT(0ULL != *threads[n].thread);
 
-        create &= 0ull != *threads[n].thread;
+        create &= 0ULL != *threads[n].thread;
 
-        if (0ull == *threads[n].thread) {
+        if (0ULL == *threads[n].thread) {
             (void)_bal_handleerr(errno);
             _bal_dbglog("error: failed to create thread(s)");
             return false;
@@ -474,7 +474,7 @@ int _bal_aitoal(bal_addrinfo* in, bal_addrlist* out)
         in->_p = in->_ai;
 
         while (NULL != (ai = _bal_enumaddrinfo(in))) {
-            *a = calloc(1ul, sizeof(bal_addr));
+            *a = calloc(1UL, sizeof(bal_addr));
 
             if (!*a) {
                 r = BAL_FALSE;
@@ -585,7 +585,7 @@ BALTHREAD _bal_eventthread(void* ctx)
     }
 
 #if defined(__WIN__)
-    return 0u;
+    return 0U
 #else
     return NULL;
 #endif
@@ -651,7 +651,7 @@ BALTHREAD _bal_syncthread(void* ctx)
     }
 
 #if defined(__WIN__)
-    return 0u;
+    return 0U
 #else
     return NULL;
 #endif
@@ -677,7 +677,7 @@ bool _bal_list_create(bal_list** lst)
     bool retval = NULL != lst;
 
     if (retval) {
-        *lst = calloc(1ul, sizeof(bal_list));
+        *lst = calloc(1UL, sizeof(bal_list));
         retval = NULL != *lst;
     }
 
@@ -690,7 +690,7 @@ bool _bal_list_create_node(bal_list_node** node, bal_descriptor key,
     bool ok = NULL != node;
 
     if (ok) {
-        *node = calloc(1ul, sizeof(bal_list_node));
+        *node = calloc(1UL, sizeof(bal_list_node));
         if (*node) {
             (*node)->key = key;
             (*node)->val = val;
@@ -767,7 +767,7 @@ bool _bal_list_iterate_func(bal_list* lst, void* ctx, bal_list_iter_callback cb)
     bool ok = !_bal_list_empty(lst) && NULL != cb;
 
     if (ok) {
-        size_t count        = 0ul;
+        size_t count        = 0UL;
         bal_list_node* node = lst->head;
         while (node) {
             count++;
@@ -775,7 +775,7 @@ bool _bal_list_iterate_func(bal_list* lst, void* ctx, bal_list_iter_callback cb)
                 break;
             node = node->next;
         }
-        ok = 0ul < count;
+        ok = 0UL < count;
     }
 
     return ok;
@@ -871,7 +871,7 @@ bool __bal_list_dispatch_events(bal_descriptor key, bal_selectdata* val, void* c
 {
     _bal_list_dispatch_data* ldd = (_bal_list_dispatch_data*)ctx;
     if (0 != FD_ISSET(key, ldd->set)) {
-        uint32_t event = 0u;
+        uint32_t event = 0U;
         bool snd       = false;
 
         switch (ldd->type) {

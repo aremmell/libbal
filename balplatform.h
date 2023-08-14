@@ -147,7 +147,7 @@ typedef BOOL(CALLBACK* bal_once_fn)(PINIT_ONCE, PVOID, PVOID*);
 #  define BAL_ONCE_INIT INIT_ONCE_STATIC_INIT
 
 /** The thread initializer. */
-#  define BAL_THREAD_INIT 0ull
+#  define BAL_THREAD_INIT 0ULL
 
 /** The mutex initializer. */
 #  define BAL_MUTEX_INIT {0}

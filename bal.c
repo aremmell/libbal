@@ -99,7 +99,7 @@ void bal_reset(bal_socket* s)
         s->pf = 0;
         s->sd = BAL_BADSOCKET;
         s->st = 0;
-        s->_f = 0u;
+        s->_f = 0U;
     }
 }
 
@@ -179,7 +179,6 @@ int bal_connectaddrlist(bal_socket* s, bal_addrlist* al)
 
             while (NULL != (sa = bal_enumaddrlist(al))) {
                 r = connect(s->sd, (const struct sockaddr*)sa, _BAL_SASIZE(*sa));
-
 #if defined(__WIN__)
                 if (!r || WSAEWOULDBLOCK == WSAGetLastError()) {
 #else
@@ -188,6 +187,8 @@ int bal_connectaddrlist(bal_socket* s, bal_addrlist* al)
                     s->_f |= BAL_F_PENDCONN;
                     r = BAL_TRUE;
                     break;
+                } else {
+                    _bal_handleerr(errno);
                 }
             }
         }
@@ -544,25 +545,25 @@ int bal_iswritable(const bal_socket* s)
 int bal_setiomode(const bal_socket* s, bool async)
 {
 #if defined(__WIN__)
-    unsigned long flag = async ? 1ul : 0ul;
+    unsigned long flag = async ? 1UL : 0UL;
     return ((NULL != s) ? ioctlsocket(s->sd, FIONBIO, &flag) : BAL_FALSE);
 #else
-    uint32_t flag = async ? O_NONBLOCK : 0u;
+    uint32_t flag = async ? O_NONBLOCK : 0U;
     return ((NULL != s) ? fcntl(s->sd, F_SETFL, flag) : BAL_FALSE);
 #endif
 }
 
 size_t bal_recvqueuesize(const bal_socket* s)
 {
-    size_t r = 0ul;
+    size_t r = 0UL;
 
     if (s) {
 #if defined(__WIN__)
         if (0 != ioctlsocket(s->sd, FIONREAD, (void*)&r))
-            r = 0ul;
+            r = 0UL;
 #else
         if (0 != ioctl(s->sd, FIONREAD, &r))
-            r = 0ul;
+            r = 0UL;
 #endif
     }
 

@@ -88,7 +88,7 @@ int _bal_getlasterror(const bal_socket* s, bal_error* err)
             err->code = WSAGetLastError();
 
         DWORD flags = FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS;
-        if (0 != FormatMessageA(flags, NULL, err->code, 0u, err->desc, BAL_MAXERROR, NULL))
+        if (0 != FormatMessageA(flags, NULL, err->code, 0U err->desc, BAL_MAXERROR, NULL))
             r = BAL_TRUE;
 #else
         if (!resolved)

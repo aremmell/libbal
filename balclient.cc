@@ -95,7 +95,9 @@ void balclient::async_events_cb(bal_socket* s, uint32_t events)
         } else {
             if (!wrote_helo) {
                 const char* req = "HELO";
-                int ret = bal_send(s, req, 4, 0u);
+                constexpr const size_t req_size = 4;
+                
+                int ret = bal_send(s, req, req_size, 0U);
                 if (ret <= 0)
                     balcommon::print_last_lib_error(s, "bal_send");
                 else
