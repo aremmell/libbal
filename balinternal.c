@@ -523,13 +523,15 @@ bool _bal_islistening(bal_socket* s)
 {
     bool retval = false;
 
-    _bal_mutex_lock(&s->m); // FIXME
-    if (_bal_validsockdata(s)) {
-        _bal_mutex_lock(&s->d->m);
-        retval = bal_isbitset(s->d->mask, BAL_S_LISTEN);
-        _bal_mutex_unlock(&s->d->m);
+    if (_bal_validptr(s)) {
+        _bal_mutex_lock(&s->m); // FIXME
+        if (_bal_validsockdata(s)) {
+            _bal_mutex_lock(&s->d->m);
+            retval = bal_isbitset(s->d->mask, BAL_S_LISTEN);
+            _bal_mutex_unlock(&s->d->m);
+        }
+        _bal_mutex_unlock(&s->m); // FIXME
     }
-    _bal_mutex_unlock(&s->m); // FIXME
 
     return retval;
 }
