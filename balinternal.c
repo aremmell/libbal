@@ -468,6 +468,7 @@ int _bal_aitoal(bal_addrinfo* in, bal_addrlist* out)
         const struct addrinfo* ai = NULL;
         bal_addr** a              = &out->_a;
 
+        r      = BAL_TRUE;
         in->_p = in->_ai;
 
         while (NULL != (ai = _bal_enumaddrinfo(in))) {
@@ -483,7 +484,6 @@ int _bal_aitoal(bal_addrinfo* in, bal_addrlist* out)
         }
 
         bal_resetaddrlist(out);
-        r = BAL_TRUE;
     }
 
     return r;

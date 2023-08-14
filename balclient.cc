@@ -25,6 +25,7 @@
  */
 #include <iostream>
 #include <iomanip>
+#include <array>
 #include "balclient.hh"
 
 using namespace std;
@@ -77,10 +78,11 @@ void balclient::async_events_cb(bal_socket* s, uint32_t events)
     }
 
     if (bal_isbitset(events, BAL_E_READ)) {
-        char read_buf[2048] = {0};
-        int read = bal_recv(s, &read_buf[0], 2047, 0);
+        constexpr const size_t buf_size = 2048;
+        std::array<char, buf_size> buf;
+        int read = bal_recv(s, buf.data(), buf.size() - 1, 0);
         if (read > 0)
-            printf("[" BAL_SOCKET_SPEC "] read %d bytes: '%s'\n", s->sd, read, read_buf);
+            printf("[" BAL_SOCKET_SPEC "] read %d bytes: '%s'\n", s->sd, read, buf.data());
         else
             printf("[" BAL_SOCKET_SPEC "] read error %d!\n", s->sd, bal_geterror(s));
     }

@@ -13,7 +13,7 @@ else
     echo "cppcheck not found; skipping"
 fi
 
-if which analyze-build >/dev/null 2>&1; then
+if which clang-tidy >/dev/null 2>&1; then
     echo "Running clang-tidy..."
     clang-tidy -p build --export-fixes=clang-fixes.yml \
                --checks=clang-diagnostic-*,clang-analyzer-* *.c &&
