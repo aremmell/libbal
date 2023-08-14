@@ -109,7 +109,7 @@ int bal_close(bal_socket** s)
 {
     int r = BAL_FALSE;
 
-    if (_bal_validptrptr(s)) {
+    if (_bal_validptrptr(s) && _bal_validptr(*s)) {
 #if defined(__WIN__)
         if (SOCKET_ERROR == closesocket((*s)->sd)) {
             (void)_bal_handleerr(WSAGetLastError());
