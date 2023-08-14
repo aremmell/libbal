@@ -125,8 +125,10 @@ int bal_close(bal_socket** s)
 
         _bal_mutex_lock(&(*s)->m); // FIXME
         if (_bal_validsockdata(*s)) {
+            _bal_mutex_lock(&(*s)->d->m); // FIXME
             (*s)->d->mask |= BAL_S_CLOSE;
             (*s)->d->s     = NULL;
+            _bal_mutex_unlock(&(*s)->d->m); // FIXME
         }
 
         _bal_dbglog("closed socket "BAL_SOCKET_SPEC" (%p, data = %p); freeing...",
@@ -134,6 +136,7 @@ int bal_close(bal_socket** s)
 
         _bal_mutex_unlock(&(*s)->m); // FIXME
         _bal_mutex_destroy(&(*s)->m);
+        memset(*s, 0, sizeof(bal_socket));
         _bal_safefree(s);
     }
 
