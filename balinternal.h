@@ -46,11 +46,10 @@ bool _bal_defer_remove_socket(bal_selectdata* d);
 
 int _bal_bindany(const bal_socket* s, unsigned short port);
 int _bal_getaddrinfo(int f, int af, int st, const char* host, const char* port,
-    bal_addrinfo* res);
+    struct addrinfo** res);
 int _bal_getnameinfo(int f, const bal_sockaddr* in, char* host, char* port);
 
-const struct addrinfo* _bal_enumaddrinfo(bal_addrinfo* ai);
-int _bal_aitoal(bal_addrinfo* in, bal_addrlist* out);
+int _bal_aitoal(struct addrinfo* ai, bal_addrlist* out);
 
 int _bal_retstr(char* out, const char* in, size_t destlen);
 
@@ -63,7 +62,7 @@ BALTHREAD _bal_syncthread(void* ctx);
 
 typedef BALTHREAD (*bal_thread_func)(void*);
 
-void _bal_dispatchevents(fd_set* set, bal_as_container * td, uint32_t type);
+void _bal_dispatchevents(fd_set* set, bal_as_container* td, uint32_t type);
 
 /** Creates a new list. */
 bool _bal_list_create(bal_list** lst);
@@ -188,6 +187,8 @@ void __bal_safefree(void** pp)
 # define _bal_safefree(pp) __bal_safefree((void**)(pp))
 
 # define _bal_validptr(p) (NULL != (p))
+
+# define _bal_validptrptr(pp) (NULL != (pp))
 
 # define bal_countof(arr) (sizeof((arr)) / sizeof((arr)[0]))
 

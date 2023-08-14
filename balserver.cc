@@ -100,7 +100,7 @@ void balserver::async_events_cb(bal_socket* s, uint32_t events)
         }
 
         printf("[" BAL_SOCKET_SPEC "] got connection from %s %s:%s; sd = "
-               BAL_SOCKET_SPEC "\n", s->sd, client_strings.type, client_strings.ip,
+               BAL_SOCKET_SPEC "\n", s->sd, client_strings.type, client_strings.addr,
                client_strings.port, client_socket.sd);
     }
 

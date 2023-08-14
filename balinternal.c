@@ -398,25 +398,21 @@ bool _bal_defer_remove_socket(bal_selectdata* d)
 }
 
 int _bal_getaddrinfo(int f, int af, int st, const char* host, const char* port,
-    bal_addrinfo* res)
+    struct addrinfo** res)
 {
     int r = BAL_FALSE;
 
-    if (_bal_validstr(host) && res) {
+    if (_bal_validstr(host) && _bal_validptrptr(res)) {
         struct addrinfo hints = {0};
 
         hints.ai_flags    = f;
         hints.ai_family   = af;
         hints.ai_socktype = st;
 
-        r = getaddrinfo(host, port, (const struct addrinfo*)&hints, &res->_ai);
-
-        if (0 != r)
-            res->_ai = NULL;
-        res->_p = res->_ai;
+        r = getaddrinfo(host, port, (const struct addrinfo*)&hints, res);
     }
 
-    if (BAL_TRUE != r && BAL_FALSE != r) {
+    if (0 != r) {
         _bal_dbglog("getaddrinfo() failed with error %d (%s)", r, gai_strerror(r));
         _bal_setlasterror(r);
         r = BAL_FALSE;
@@ -429,13 +425,13 @@ int _bal_getnameinfo(int f, const bal_sockaddr* in, char* host, char* port)
 {
     int r = BAL_FALSE;
 
-    if (in && host) {
+    if (_bal_validptr(in) && _bal_validptr(host)) {
         socklen_t inlen = _BAL_SASIZE(*in);
         r = getnameinfo((const struct sockaddr*)in, inlen, host, NI_MAXHOST, port,
             NI_MAXSERV, f);
     }
 
-    if (BAL_TRUE != r && BAL_FALSE != r) {
+    if (0 != r) {
         _bal_dbglog("getnameinfo() failed with error %d (%s)", r, gai_strerror(r));
         _bal_setlasterror(r);
         r = BAL_FALSE;
@@ -444,37 +440,18 @@ int _bal_getnameinfo(int f, const bal_sockaddr* in, char* host, char* port)
     return r;
 }
 
-const struct addrinfo* _bal_enumaddrinfo(bal_addrinfo* ai)
-{
-    const struct addrinfo* r = NULL;
-
-    if (ai && ai->_ai) {
-        if (ai->_p) {
-            r      = ai->_p;
-            ai->_p = ai->_p->ai_next;
-        } else {
-            ai->_p = ai->_ai;
-        }
-    }
-
-    return r;
-}
-
-int _bal_aitoal(bal_addrinfo* in, bal_addrlist* out)
+int _bal_aitoal(struct addrinfo* ai, bal_addrlist* out)
 {
     int r = BAL_FALSE;
 
-    if (in && in->_ai && out) {
-        const struct addrinfo* ai = NULL;
-        bal_addr** a              = &out->_a;
+    if (_bal_validptr(ai) && _bal_validptr(out)) {
+        bal_addr** a = &out->_a;
+        r            = BAL_TRUE;
 
-        r      = BAL_TRUE;
-        in->_p = in->_ai;
-
-        while (NULL != (ai = _bal_enumaddrinfo(in))) {
+        while (NULL != (ai = ai->ai_next)) {
             *a = calloc(1UL, sizeof(bal_addr));
-
-            if (!*a) {
+            if (!_bal_validptr(*a)) {
+                _bal_handleerr(errno);
                 r = BAL_FALSE;
                 break;
             }

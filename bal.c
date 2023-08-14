@@ -54,22 +54,22 @@ int bal_autosocket(bal_socket* s, int af, int pt, const char* host, const char* 
     int r = BAL_FALSE;
 
     if (s && _bal_validstr(host)) {
-        int _af = ((af == 0) ? PF_UNSPEC : af);
-        int _st = ((pt == 0) ? 0 : (pt == IPPROTO_TCP) ? SOCK_STREAM : SOCK_DGRAM);
-        bal_addrinfo ai = {NULL, NULL};
+        if (0 == af)
+            af = PF_UNSPEC;
 
-        if (BAL_TRUE == _bal_getaddrinfo(0, _af, _st, host, port, &ai)) {
-            const struct addrinfo* a = NULL;
+        int _st = (pt == 0 ? 0 : (pt == IPPROTO_TCP ? SOCK_STREAM : SOCK_DGRAM));
+        struct addrinfo* ai = NULL;
 
-            while (NULL != (a = _bal_enumaddrinfo(&ai))) {
-                if (BAL_TRUE ==
-                    bal_sock_create(s, a->ai_family, a->ai_protocol, a->ai_socktype)) {
+        if (BAL_TRUE == _bal_getaddrinfo(0, af, _st, host, port, &ai) && NULL != ai) {
+            while (NULL != (ai = ai->ai_next)) {
+                if (BAL_TRUE == bal_sock_create(s, ai->ai_family, ai->ai_protocol,
+                    ai->ai_socktype)) {
                     r = BAL_TRUE;
                     break;
                 }
             }
 
-            freeaddrinfo(ai._ai);
+            freeaddrinfo(ai);
         }
     }
 
@@ -152,17 +152,17 @@ int bal_connect(const bal_socket* s, const char* host, const char* port)
     int r = BAL_FALSE;
 
     if (s && _bal_validstr(host) && _bal_validstr(port)) {
-        bal_addrinfo ai = {NULL, NULL};
+        struct addrinfo* ai = NULL;
 
         if (BAL_TRUE == _bal_getaddrinfo(0, s->af, s->st, host, port, &ai)) {
             bal_addrlist al = {NULL, NULL};
 
-            if (BAL_TRUE == _bal_aitoal(&ai, &al)) {
+            if (BAL_TRUE == _bal_aitoal(ai, &al)) {
                 r = bal_connectaddrlist((bal_socket*)s, &al);
                 bal_freeaddrlist(&al);
             }
 
-            freeaddrinfo(ai._ai);
+            freeaddrinfo(ai);
         }
     }
 
@@ -219,12 +219,12 @@ int bal_sendto(const bal_socket* s, const char* host, const char* port, const vo
     int r = BAL_FALSE;
 
     if (s && _bal_validstr(host) && _bal_validstr(port) && data && len) {
-        bal_addrinfo ai = {NULL, NULL};
+        struct addrinfo* ai = NULL;
 
         if (BAL_TRUE == _bal_getaddrinfo(0, PF_UNSPEC, SOCK_DGRAM, host, port, &ai) &&
-            NULL != ai._ai) {
-            r = bal_sendtoaddr(s, (const bal_sockaddr*)ai._ai->ai_addr, data, len, flags);
-            freeaddrinfo(ai._ai);
+            NULL != ai) {
+            r = bal_sendtoaddr(s, (const bal_sockaddr*)ai->ai_addr, data, len, flags);
+            freeaddrinfo(ai);
         }
     }
 
@@ -257,19 +257,18 @@ int bal_bind(const bal_socket* s, const char* addr, const char* port)
     int r = BAL_FALSE;
 
     if (s && _bal_validstr(addr) && _bal_validstr(port)) {
-        bal_addrinfo ai = {NULL, NULL};
+        struct addrinfo* ai = NULL;
 
-        if (BAL_TRUE == _bal_getaddrinfo(AI_NUMERICHOST, s->af, s->st, addr, port, &ai)) {
-            const struct addrinfo* a = NULL;
-
-            while (NULL != (a = _bal_enumaddrinfo(&ai))) {
-                if (0 == bind(s->sd, (const struct sockaddr*)a->ai_addr, a->ai_addrlen)) {
+        if (BAL_TRUE == _bal_getaddrinfo(AI_NUMERICHOST, s->af, s->st, addr, port, &ai) &&
+            NULL != ai) {
+            while (NULL != (ai = ai->ai_next)) {
+                if (0 == bind(s->sd, (const struct sockaddr*)ai->ai_addr, ai->ai_addrlen)) {
                     r = BAL_TRUE;
                     break;
                 }
             }
 
-            freeaddrinfo(ai._ai);
+            freeaddrinfo(ai);
         }
     }
 
@@ -587,14 +586,14 @@ int bal_resolvehost(const char* host, bal_addrlist* out)
 {
     int r = BAL_FALSE;
 
-    if (_bal_validstr(host) && out) {
-        bal_addrinfo ai = {NULL, NULL};
+    if (_bal_validstr(host) && _bal_validptr(out)) {
+        struct addrinfo* ai = NULL;
 
         int get = _bal_getaddrinfo(0, PF_UNSPEC, SOCK_STREAM, host, NULL, &ai);
-        if (BAL_TRUE == get) {
-            if (BAL_TRUE == _bal_aitoal(&ai, out))
+        if (BAL_TRUE == get && NULL != ai) {
+            if (BAL_TRUE == _bal_aitoal(ai, out))
                 r = BAL_TRUE;
-            freeaddrinfo(ai._ai);
+            freeaddrinfo(ai);
         }
     }
 
@@ -653,6 +652,38 @@ int bal_getlocalhoststrings(const bal_socket* s, int dns, bal_addrstrings* out)
     return r;
 }
 
+int bal_getaddrstrings(const bal_sockaddr* in, bool dns, bal_addrstrings* out)
+{
+    int r = BAL_FALSE;
+
+    if (_bal_validptr(in) && _bal_validptr(out)) {
+        memset(out, 0, sizeof(bal_addrstrings));
+
+        static const int no_dns_flags = NI_NUMERICHOST | NI_NUMERICSERV;
+        static const int dns_flags    = NI_NAMEREQD    | NI_NUMERICSERV;
+
+        int get = _bal_getnameinfo(no_dns_flags, in, out->addr, out->port);
+        if (BAL_TRUE == get) {
+            if (dns) {
+                get = _bal_getnameinfo(dns_flags, in, out->host, out->port);
+                if (BAL_FALSE == get)
+                    (void)_bal_retstr(out->host, BAL_UNKNOWN, NI_MAXHOST);
+            }
+
+            if (PF_INET == ((struct sockaddr*)in)->sa_family)
+                out->type = BAL_AS_IPV4;
+            else if (PF_INET6 == ((struct sockaddr*)in)->sa_family)
+                out->type = BAL_AS_IPV6;
+            else
+                out->type = BAL_UNKNOWN;
+
+            r = BAL_TRUE;
+        }
+    }
+
+    return r;
+}
+
 int bal_resetaddrlist(bal_addrlist* al)
 {
     int r = BAL_FALSE;
@@ -697,34 +728,6 @@ int bal_freeaddrlist(bal_addrlist* al)
 
         r      = BAL_TRUE;
         al->_p = al->_a = NULL;
-    }
-
-    return r;
-}
-
-int bal_getaddrstrings(const bal_sockaddr* in, bool dns, bal_addrstrings* out)
-{
-    int r = BAL_FALSE;
-
-    if (in && out) {
-        memset(out, 0, sizeof(bal_addrstrings));
-
-        if (BAL_TRUE == _bal_getnameinfo(_BAL_NI_NODNS, in, out->ip, out->port)) {
-            if (dns) {
-                int get = _bal_getnameinfo(_BAL_NI_DNS, in, out->host, out->port);
-                if (BAL_FALSE == get)
-                    (void)_bal_retstr(out->host, BAL_UNKNOWN, NI_MAXHOST);
-            }
-
-            if (PF_INET == ((struct sockaddr*)in)->sa_family)
-                out->type = BAL_AS_IPV4;
-            else if (PF_INET6 == ((struct sockaddr*)in)->sa_family)
-                out->type = BAL_AS_IPV6;
-            else
-                out->type = BAL_UNKNOWN;
-
-            r = BAL_TRUE;
-        }
     }
 
     return r;

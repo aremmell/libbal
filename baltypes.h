@@ -40,11 +40,6 @@ typedef struct {
     uint32_t _f;       /**< Internally-used state flags. */
 } bal_socket;
 
-typedef struct {
-    struct addrinfo* _ai;
-    struct addrinfo* _p;
-} bal_addrinfo;
-
 typedef struct _bal_addr {
     bal_sockaddr _sa;
     struct _bal_addr* _n;
@@ -57,8 +52,8 @@ typedef struct {
 
 typedef struct {
     char host[NI_MAXHOST];
-    char ip[NI_MAXHOST];
-    char* type;
+    char addr[NI_MAXHOST];
+    const char* type;
     char port[NI_MAXSERV];
 } bal_addrstrings;
 

@@ -30,11 +30,9 @@
 # include "baltypes.h"
 # include "balerrors.h"
 
-
-/*─────────────────────────────────────────────────────────────────────────────╮
-│                            Exported Functions                                │
-╰─────────────────────────────────────────────────────────────────────────────*/
-
+/******************************************************************************\
+ *                             Exported Functions                             *
+\******************************************************************************/
 
 # if defined(__cplusplus)
 extern "C" {
@@ -121,11 +119,11 @@ int bal_getremotehostaddr(const bal_socket* s, bal_sockaddr* out);
 int bal_getremotehoststrings(const bal_socket* s, int dns, bal_addrstrings* out);
 int bal_getlocalhostaddr(const bal_socket* s, bal_sockaddr* out);
 int bal_getlocalhoststrings(const bal_socket* s, int dns, bal_addrstrings* out);
+int bal_getaddrstrings(const bal_sockaddr* in, bool dns, bal_addrstrings* out);
 
 int bal_resetaddrlist(bal_addrlist* al);
 const bal_sockaddr* bal_enumaddrlist(bal_addrlist* al);
 int bal_freeaddrlist(bal_addrlist* al);
-int bal_getaddrstrings(const bal_sockaddr* in, bool dns, bal_addrstrings* out);
 
 void bal_yield_thread(void);
 
