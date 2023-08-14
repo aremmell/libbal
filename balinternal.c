@@ -35,9 +35,9 @@ static bal_once _bal_static_once_init = BAL_ONCE_INIT;
 
 /* whether or not the async select handler is initialized. */
 #if defined(__HAVE_STDATOMICS__)
-    static atomic_bool _bal_asyncselect_init;
+static atomic_bool _bal_asyncselect_init;
 #else
-    static volatile bool _bal_asyncselect_init = false;
+static volatile bool _bal_asyncselect_init = false;
 #endif
 
 /* async I/O state container. */
@@ -50,7 +50,7 @@ static bal_as_container _bal_as_container = {0};
 bool _bal_init(void)
 {
 #if defined(__WIN__)
-    WORD wVer  = MAKEWORD(2, 2);
+    WORD wVer = MAKEWORD(2, 2);
     WSADATA wd = {0};
 
     if (0 != WSAStartup(wVer, &wd)) {
@@ -111,14 +111,14 @@ int _bal_asyncselect(const bal_socket* s, bal_async_callback proc, uint32_t mask
         return BAL_FALSE;
     }
 
-    if (!proc && 0U!= mask) {
+    if (!proc && 0U != mask) {
         BAL_ASSERT(!"null proc with non-zero mask");
         return BAL_FALSE;
     }
 
     int r = BAL_FALSE;
     if (_bal_mutex_lock(&_bal_as_container.mutex)) {
-        if (0U== mask) {
+        if (0U == mask) {
             bal_selectdata* d = NULL;
             bool success      = _bal_list_find(_bal_as_container.lst, s->sd, &d);
             BAL_ASSERT(NULL != d);
@@ -270,8 +270,7 @@ bool _bal_initasyncselect(void)
     }
 
     _bal_set_boolean(&_bal_asyncselect_init, true);
-    _bal_dbglog("async I/O initialized %s", create
-        ? "successfully" : "with errors");
+    _bal_dbglog("async I/O initialized %s", create ? "successfully" : "with errors");
 
     return create;
 }
@@ -355,8 +354,7 @@ bool _bal_cleanupasyncselect(void)
     }
 
     _bal_set_boolean(&_bal_asyncselect_init, false);
-    _bal_dbglog("async I/O cleaned up %s", cleanup ?
-        "successfully" : "with errors");
+    _bal_dbglog("async I/O cleaned up %s", cleanup ? "successfully" : "with errors");
 
     return cleanup;
 }
@@ -433,8 +431,8 @@ int _bal_getnameinfo(int f, const bal_sockaddr* in, char* host, char* port)
 
     if (in && host) {
         socklen_t inlen = _BAL_SASIZE(*in);
-        r = getnameinfo((const struct sockaddr*)in, inlen, host, NI_MAXHOST,
-            port, NI_MAXSERV, f);
+        r = getnameinfo((const struct sockaddr*)in, inlen, host, NI_MAXHOST, port,
+            NI_MAXSERV, f);
     }
 
     if (BAL_TRUE != r && BAL_FALSE != r) {
@@ -469,7 +467,6 @@ int _bal_aitoal(bal_addrinfo* in, bal_addrlist* out)
     if (in && in->_ai && out) {
         const struct addrinfo* ai = NULL;
         bal_addr** a              = &out->_a;
-        r                         = BAL_TRUE;
 
         in->_p = in->_ai;
 
@@ -486,6 +483,7 @@ int _bal_aitoal(bal_addrinfo* in, bal_addrlist* out)
         }
 
         bal_resetaddrlist(out);
+        r = BAL_TRUE;
     }
 
     return r;
@@ -524,14 +522,14 @@ bool _bal_isclosedcircuit(const bal_socket* s)
         return true;
     } else if (-1 == rcv) {
 #if defined(__WIN__)
-    int error = WSAGetLastError();
-    if (WSAENETDOWN == error     || WSAENOTCONN == error  ||
-        WSAEOPNOTSUPP == error   || WSAESHUTDOWN == error ||
-        WSAECONNABORTED == error || WSAECONNRESET == error)
-        return true;
+        int error = WSAGetLastError();
+        if (WSAENETDOWN == error     || WSAENOTCONN == error  ||
+            WSAEOPNOTSUPP == error   || WSAESHUTDOWN == error ||
+            WSAECONNABORTED == error || WSAECONNRESET == error)
+            return true;
 #else
-    if (EBADF == errno || ENOTCONN == errno || ENOTSOCK == errno)
-        return true;
+        if (EBADF == errno || ENOTCONN == errno || ENOTSOCK == errno)
+            return true;
 #endif
     }
 
@@ -710,8 +708,7 @@ bool _bal_list_add(bal_list* lst, bal_descriptor key, bal_selectdata* val)
             lst->iter = lst->head;
         } else {
             bal_list_node* node = lst->head;
-            while (node && node->next)
-                node = node->next;
+            while (node && node->next) node = node->next;
 
             ok = _bal_list_create_node(&node->next, key, val);
             if (ok)
@@ -727,7 +724,7 @@ bool _bal_list_find(bal_list* lst, bal_descriptor key, bal_selectdata** val)
     bool ok = !_bal_list_empty(lst) && NULL != val;
 
     if (ok) {
-        _bal_list_find_data lfd = { key, val, false };
+        _bal_list_find_data lfd = {key, val, false};
         ok = _bal_list_iterate_func(lst, &lfd, &__bal_list_find_key) && lfd.found;
     }
 
@@ -920,8 +917,9 @@ bool __bal_list_dispatch_events(bal_descriptor key, bal_selectdata* val, void* c
             BAL_ASSERT_UNUSED(added, added);
             if (added) {
                 val->mask |= BAL_S_CLOSE;
-                _bal_dbglog("added socket "BAL_SOCKET_SPEC" to defer"
-                             " remove list", key);
+                _bal_dbglog("added socket " BAL_SOCKET_SPEC " to defer"
+                            " remove list",
+                    key);
             } else {
                 BAL_ASSERT(!"failed to add socket to defer remove list");
             }
@@ -985,7 +983,8 @@ bool __bal_list_event_prepare(bal_descriptor key, bal_selectdata* val, void* ctx
 }
 
 #if !defined(__WIN__) /* pthread mutex implementation. */
-bool _bal_mutex_create(bal_mutex* mutex) {
+bool _bal_mutex_create(bal_mutex* mutex)
+{
     if (_bal_validptr(mutex)) {
         pthread_mutexattr_t attr;
         int op = pthread_mutexattr_init(&attr);
@@ -1004,7 +1003,8 @@ bool _bal_mutex_create(bal_mutex* mutex) {
     return false;
 }
 
-bool _bal_mutex_lock(bal_mutex* mutex) {
+bool _bal_mutex_lock(bal_mutex* mutex)
+{
     if (_bal_validptr(mutex)) {
         int op = pthread_mutex_lock(mutex);
         return 0 == op ? true : _bal_handleerr(op);
@@ -1013,7 +1013,8 @@ bool _bal_mutex_lock(bal_mutex* mutex) {
     return false;
 }
 
-bool _bal_mutex_trylock(bal_mutex* mutex) {
+bool _bal_mutex_trylock(bal_mutex* mutex)
+{
     if (_bal_validptr(mutex)) {
         int op = pthread_mutex_trylock(mutex);
         return 0 == op ? true : EBUSY != op ? _bal_handleerr(op) : false;
@@ -1022,7 +1023,8 @@ bool _bal_mutex_trylock(bal_mutex* mutex) {
     return false;
 }
 
-bool _bal_mutex_unlock(bal_mutex* mutex) {
+bool _bal_mutex_unlock(bal_mutex* mutex)
+{
     if (_bal_validptr(mutex)) {
         int op = pthread_mutex_unlock(mutex);
         return 0 == op ? true : _bal_handleerr(op);
@@ -1031,7 +1033,8 @@ bool _bal_mutex_unlock(bal_mutex* mutex) {
     return false;
 }
 
-bool _bal_mutex_destroy(bal_mutex* mutex) {
+bool _bal_mutex_destroy(bal_mutex* mutex)
+{
     if (_bal_validptr(mutex)) {
         int op = pthread_mutex_destroy(mutex);
         return 0 == op ? true : _bal_handleerr(op);
@@ -1040,7 +1043,8 @@ bool _bal_mutex_destroy(bal_mutex* mutex) {
     return false;
 }
 #else /* __WIN__ */
-bool _bal_mutex_create(bal_mutex* mutex) {
+bool _bal_mutex_create(bal_mutex* mutex)
+{
     if (_bal_validptr(mutex)) {
         InitializeCriticalSection(mutex);
         return true;
@@ -1049,7 +1053,8 @@ bool _bal_mutex_create(bal_mutex* mutex) {
     return false;
 }
 
-bool _bal_mutex_lock(bal_mutex* mutex) {
+bool _bal_mutex_lock(bal_mutex* mutex)
+{
     if (_bal_validptr(mutex)) {
         EnterCriticalSection(mutex);
         return true;
@@ -1058,14 +1063,16 @@ bool _bal_mutex_lock(bal_mutex* mutex) {
     return false;
 }
 
-bool _bal_mutex_trylock(bal_mutex* mutex) {
+bool _bal_mutex_trylock(bal_mutex* mutex)
+{
     if (_bal_validptr(mutex))
         return FALSE != TryEnterCriticalSection(mutex);
 
     return false;
 }
 
-bool _bal_mutex_unlock(bal_mutex* mutex) {
+bool _bal_mutex_unlock(bal_mutex* mutex)
+{
     if (_bal_validptr(mutex)) {
         LeaveCriticalSection(mutex);
         return true;
@@ -1074,7 +1081,8 @@ bool _bal_mutex_unlock(bal_mutex* mutex) {
     return false;
 }
 
-bool _bal_mutex_destroy(bal_mutex* mutex) {
+bool _bal_mutex_destroy(bal_mutex* mutex)
+{
     if (_bal_validptr(mutex)) {
         DeleteCriticalSection(mutex);
         return true;
