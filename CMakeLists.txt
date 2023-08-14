@@ -30,8 +30,8 @@ cmake_policy(SET CMP0102 NEW) # mark_as_advanced
 # toolchain-related
 if (WIN32)
     set(C_FLAGS_BASE "/experimental:c11atomics")
-    set(CMAKE_C_FLAGS_DEBUG "${C_FLAGS_BASE} ${CMAKE_C_FLAGS}")
-    set(CMAKE_C_FLAGS_RELEASE "${C_FLAGS_BASE} ${CMAKE_C_FLAGS}")
+    set(CMAKE_C_FLAGS_DEBUG "${C_FLAGS_BASE} ${CMAKE_C_FLAGS} /MP /W4 /DDEBUG")
+    set(CMAKE_C_FLAGS_RELEASE "${C_FLAGS_BASE} ${CMAKE_C_FLAGS} /MP /W4 /DDEBUG")
     set(CMAKE_CXX_FLAGS_DEBUG "${C_FLAGS_BASE} /DDEBUG")
     set(CMAKE_CXX_FLAGS_RELEASE "${C_FLAGS_BASE} /DNDEBUG")
 else()
