@@ -26,7 +26,7 @@
 #ifndef _BAL_TYPES_H_INCLUDED
 # define _BAL_TYPES_H_INCLUDED
 
-#include "balplatform.h"
+# include "balplatform.h"
 
 /**
  * @struct bal_socket
@@ -67,30 +67,68 @@ typedef struct {
     char desc[BAL_MAXERROR];
 } bal_error;
 
+/* bal_asyncselect callback. */
 typedef void (*bal_async_callback)(bal_socket*, uint32_t);
 
-typedef struct bal_selectdata {
+/* Value storage for bal_list. */
+typedef struct {
     bal_socket* s;
     uint32_t mask;
     bal_async_callback proc;
-    struct bal_selectdata* _p;
-    struct bal_selectdata* _n;
 } bal_selectdata;
 
+/* Iteration callback. Returns false to stop iteration. */
+typedef bool (*bal_list_iter_callback)(bal_descriptor /*key*/,
+    bal_selectdata* /*val*/, void* /*ctx*/);
+
+/* Node type for bal_list. */
+typedef struct _bal_list_node {
+    bal_descriptor key;
+    bal_selectdata* val;
+    struct _bal_list_node *prev;
+    struct _bal_list_node *next;
+} bal_list_node;
+
+/* List of socket descriptors and associated state data. */
 typedef struct {
-    bal_selectdata* _h;
-    bal_selectdata* _t;
-    bal_selectdata* _c;
-} bal_selectdata_list;
+    bal_list_node* head;
+    bal_list_node* iter;
+} bal_list;
 
 typedef struct {
-    bal_selectdata_list* sdl;
-    bal_mutex* m;
-#if defined(__HAVE_STDATOMICS__) && !defined(__cplusplus)
+    bal_descriptor key;
+    bal_selectdata** val;
+    bool found;
+} _bal_list_find_data;
+
+typedef struct {
+    fd_set* set;
+    uint32_t type;
+} _bal_list_dispatch_data;
+
+typedef struct {
+    fd_set* fd_read;
+    fd_set* fd_write;
+    fd_set* fd_except;
+    bal_descriptor high_watermark;
+} _bal_list_event_prepare_data;
+
+typedef struct {
+    bal_list* lst;        /** List of active socket descriptors and their states. */
+    bal_mutex mutex;      /** Mutex for access to `lst`. */
+    bal_thread thread;    /** Asynchronous I/O events thread. */
+
+    bal_list* lst_add;    /** List of socket descriptors to add to `lst`. */
+    bal_list* lst_rem;    /** List of socket descriptors to remove from `lst`. */
+    bal_condition s_cond; /** Condition variable for `lst_add` and `lst_rem`. */
+    bal_mutex s_mutex;    /** Mutex for access to `lst_add` and `lst_rem`. */
+    bal_thread s_thread;  /** Data synchronization thread. */
+
+# if defined(__HAVE_STDATOMICS__) && !defined(__cplusplus)
     atomic_bool die;
-#else
+# else
     volatile bool die;
-#endif
-} bal_eventthread_data;
+# endif
+} bal_as_container;
 
 #endif /* !_BAL_TYPES_H_INCLUDED */

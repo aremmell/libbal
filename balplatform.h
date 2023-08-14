@@ -28,14 +28,23 @@
 
 # if !defined(_WIN32)
 #  if defined(__APPLE__) && defined(__MACH__)
+#   define __MACOS__
 #   undef _DARWIN_C_SOURCE
 #   define _DARWIN_C_SOURCE
 #  elif defined(__linux__)
 #   undef _GNU_SOURCE
 #   define _GNU_SOURCE
 #  elif defined (__FreeBSD__)
+#   define __BSD__
 #   undef _BSD_SOURCE
 #   define _BSD_SOURCE
+#  endif
+
+#  if defined(__linux__)
+#   include <sys/syscall.h>
+#  elif defined(__sun)
+#   include <sys/filio.h>
+#   include <stropts.h>
 #  endif
 
 #  include <sys/types.h>
@@ -55,22 +64,29 @@
 #  include <sched.h>
 #  include <poll.h>
 
-#  if defined(__sun)
-#   include <sys/filio.h>
-#   include <stropts.h>
-#  endif
-
 #  if !defined(__STDC_NO_ATOMICS__) && !defined(__cplusplus)
 #   include <stdatomic.h>
-#  undef __HAVE_STDATOMICS__
-#  define __HAVE_STDATOMICS__
+#   undef __HAVE_STDATOMICS__
+#   define __HAVE_STDATOMICS__
 #  endif
 
 #  define BAL_SOCKET_SPEC "%d"
+#  define BAL_TID_SPEC "%x"
 
+/** The socket descriptor type. */
 typedef int bal_descriptor;
+
+/** The mutex type. */
 typedef pthread_mutex_t bal_mutex;
+
+/** The condition variable type. */
+typedef pthread_cond_t bal_condition;
+
+/** The thread handle type. */
 typedef pthread_t bal_thread;
+
+/** The mutex/condition variable wait time type. */
+typedef struct timespec bal_wait;
 
 /** The one-time type. */
 typedef pthread_once_t bal_once;
@@ -98,19 +114,28 @@ typedef void (*bal_once_fn)(void);
 
 #  undef __HAVE_STDATOMICS__
 
-# if defined(_MSC_VER) && _MSC_VER >= 1933 && !defined(__cplusplus)
-#  include <stdatomic.h>
-#  define __HAVE_STDATOMICS__
-# endif
-
-#  define WSOCK_MAJVER 2
-#  define WSOCK_MINVER 2
+#  if defined(_MSC_VER) && _MSC_VER >= 1933 && !defined(__cplusplus)
+#   include <stdatomic.h>
+#   define __HAVE_STDATOMICS__
+#  endif
 
 #  define BAL_SOCKET_SPEC "%llu"
+#  define BAL_TID_SPEC "%x"
 
+/** The socket descriptor type. */
 typedef SOCKET bal_descriptor;
+
+/** The mutex type. */
 typedef CRITICAL_SECTION bal_mutex;
+
+/** The condition variable type. */
+typedef CONDITION_VARIABLE bal_condition;
+
+/** The thread handle type. */
 typedef uintptr_t bal_thread;
+
+/** The mutex/condition variable wait time type. */
+typedef DWORD bal_wait;
 
 /** The one-time type. */
 typedef INIT_ONCE bal_once;
@@ -122,12 +147,12 @@ typedef BOOL(CALLBACK* bal_once_fn)(PINIT_ONCE, PVOID, PVOID*);
 #  define BAL_ONCE_INIT INIT_ONCE_STATIC_INIT
 
 /** The thread initializer. */
-#  define BAL_THREAD_INIT 0ull
+#  define BAL_THREAD_INIT 0ULL
 
 /** The mutex initializer. */
 #  define BAL_MUTEX_INIT {0}
 
-# endif
+# endif /* !_WIN32 */
 
 # include "version.h"
 
@@ -144,7 +169,8 @@ typedef struct sockaddr_storage bal_sockaddr;
 # define BAL_FALSE    -1
 # define BAL_MAXERROR 1024
 
-# define BAL_AS_UNKNWN "<unknown>"
+# define BAL_UNKNOWN "<unknown>"
+
 # define BAL_AS_IPV6   "IPv6"
 # define BAL_AS_IPV4   "IPv4"
 
@@ -153,21 +179,17 @@ typedef struct sockaddr_storage bal_sockaddr;
 
 # define BAL_BADSOCKET -1
 
-# define _bal_validstr(str) (str && *str)
+# define BAL_UNUSED(var) (void)(var)
 
-# define BAL_SASIZE(sa) \
-    ((PF_INET == ((struct sockaddr* )&sa)->sa_family) ? sizeof(struct sockaddr_in) \
-                                                      : sizeof(struct sockaddr_in6))
-
-# define BAL_UNUSED(var) (void)var
-# define BAL_ASSERT_UNUSED(var, expr) \
-    if (!(expr)) { \
-        assert((expr)); \
-        BAL_UNUSED((var)); \
-    }
-
-# define BAL_NI_NODNS (NI_NUMERICHOST | NI_NUMERICSERV)
-# define BAL_NI_DNS   (NI_NAMEREQD | NI_NUMERICSERV)
+# if defined(__WIN__)
+#  define BAL_SHUT_RDWR SD_BOTH
+#  define BAL_SHUT_RD   SD_RECEIVE
+#  define BAL_SHUT_WR   SD_SEND
+# else
+#  define BAL_SHUT_RDWR SHUT_RDWR
+#  define BAL_SHUT_RD   SHUT_RD
+#  define BAL_SHUT_WR   SHUT_WR
+# endif
 
 # define BAL_E_READ      0x00000001u
 # define BAL_E_WRITE     0x00000002u
@@ -181,6 +203,7 @@ typedef struct sockaddr_storage bal_sockaddr;
 # define BAL_S_DIE       0x0D1E0D1Eu
 # define BAL_S_CONNECT   0x10000000u
 # define BAL_S_LISTEN    0x20000000u
+# define BAL_S_CLOSE     0x40000000u
 # define BAL_S_READ      0x00000001u
 # define BAL_S_WRITE     0x00000002u
 # define BAL_S_EXCEPT    0x00000003u

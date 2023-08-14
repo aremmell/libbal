@@ -26,8 +26,9 @@
 #ifndef _BAL_H_INCLUDED
 # define _BAL_H_INCLUDED
 
-#include "balplatform.h"
-#include "baltypes.h"
+# include "balplatform.h"
+# include "baltypes.h"
+# include "balerrors.h"
 
 
 /*─────────────────────────────────────────────────────────────────────────────╮
@@ -39,8 +40,8 @@
 extern "C" {
 # endif
 
-int bal_initialize(void);
-int bal_finalize(void);
+bool bal_init(void);
+bool bal_cleanup(void);
 
 int bal_asyncselect(const bal_socket* s, bal_async_callback proc, uint32_t mask);
 
@@ -106,9 +107,8 @@ int bal_getrecvtimeout(const bal_socket* s, long* sec, long* usec);
 
 int bal_geterror(const bal_socket* s);
 
-int bal_islistening(const bal_socket* s);
-int bal_isreadable(const bal_socket* s);
-int bal_iswritable(const bal_socket* s);
+bool bal_isreadable(const bal_socket* s);
+bool bal_iswritable(const bal_socket* s);
 
 int bal_setiomode(const bal_socket* s, bool async);
 size_t bal_recvqueuesize(const bal_socket* s);
@@ -127,91 +127,13 @@ const bal_sockaddr* bal_enumaddrlist(bal_addrlist* al);
 int bal_freeaddrlist(bal_addrlist* al);
 int bal_getaddrstrings(const bal_sockaddr* in, bool dns, bal_addrstrings* out);
 
+void bal_yield_thread(void);
+
 static inline
 bool bal_isbitset(uint32_t bitmask, uint32_t bit)
 {
     return (bitmask & bit) == bit;
 }
-
-
-/*─────────────────────────────────────────────────────────────────────────────╮
-│                             Internal functions                               │
-╰─────────────────────────────────────────────────────────────────────────────*/
-
-
-int _bal_bindany(const bal_socket* s, unsigned short port);
-int _bal_getaddrinfo(int f, int af, int st, const char* host, const char* port,
-    bal_addrinfo* res);
-int _bal_getnameinfo(int f, const bal_sockaddr* in, char* host, char* port);
-
-const struct addrinfo* _bal_enumaddrinfo(bal_addrinfo* ai);
-int _bal_aitoal(bal_addrinfo* in, bal_addrlist* out);
-
-int _bal_getlasterror(const bal_socket* s, bal_error* err);
-void __bal_setlasterror(int err, const char* func, const char* file, int line);
-# define _bal_setlasterror(err) __bal_setlasterror(err, __func__, __file__, __LINE__);
-
-int _bal_retstr(char* out, const char* in, size_t destlen);
-
-int _bal_haspendingconnect(const bal_socket* s);
-int _bal_isclosedcircuit(const bal_socket* s);
-
-BALTHREAD _bal_eventthread(void* p);
-int _bal_initasyncselect(bal_thread* t, bal_mutex* m, bal_eventthread_data * td);
-void _bal_dispatchevents(fd_set* set, bal_eventthread_data * td, int type);
-
-int _bal_sdl_add(bal_selectdata_list* sdl, const bal_selectdata* d);
-int _bal_sdl_rem(bal_selectdata_list* sdl, bal_descriptor sd);
-int _bal_sdl_clr(bal_selectdata_list* sdl);
-int _bal_sdl_size(bal_selectdata_list* sdl);
-int _bal_sdl_enum(bal_selectdata_list* sdl, bal_selectdata** d);
-void _bal_sdl_reset(bal_selectdata_list* sdl);
-bal_selectdata* _bal_sdl_find(const bal_selectdata_list* sdl, bal_descriptor sd);
-
-int _bal_mutex_init(bal_mutex* m);
-int _bal_mutex_lock(bal_mutex* m);
-int _bal_mutex_unlock(bal_mutex* m);
-int _bal_mutex_destroy(bal_mutex* m);
-
-#if defined(__HAVE_STDATOMICS__)
-bool _bal_get_boolean(atomic_bool* boolean);
-void _bal_set_boolean(atomic_bool* boolean, bool value);
-#else
-bool _bal_get_boolean(bool* boolean);
-void _bal_set_boolean(bool* boolean, bool value);
-#endif
-
-void _bal_yield_thread(void);
-
-#if defined(BAL_SELFLOG)
-void __bal_selflog(const char* func, const char* file, uint32_t line,
-    const char* format, ...);
-# define _bal_selflog(...) \
-    __bal_selflog(__func__, __file__, __LINE__, __VA_ARGS__);
-#else
-static inline
-void __dummy_func(const char* dummy, ...) { BAL_UNUSED(dummy); }
-# define _bal_selflog(...) __dummy_func(__VA_ARGS__)
-#endif
-
-static inline
-void _bal_safefree(void** pp)
-{
-    if (pp && *pp) {
-        free(*pp);
-        *pp = NULL;
-    }
-}
-
-# define bal_safefree(pp) _bal_safefree((void**)pp)
-
-bool _bal_once(bal_once* once, bal_once_fn func);
-
-# if defined(__WIN__)
-BOOL CALLBACK _bal_static_once_init(PINIT_ONCE ponce, PVOID param, PVOID* ctx);
-# else
-void _bal_static_once_init(void);
-# endif
 
 # if defined(__cplusplus)
 }

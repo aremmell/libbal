@@ -2,7 +2,7 @@
 
 Berkeley Abstraction Layer: a portable C/C++ wrapper for Berkeley sockets (IPv6 support)
 
-> NOTE: This code is ancient; it probably doesn't even compile. I have placed it here for posterity.
+> NOTE: This code is ancient; I have definitely run into bugs while trying to write test applications, so this is very much a WIP.
 
 ## UPDATE July 2023
 

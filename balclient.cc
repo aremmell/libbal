@@ -37,27 +37,27 @@ int main(int argc, char** argv)
     if (!balcommon::initialize())
         return EXIT_FAILURE;
 
-    bal_socket s;
+    bal_socket s {};
     int ret = bal_sock_create(&s, AF_INET, IPPROTO_TCP, SOCK_STREAM);
     EXIT_IF_FAILED(ret, nullptr, "bal_sock_create");
 
     ret = bal_asyncselect(&s, &balclient::async_events_cb, BAL_E_ALL);
-    EXIT_IF_FAILED(ret, nullptr, "bal_asyncselect");
+    EXIT_IF_FAILED(ret, &s, "bal_asyncselect");
 
     ret = bal_connect(&s, balcommon::localaddr, balcommon::portnum);
-    EXIT_IF_FAILED(ret, nullptr, "bal_connect");
+    EXIT_IF_FAILED(ret, &s, "bal_connect");
 
     printf("running; ctrl+c to exit...\n");
 
     do {
-        _bal_yield_thread();
+        bal_yield_thread();
     } while (balcommon::should_run());
 
-    ret = bal_close(&s);
-    EXIT_IF_FAILED(ret, nullptr, "bal_close");
+    if (BAL_TRUE != bal_close(&s))
+        balcommon::print_last_lib_error(&s, "bal_close");
 
-    ret = bal_finalize();
-    EXIT_IF_FAILED(ret, nullptr, "bal_finalize");
+    if (!bal_cleanup())
+        balcommon::print_last_lib_error(nullptr, "bal_cleanup");
 
     return EXIT_SUCCESS;
 }
@@ -76,8 +76,7 @@ void balclient::async_events_cb(bal_socket* s, uint32_t events)
             s->sd, balcommon::localaddr, balcommon::portnum, err.code, err.desc);
     }
 
-    if (bal_isbitset(events, BAL_E_READ))
-    {
+    if (bal_isbitset(events, BAL_E_READ)) {
         char read_buf[2048] = {0};
         int read = bal_recv(s, &read_buf[0], 2047, 0);
         if (read > 0)
@@ -95,7 +94,9 @@ void balclient::async_events_cb(bal_socket* s, uint32_t events)
         } else {
             if (!wrote_helo) {
                 const char* req = "HELO";
-                int ret = bal_send(s, req, 4, 0u);
+                constexpr const size_t req_size = 4;
+
+                int ret = bal_send(s, req, req_size, 0U);
                 if (ret <= 0)
                     balcommon::print_last_lib_error(s, "bal_send");
                 else
@@ -111,7 +112,7 @@ void balclient::async_events_cb(bal_socket* s, uint32_t events)
     }
 
     if (bal_isbitset(events, BAL_E_EXCEPTION)) {
-        printf("error: got exception condition! err: %d\n",
+        printf("[" BAL_SOCKET_SPEC "] error: got exception! err: %d\n", s->sd,
             bal_geterror(s));
         return;
     }

@@ -25,6 +25,7 @@
  */
 #include "balserver.hh"
 #include <cstdio>
+#include <array>
 
 using namespace std;
 
@@ -41,48 +42,50 @@ int main(int argc, char** argv)
     EXIT_IF_FAILED(ret, nullptr, "bal_sock_create");
 
     ret = bal_setreuseaddr(&s, 1);
-    EXIT_IF_FAILED(ret, nullptr, "bal_setreuseaddr");
+    EXIT_IF_FAILED(ret, &s, "bal_setreuseaddr");
 
     ret = bal_bind(&s, balcommon::localaddr, balcommon::portnum);
-    EXIT_IF_FAILED(ret, nullptr, "bal_bind");
+    EXIT_IF_FAILED(ret, &s, "bal_bind");
 
     ret = bal_asyncselect(&s, &balserver::async_events_cb, BAL_E_ALL);
-    EXIT_IF_FAILED(ret, nullptr, "bal_asyncselect");
+    EXIT_IF_FAILED(ret, &s, "bal_asyncselect");
 
     ret = bal_listen(&s, 0);
-    EXIT_IF_FAILED(ret, nullptr, "bal_listen");
+    EXIT_IF_FAILED(ret, &s, "bal_listen");
 
     printf("listening on %s:%s; ctrl+c to exit...\n",
         balcommon::localaddr, balcommon::portnum);
 
     do {
-        _bal_yield_thread();
+        bal_yield_thread();
     } while (balcommon::should_run());
 
-    ret = bal_close(&s);
-    EXIT_IF_FAILED(ret, nullptr, "bal_close");
+    ret = bal_asyncselect(&s, nullptr, 0U);
+    EXIT_IF_FAILED(ret, &s, "bal_asyncselect");
 
-    ret = bal_finalize();
-    EXIT_IF_FAILED(ret, nullptr, "bal_finalize");
+    if (BAL_TRUE != bal_close(&s))
+        balcommon::print_last_lib_error(&s, "bal_close");
+
+    if (!bal_cleanup())
+        balcommon::print_last_lib_error(nullptr, "bal_cleanup");
 
     return EXIT_SUCCESS;
 }
 
 void balserver::async_events_cb(bal_socket* s, uint32_t events)
 {
-    if (bal_isbitset(events, BAL_E_ACCEPT))
-    {
+    if (bal_isbitset(events, BAL_E_ACCEPT)) {
         bal_socket client_socket {};
         bal_sockaddr client_addr {};
 
         int ret = bal_accept(s, &client_socket, &client_addr);
         if (BAL_TRUE != ret) {
-            balcommon::print_last_lib_error(nullptr, "bal_accept");
+            balcommon::print_last_lib_error(s, "bal_accept");
             return;
         }
 
         bal_addrstrings client_strings {};
-        ret = bal_getaddrstrings(&client_addr, 0, &client_strings);
+        ret = bal_getaddrstrings(&client_addr, false, &client_strings);
         if (BAL_TRUE != ret) {
             balcommon::print_last_lib_error(nullptr, "bal_getaddrstrings");
             bal_close(&client_socket);
@@ -91,7 +94,7 @@ void balserver::async_events_cb(bal_socket* s, uint32_t events)
 
         ret = bal_asyncselect(&client_socket, &async_events_cb, BAL_E_ALL);
         if (BAL_TRUE != ret) {
-            balcommon::print_last_lib_error(nullptr, "bal_asyncselect");
+            balcommon::print_last_lib_error(&client_socket, "bal_asyncselect");
             bal_close(&client_socket);
             return;
         }
@@ -101,35 +104,41 @@ void balserver::async_events_cb(bal_socket* s, uint32_t events)
                client_strings.port, client_socket.sd);
     }
 
-    if (bal_isbitset(events, BAL_E_READ))
-    {
-        static bool sent_reply = false;
-        static const char* reply = "O, HELO 2 U";
-        
-        char read_buf[2048] = {0};
-        int read = bal_recv(s, &read_buf[0], 2047, 0);
-        if (read > 0) {
-            sent_reply = false;
-            printf("[" BAL_SOCKET_SPEC "] read %d bytes: '%s'\n", s->sd, read, read_buf);
+    if (bal_isbitset(events, BAL_E_READ)) {
+        constexpr const size_t buf_size = 2048;
+        std::array<char, buf_size> buf {};
 
-            if (bal_iswritable(s) && !sent_reply) {
-                int sent = bal_send(s, reply, 11, 0u);
-                if (sent > 0) {
-                    sent_reply = true;
-                    printf("[" BAL_SOCKET_SPEC "] wrote %d bytes\n", s->sd, 11);
-                }
-            }
+        int read = bal_recv(s, buf.data(), buf.size() - 1, 0);
+        if (read > 0) {
+            printf("[" BAL_SOCKET_SPEC "] read %d bytes: '%s'\n", s->sd, read, buf.data());
         } else {
             printf("[" BAL_SOCKET_SPEC "] read error %d!\n", s->sd, bal_geterror(s));
         }
     }
 
+    if (bal_isbitset(events, BAL_E_WRITE)) {
+        static bool sent_reply = false;
+        if (!sent_reply) {
+            static const char* reply = "O, HELO 2 U";
+            constexpr const size_t reply_size = 11;
+
+            int sent = bal_send(s, reply, reply_size, 0U);
+            BAL_ASSERT(reply_size == sent);
+            if (sent > 0) {
+                sent_reply = true;
+                printf("[" BAL_SOCKET_SPEC "] wrote %d bytes\n", s->sd, sent);
+            }
+        }
+    }
+
     if (bal_isbitset(events, BAL_E_CLOSE)) {
         printf("[" BAL_SOCKET_SPEC "] connection closed.\n", s->sd);
+        bal_close(s);
     }
 
     if (bal_isbitset(events, BAL_E_EXCEPTION)) {
-        printf("[" BAL_SOCKET_SPEC "] error: got exception condition! err: %d\n", s->sd,
+        printf("[" BAL_SOCKET_SPEC "] error: got exception! err: %d\n", s->sd,
             bal_geterror(s));
+        return;
     }
 }
