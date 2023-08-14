@@ -27,6 +27,10 @@
 #include "balerrors.h"
 #include "balinternal.h"
 
+#if defined(__WIN__)
+# pragma comment(lib, "shlwapi.lib")
+#endif
+
 void __bal_dbglog(const char* func, const char* file, uint32_t line,
     const char* format, ...)
 {
