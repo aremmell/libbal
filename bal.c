@@ -336,7 +336,7 @@ int bal_accept(const bal_socket* s, bal_socket** res, bal_sockaddr* resaddr)
         } else {
             _bal_init_socket(*res);
             socklen_t sasize = sizeof(bal_sockaddr);
-            int sd = accept(s->sd, (struct sockaddr*)resaddr, &sasize);
+            bal_descriptor sd = accept(s->sd, (struct sockaddr*)resaddr, &sasize);
 
             if (sd > 0 ||
 #if defined(__WIN__)
