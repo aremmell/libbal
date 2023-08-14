@@ -41,12 +41,11 @@ extern "C" {
 bool bal_init(void);
 bool bal_cleanup(void);
 
-int bal_asyncselect(const bal_socket* s, bal_async_callback proc, uint32_t mask);
+int bal_asyncselect(bal_socket* s, bal_async_callback proc, uint32_t mask);
 
-int bal_autosocket(bal_socket* s, int af, int pt, const char* host, const char* port);
-int bal_sock_create(bal_socket* s, int af, int pt, int st);
-void bal_reset(bal_socket* s);
-int bal_close(bal_socket* s);
+int bal_autosocket(bal_socket** s, int addr_fam, int proto, const char* host, const char* port);
+int bal_sock_create(bal_socket** s, int addr_fam, int type, int proto);
+int bal_close(bal_socket** s);
 int bal_shutdown(bal_socket* s, int how);
 
 int bal_connect(const bal_socket* s, const char* host, const char* port);
@@ -66,7 +65,7 @@ int bal_recvfrom(const bal_socket* s, void* data, size_t len, int flags,
 int bal_bind(const bal_socket* s, const char* addr, const char* port);
 
 int bal_listen(bal_socket* s, int backlog);
-int bal_accept(const bal_socket* s, bal_socket* res, bal_sockaddr* resaddr);
+int bal_accept(const bal_socket* s, bal_socket** res, bal_sockaddr* resaddr);
 
 int bal_getoption(const bal_socket* s, int level, int name, void* optval,
     socklen_t len);
@@ -107,6 +106,7 @@ int bal_geterror(const bal_socket* s);
 
 bool bal_isreadable(const bal_socket* s);
 bool bal_iswritable(const bal_socket* s);
+bool bal_islistening(const bal_socket* s);
 
 int bal_setiomode(const bal_socket* s, bool async);
 size_t bal_recvqueuesize(const bal_socket* s);

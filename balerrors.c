@@ -122,6 +122,7 @@ int _bal_getlasterror(const bal_socket* s, bal_error* err)
 
 bool _bal_setlasterror(int err)
 {
+    _bal_dbglog("setting last error to %d", err);
 #if defined(__WIN__)
     WSASetLastError(err);
 #else

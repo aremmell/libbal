@@ -36,13 +36,13 @@
 bool _bal_init(void);
 bool _bal_cleanup(void);
 
-int _bal_asyncselect(const bal_socket* s, bal_async_callback proc, uint32_t mask);
+int _bal_asyncselect(bal_socket* s, bal_async_callback proc, uint32_t mask);
 
 bool _bal_initasyncselect(void);
 bool _bal_cleanupasyncselect(void);
 
 bool _bal_defer_add_socket(bal_sockdata* d);
-bool _bal_defer_remove_socket(bal_sockdata* d);
+bool _bal_defer_remove_socket(bal_descriptor sd, bal_sockdata* d);
 
 int _bal_bindany(const bal_socket* s, unsigned short port);
 int _bal_getaddrinfo(int f, int af, int st, const char* host, const char* port,
@@ -53,8 +53,8 @@ int _bal_aitoal(struct addrinfo* ai, bal_addrlist* out);
 
 int _bal_retstr(char* out, const char* in, size_t destlen);
 
-bool _bal_islistening(const bal_socket* s);
-bool _bal_haspendingconnect(const bal_socket* s);
+bool _bal_islistening(bal_socket* s);
+bool _bal_haspendingconnect(bal_socket* s);
 bool _bal_isclosedcircuit(const bal_socket* s);
 
 BALTHREAD _bal_eventthread(void* ctx);
@@ -158,6 +158,9 @@ bool _bal_get_boolean(const bool* boolean);
 void _bal_set_boolean(bool* boolean, bool value);
 # endif
 
+void _bal_init_socket(bal_socket* s);
+void _bal_init_sockdata(bal_sockdata* d);
+
 bool _bal_once(bal_once* once, bal_once_fn func);
 
 pid_t _bal_gettid(void);
@@ -193,6 +196,8 @@ void __bal_safefree(void** pp)
 # define bal_countof(arr) (sizeof((arr)) / sizeof((arr)[0]))
 
 # define _bal_validstr(str) ((str) && (*str))
+
+# define _bal_validsockdata(s) (NULL != (s) && NULL != (s)->d)
 
 /** Converts a bal_socket into human-readable form. */
 void _bal_socket_tostr(const bal_socket* s, char buf[256]);

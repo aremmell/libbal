@@ -33,11 +33,12 @@
  * @brief BAL state structure.
  */
 typedef struct {
-    bal_descriptor sd; /**< Socket descriptor. */
-    int af;            /**< Address family (e.g. AF_INET). */
-    int st;            /**< Socket type (e.g., SOCK_STREAM). */
-    int pf;            /**< Protocol family (e.g., IPPROTO_TCP). */
-    uint32_t _f;       /**< Internally-used state flags. */
+    bal_descriptor sd;      /**< Socket descriptor. */
+    int addr_fam;           /**< Address family (e.g. AF_INET). */
+    int type;               /**< Socket type (e.g., SOCK_STREAM). */
+    int proto;              /**< Protocol (e.g., IPPROTO_TCP). */
+    struct bal_sockdata* d; /**< Socket state data. */
+    bal_mutex m;            /**< Mutex guard for socket state data. */
 } bal_socket;
 
 typedef struct _bal_addr {
@@ -67,9 +68,10 @@ typedef void (*bal_async_callback)(bal_socket*, uint32_t);
 
 /* Socket state data (value storage for bal_list). */
 typedef struct bal_sockdata {
-    bal_socket s;
-    uint32_t mask;
-    bal_async_callback proc;
+    bal_socket* s;           /**< Pointer to associated socket. */
+    uint32_t mask;           /**< State bitmask. */
+    bal_async_callback proc; /**< Async I/O event callback. */
+    bal_mutex m;             /**< Mutex guard for associated socket, mask. */
 } bal_sockdata;
 
 /* Iteration callback. Returns false to stop iteration. */

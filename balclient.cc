@@ -38,15 +38,15 @@ int main(int argc, char** argv)
     if (!balcommon::initialize())
         return EXIT_FAILURE;
 
-    bal_socket s {};
-    int ret = bal_sock_create(&s, AF_INET, IPPROTO_TCP, SOCK_STREAM);
+    bal_socket* s = nullptr;
+    int ret = bal_sock_create(&s, AF_INET, SOCK_STREAM, IPPROTO_TCP);
     EXIT_IF_FAILED(ret, nullptr, "bal_sock_create");
 
-    ret = bal_asyncselect(&s, &balclient::async_events_cb, BAL_E_ALL);
-    EXIT_IF_FAILED(ret, &s, "bal_asyncselect");
+    ret = bal_asyncselect(s, &balclient::async_events_cb, BAL_E_ALL);
+    EXIT_IF_FAILED(ret, s, "bal_asyncselect");
 
-    ret = bal_connect(&s, balcommon::localaddr, balcommon::portnum);
-    EXIT_IF_FAILED(ret, &s, "bal_connect");
+    ret = bal_connect(s, balcommon::localaddr, balcommon::portnum);
+    EXIT_IF_FAILED(ret, s, "bal_connect");
 
     printf("running; ctrl+c to exit...\n");
 
@@ -55,7 +55,7 @@ int main(int argc, char** argv)
     } while (balcommon::should_run());
 
     if (BAL_TRUE != bal_close(&s))
-        balcommon::print_last_lib_error(&s, "bal_close");
+        balcommon::print_last_lib_error(s, "bal_close");
 
     if (!bal_cleanup())
         balcommon::print_last_lib_error(nullptr, "bal_cleanup");
