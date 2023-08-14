@@ -258,8 +258,8 @@ bool _bal_initasyncselect(void)
 
     for (size_t n = 0; n < bal_countof(threads); n++) {
 #if defined(__WIN__)
-        *threads[n].thread = _beginthreadex(NULL, 0U threads[n].func,
-            &_bal_as_container, 0U NULL);
+        *threads[n].thread = _beginthreadex(NULL, 0U, threads[n].func,
+            &_bal_as_container, 0U, NULL);
         BAL_ASSERT(0ULL != *threads[n].thread);
 
         create &= 0ULL != *threads[n].thread;
@@ -319,7 +319,7 @@ bool _bal_cleanupasyncselect(void)
         _bal_as_container.lst_rem
     };
 
-    for (size_t n = 0; n < bal_countof(lists); n++) {
+    for (size_t n = 0UL; n < bal_countof(lists); n++) {
         /* for the main list, some heap data may still be present;
          * the other lists contain the same pointers, so it's not necessary to
          * process them as well. */
