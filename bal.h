@@ -107,8 +107,8 @@ int bal_getrecvtimeout(const bal_socket* s, long* sec, long* usec);
 
 int bal_geterror(const bal_socket* s);
 
-int bal_isreadable(const bal_socket* s);
-int bal_iswritable(const bal_socket* s);
+bool bal_isreadable(const bal_socket* s);
+bool bal_iswritable(const bal_socket* s);
 
 int bal_setiomode(const bal_socket* s, bool async);
 size_t bal_recvqueuesize(const bal_socket* s);

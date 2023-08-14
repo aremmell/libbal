@@ -54,9 +54,9 @@ int _bal_aitoal(bal_addrinfo* in, bal_addrlist* out);
 
 int _bal_retstr(char* out, const char* in, size_t destlen);
 
-int _bal_islistening(const bal_socket* s);
-int _bal_haspendingconnect(const bal_socket* s);
-int _bal_isclosedcircuit(const bal_socket* s);
+bool _bal_islistening(const bal_socket* s);
+bool _bal_haspendingconnect(const bal_socket* s);
+bool _bal_isclosedcircuit(const bal_socket* s);
 
 BALTHREAD _bal_eventthread(void* ctx);
 BALTHREAD _bal_syncthread(void* ctx);

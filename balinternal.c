@@ -502,41 +502,40 @@ int _bal_retstr(char* out, const char* in, size_t destlen)
     return r;
 }
 
-int _bal_haspendingconnect(const bal_socket* s)
+bool _bal_haspendingconnect(const bal_socket* s)
 {
-    return (s && bal_isbitset(s->_f, BAL_F_PENDCONN)) ? BAL_TRUE : BAL_FALSE;
+    return NULL != s && bal_isbitset(s->_f, BAL_F_PENDCONN);
 }
 
-int _bal_islistening(const bal_socket* s)
+bool _bal_islistening(const bal_socket* s)
 {
-    return (s && bal_isbitset(s->_f, BAL_F_LISTENING)) ? BAL_TRUE : BAL_FALSE;
+    return NULL != s && bal_isbitset(s->_f, BAL_F_LISTENING);
 }
 
-int _bal_isclosedcircuit(const bal_socket* s)
+bool _bal_isclosedcircuit(const bal_socket* s)
 {
-    int r = BAL_FALSE;
+    if (NULL == s)
+        return false;
 
-    if (s) {
-        unsigned char buf = '\0';
-        int rcv = recv(s->sd, &buf, sizeof(unsigned char), MSG_PEEK);
+    int buf = 0;
+    int rcv = recv(s->sd, &buf, sizeof(int), MSG_PEEK);
 
-        if (0 == rcv)
-            r = BAL_TRUE;
-        else if (-1 == rcv) {
+    if (0 == rcv) {
+        return true;
+    } else if (-1 == rcv) {
 #if defined(__WIN__)
-            int error = WSAGetLastError();
-            if (WSAENETDOWN == error     || WSAENOTCONN == error  ||
-                WSAEOPNOTSUPP == error   || WSAESHUTDOWN == error ||
-                WSAECONNABORTED == error || WSAECONNRESET == error)
-                r = BAL_TRUE;
+    int error = WSAGetLastError();
+    if (WSAENETDOWN == error     || WSAENOTCONN == error  ||
+        WSAEOPNOTSUPP == error   || WSAESHUTDOWN == error ||
+        WSAECONNABORTED == error || WSAECONNRESET == error)
+        return true;
 #else
-            if (EBADF == errno || ENOTCONN == errno || ENOTSOCK == errno)
-                r = BAL_TRUE;
+    if (EBADF == errno || ENOTCONN == errno || ENOTSOCK == errno)
+        return true;
 #endif
-        }
     }
 
-    return r;
+    return false;
 }
 
 BALTHREAD _bal_eventthread(void* ctx)
@@ -879,7 +878,7 @@ bool __bal_list_dispatch_events(bal_descriptor key, bal_selectdata* val, void* c
                 if (bal_isbitset(val->mask, BAL_E_READ)) {
                     if (bal_isbitset(val->mask, BAL_S_LISTEN))
                         event = BAL_E_ACCEPT;
-                    else if (BAL_TRUE == _bal_isclosedcircuit(val->s))
+                    else if (_bal_isclosedcircuit(val->s))
                         event = BAL_E_CLOSE;
                     else
                         event = BAL_E_READ;
@@ -965,12 +964,12 @@ bool __bal_list_event_prepare(bal_descriptor key, bal_selectdata* val, void* ctx
 {
     _bal_list_event_prepare_data* epd = (_bal_list_event_prepare_data*)ctx;
 
-    if (BAL_TRUE == _bal_haspendingconnect(val->s)) {
+    if (_bal_haspendingconnect(val->s)) {
         val->mask |= BAL_S_CONNECT;
         val->s->_f &= ~BAL_F_PENDCONN;
     }
 
-    if (BAL_TRUE == _bal_islistening(val->s)) {
+    if (_bal_islistening(val->s)) {
         val->mask |= BAL_S_LISTEN;
         val->s->_f &= ~BAL_F_LISTENING;
     }

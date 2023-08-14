@@ -502,9 +502,9 @@ int bal_geterror(const bal_socket* s)
     return r;
 }
 
-int bal_isreadable(const bal_socket* s)
+bool bal_isreadable(const bal_socket* s)
 {
-    int r = BAL_FALSE;
+    bool r = false;
 
     if (s) {
         fd_set fd        = {0};
@@ -515,16 +515,16 @@ int bal_isreadable(const bal_socket* s)
 
         if (0 == select(1, &fd, NULL, NULL, &t)) {
             if (FD_ISSET(s->sd, &fd))
-                r = BAL_TRUE;
+                r = true;
         }
     }
 
     return r;
 }
 
-int bal_iswritable(const bal_socket* s)
+bool bal_iswritable(const bal_socket* s)
 {
-    int r = BAL_FALSE;
+    bool r = false;
 
     if (s) {
         fd_set fd        = {0};
@@ -535,7 +535,7 @@ int bal_iswritable(const bal_socket* s)
 
         if (0 == select(1, NULL, &fd, NULL, &t)) {
             if (FD_ISSET(s->sd, &fd))
-                r = BAL_TRUE;
+                r = true;
         }
     }
 
