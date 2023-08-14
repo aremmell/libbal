@@ -76,8 +76,7 @@ void balclient::async_events_cb(bal_socket* s, uint32_t events)
             s->sd, balcommon::localaddr, balcommon::portnum, err.code, err.desc);
     }
 
-    if (bal_isbitset(events, BAL_E_READ))
-    {
+    if (bal_isbitset(events, BAL_E_READ)) {
         char read_buf[2048] = {0};
         int read = bal_recv(s, &read_buf[0], 2047, 0);
         if (read > 0)
@@ -96,7 +95,7 @@ void balclient::async_events_cb(bal_socket* s, uint32_t events)
             if (!wrote_helo) {
                 const char* req = "HELO";
                 constexpr const size_t req_size = 4;
-                
+
                 int ret = bal_send(s, req, req_size, 0U);
                 if (ret <= 0)
                     balcommon::print_last_lib_error(s, "bal_send");
@@ -113,7 +112,7 @@ void balclient::async_events_cb(bal_socket* s, uint32_t events)
     }
 
     if (bal_isbitset(events, BAL_E_EXCEPTION)) {
-        printf("error: got exception condition! err: %d\n",
+        printf("[" BAL_SOCKET_SPEC "] error: got exception! err: %d\n", s->sd,
             bal_geterror(s));
         return;
     }

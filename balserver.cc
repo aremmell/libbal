@@ -74,8 +74,7 @@ int main(int argc, char** argv)
 
 void balserver::async_events_cb(bal_socket* s, uint32_t events)
 {
-    if (bal_isbitset(events, BAL_E_ACCEPT))
-    {
+    if (bal_isbitset(events, BAL_E_ACCEPT)) {
         bal_socket client_socket {};
         bal_sockaddr client_addr {};
 
@@ -105,29 +104,30 @@ void balserver::async_events_cb(bal_socket* s, uint32_t events)
                client_strings.port, client_socket.sd);
     }
 
-    if (bal_isbitset(events, BAL_E_READ))
-    {
+    if (bal_isbitset(events, BAL_E_READ)) {
         constexpr const size_t buf_size = 2048;
         std::array<char, buf_size> buf {};
 
         int read = bal_recv(s, buf.data(), buf.size() - 1, 0);
         if (read > 0) {
             printf("[" BAL_SOCKET_SPEC "] read %d bytes: '%s'\n", s->sd, read, buf.data());
-
-            static bool sent_reply = false;
-            if (bal_iswritable(s) && !sent_reply) {
-                static const char* reply = "O, HELO 2 U";
-                constexpr const size_t reply_size = 11;
-
-                int sent = bal_send(s, reply, reply_size, 0U);
-                BAL_ASSERT(reply_size == sent);
-                if (sent > 0) {
-                    sent_reply = true;
-                    printf("[" BAL_SOCKET_SPEC "] wrote %d bytes\n", s->sd, sent);
-                }
-            }
         } else {
             printf("[" BAL_SOCKET_SPEC "] read error %d!\n", s->sd, bal_geterror(s));
+        }
+    }
+
+    if (bal_isbitset(events, BAL_E_WRITE)) {
+        static bool sent_reply = false;
+        if (!sent_reply) {
+            static const char* reply = "O, HELO 2 U";
+            constexpr const size_t reply_size = 11;
+
+            int sent = bal_send(s, reply, reply_size, 0U);
+            BAL_ASSERT(reply_size == sent);
+            if (sent > 0) {
+                sent_reply = true;
+                printf("[" BAL_SOCKET_SPEC "] wrote %d bytes\n", s->sd, sent);
+            }
         }
     }
 
@@ -137,7 +137,8 @@ void balserver::async_events_cb(bal_socket* s, uint32_t events)
     }
 
     if (bal_isbitset(events, BAL_E_EXCEPTION)) {
-        printf("[" BAL_SOCKET_SPEC "] error: got exception condition! err: %d\n", s->sd,
+        printf("[" BAL_SOCKET_SPEC "] error: got exception! err: %d\n", s->sd,
             bal_geterror(s));
+        return;
     }
 }
