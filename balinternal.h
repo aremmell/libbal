@@ -47,26 +47,19 @@ bool _bal_cleanupasyncselect(void);
 
 int _bal_sock_destroy(bal_socket** s);
 
-bool _bal_defer_add_socket(bal_socket* s);
-bool _bal_defer_remove_socket(bal_descriptor sd, bal_socket* s);
+/*bool _bal_defer_add_socket(bal_socket* s);
+bool _bal_defer_remove_socket(bal_descriptor sd, bal_socket* s);*/
 
-int _bal_bindany(const bal_socket* s, unsigned short port);
 int _bal_getaddrinfo(int f, int af, int st, const char* host, const char* port,
     struct addrinfo** res);
 int _bal_getnameinfo(int f, const bal_sockaddr* in, char* host, char* port);
-
-int _bal_aitoal(struct addrinfo* ai, bal_addrlist* out);
-
-int _bal_retstr(char* out, const char* in, size_t destlen);
 
 bool _bal_haspendingconnect(bal_socket* s);
 uint32_t _bal_on_pending_conn_event(bal_socket* s);
 bool _bal_isclosedcircuit(const bal_socket* s);
 
 bal_threadret _bal_eventthread(void* ctx);
-bal_threadret _bal_syncthread(void* ctx);
-
-typedef bal_threadret (*bal_thread_func)(void*);
+/* bal_threadret _bal_syncthread(void* ctx); */
 
 void _bal_processevents(bal_list* lst, uint32_t type);
 void _bal_dispatchevents(const fd_set* set, bal_descriptor sd, bal_socket* s,
@@ -96,7 +89,7 @@ bool _bal_list_iterate(bal_list* lst, bal_descriptor* key, bal_socket** val);
 void _bal_list_reset_iterator(bal_list* lst);
 
 /** Calls `func` for each node in the list, passing `ctx`. */
-bool _bal_list_iterate_func(bal_list* lst, void* ctx, bal_list_iter_callback cb);
+bool _bal_list_iterate_func(bal_list* lst, void* ctx, bal_list_iter_cb cb);
 
 /** Finds a node by key, and destroys it if found. */
 bool _bal_list_remove(bal_list* lst, bal_descriptor key, bal_socket** val);
@@ -164,7 +157,10 @@ void _bal_set_boolean(bool* boolean, bool value);
 
 bool _bal_once(bal_once* once, bal_once_fn func);
 
+# if defined(BAL_DBGLOG)
+/** Returns the current thread identifier (used by _bal_dbglog). */
 pid_t _bal_gettid(void);
+# endif
 
 # if defined(__WIN__)
 BOOL CALLBACK _bal_static_once_init_func(PINIT_ONCE ponce, PVOID param, PVOID* ctx);
@@ -172,46 +168,8 @@ BOOL CALLBACK _bal_static_once_init_func(PINIT_ONCE ponce, PVOID param, PVOID* c
 void _bal_static_once_init_func(void);
 # endif
 
-# define _BAL_SASIZE(sa) \
-    ((PF_INET6 == ((struct sockaddr* )&(sa))->sa_family) \
-        ? sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in))
-
 # define _BAL_NI_NODNS (NI_NUMERICHOST | NI_NUMERICSERV)
 # define _BAL_NI_DNS   (NI_NAMEREQD | NI_NUMERICSERV)
-
-static inline
-void __bal_safefree(void** pp)
-{
-    if (pp && *pp) {
-        free(*pp);
-        *pp = NULL;
-    }
-}
-
-# define _bal_safefree(pp) __bal_safefree((void**)(pp))
-
-# define _bal_validptr(p) (NULL != (p))
-
-# define _bal_validptrptr(pp) (NULL != (pp))
-
-# define bal_countof(arr) (sizeof((arr)) / sizeof((arr)[0]))
-
-# define _bal_validstr(str) ((str) && (*str))
-
-# define _bal_validsock(s) (NULL != (s) && BAL_BADSOCKET != (s)->sd)
-
-# define _BAL_ENTER_MUTEX(m, name) \
-    bool name##_locked = _bal_mutex_lock(m); \
-    BAL_ASSERT(name##_locked); \
-    if (name##_locked) {
-
-# define _BAL_LEAVE_MUTEX(m, name) \
-    bool name##_unlocked = _bal_mutex_unlock(m); \
-    BAL_ASSERT_UNUSED(name##_unlocked, name##_unlocked); \
-    }
-
-/** Converts a bal_socket into human-readable form. */
-void _bal_socket_tostr(const bal_socket* s, char buf[256]);
 
 # if defined(__cplusplus)
 }

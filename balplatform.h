@@ -94,6 +94,9 @@ typedef pthread_once_t bal_once;
 /** The one-time execution function type. */
 typedef void (*bal_once_fn)(void);
 
+/** The thread callback return type. */
+typedef void* bal_threadret;
+
 /** The one-time initializer. */
 #  define BAL_ONCE_INIT PTHREAD_ONCE_INIT
 
@@ -102,6 +105,10 @@ typedef void (*bal_once_fn)(void);
 
 /** The mutex initializer. */
 #  define BAL_MUTEX_INIT PTHREAD_MUTEX_INITIALIZER
+
+#  define BAL_SHUT_RDWR SHUT_RDWR
+#  define BAL_SHUT_RD   SHUT_RD
+#  define BAL_SHUT_WR   SHUT_WR
 
 # else /* _WIN32 */
 
@@ -147,6 +154,9 @@ typedef BOOL(CALLBACK* bal_once_fn)(PINIT_ONCE, PVOID, PVOID*);
 /** The process/thread identifier type. */
 typedef int pid_t;
 
+/** The thread callback return type. */
+typedef unsigned bal_threadret;
+
 /** The one-time initializer. */
 #  define BAL_ONCE_INIT INIT_ONCE_STATIC_INIT
 
@@ -155,6 +165,10 @@ typedef int pid_t;
 
 /** The mutex initializer. */
 #  define BAL_MUTEX_INIT {0}
+
+#  define BAL_SHUT_RDWR SD_BOTH
+#  define BAL_SHUT_RD   SD_RECEIVE
+#  define BAL_SHUT_WR   SD_SEND
 
 # endif /* !_WIN32 */
 
@@ -167,36 +181,21 @@ typedef int pid_t;
 # include <inttypes.h>
 # include <assert.h>
 
-typedef struct sockaddr_storage bal_sockaddr;
-
 # if defined(__MACOS__)
 #  undef __HAVE_SO_ACCEPTCONN__
 # else
 #  define __HAVE_SO_ACCEPTCONN__
 # endif
 
-# define BAL_TRUE     0
-# define BAL_FALSE    -1
+# define BAL_TRUE        0
+# define BAL_FALSE      -1
+# define BAL_BADSOCKET  -1
 # define BAL_MAXERROR 1024
 
 # define BAL_UNKNOWN "<unknown>"
 
-# define BAL_AS_IPV6   "IPv6"
-# define BAL_AS_IPV4   "IPv4"
-
-# define BAL_BADSOCKET -1
-
-# define BAL_UNUSED(var) (void)(var)
-
-# if defined(__WIN__)
-#  define BAL_SHUT_RDWR SD_BOTH
-#  define BAL_SHUT_RD   SD_RECEIVE
-#  define BAL_SHUT_WR   SD_SEND
-# else
-#  define BAL_SHUT_RDWR SHUT_RDWR
-#  define BAL_SHUT_RD   SHUT_RD
-#  define BAL_SHUT_WR   SHUT_WR
-# endif
+# define BAL_AS_IPV6 "IPv6"
+# define BAL_AS_IPV4 "IPv4"
 
 # define BAL_E_READ      0x00000001U
 # define BAL_E_WRITE     0x00000002U
@@ -213,12 +212,6 @@ typedef struct sockaddr_storage bal_sockaddr;
 # define BAL_S_READ      0x00000001U
 # define BAL_S_WRITE     0x00000002U
 # define BAL_S_EXCEPT    0x00000003U
-
-# if defined(__WIN__)
-#  define bal_threadret unsigned
-# else
-#  define bal_threadret void*
-# endif
 
 # if (defined(__clang__) || defined(__GNUC__)) && defined(__FILE_NAME__)
 #  define __file__ __FILE_NAME__

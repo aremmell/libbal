@@ -28,30 +28,32 @@
 
 # include "balplatform.h"
 
+/** The sockaddr_storage wrapper type. */
+typedef struct sockaddr_storage bal_sockaddr;
+
 struct bal_socket; /* forward declaration. */
 
-/* bal_asyncselect callback. */
+/** bal_asyncselect callback. */
 typedef void (*bal_async_cb)(struct bal_socket*, uint32_t);
 
-/* Iteration callback. Returns false to stop iteration. */
-typedef bool (*bal_list_iter_callback)(bal_descriptor /*key*/,
+/** List iteration callback. Returns false to stop iteration. */
+typedef bool (*bal_list_iter_cb)(bal_descriptor /*key*/,
     struct bal_socket* /*val*/, void* /*ctx*/);
+
+/** Worker thread callback. */
+typedef bal_threadret (*bal_thread_cb)(void*);
 
 typedef struct bal_state {
     uint32_t mask;     /**< State bitmask. */
     bal_async_cb proc; /**< Async I/O event callback. */
 } bal_state;
 
-/**
- * @struct bal_socket
- * @brief BAL state structure.
- */
 typedef struct bal_socket {
     bal_descriptor sd; /**< Socket descriptor. */
     int addr_fam;      /**< Address family (e.g. AF_INET). */
     int type;          /**< Socket type (e.g., SOCK_STREAM). */
     int proto;         /**< Protocol (e.g., IPPROTO_TCP). */
-    bal_state state;   /**< Socket state data. */
+    bal_state state;   /**< Internal socket state data. */
     // bal_mutex m;    /**< Mutex guard for socket state data. */
 } bal_socket;
 

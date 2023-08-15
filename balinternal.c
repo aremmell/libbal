@@ -24,6 +24,7 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 #include "balinternal.h"
+#include "balhelpers.h"
 #include "bal.h"
 
 /******************************************************************************\
@@ -230,7 +231,7 @@ bool _bal_initasyncselect(void)
 
     struct {
         bal_thread* thread;
-        bal_thread_func func;
+        bal_thread_cb proc;
     } threads[] = {
         {
             &_bal_as_container.thread,
@@ -244,7 +245,7 @@ bool _bal_initasyncselect(void)
 
     for (size_t n = 0; n < bal_countof(threads); n++) {
 #if defined(__WIN__)
-        *threads[n].thread = _beginthreadex(NULL, 0U, threads[n].func,
+        *threads[n].thread = _beginthreadex(NULL, 0U, threads[n].proc,
             &_bal_as_container, 0U, NULL);
         BAL_ASSERT(0ULL != *threads[n].thread);
 
@@ -252,11 +253,10 @@ bool _bal_initasyncselect(void)
 
         if (0ULL == *threads[n].thread) {
             (void)_bal_handleerr(errno);
-            _bal_dbglog("error: failed to create thread(s)");
             return false;
         }
 #else
-        int op = pthread_create(threads[n].thread, NULL, threads[n].func,
+        int op = pthread_create(threads[n].thread, NULL, threads[n].proc,
             &_bal_as_container);
         BAL_ASSERT(0 == op);
 
@@ -264,7 +264,6 @@ bool _bal_initasyncselect(void)
 
         if (0 != op) {
             (void)_bal_handleerr(op);
-            _bal_dbglog("error: failed to create thread(s)");
             return false;
         }
 #endif
@@ -385,7 +384,7 @@ int _bal_sock_destroy(bal_socket** s)
     return r;
 }
 
-bool _bal_defer_add_socket(bal_socket* s)
+/*bool _bal_defer_add_socket(bal_socket* s)
 {
     bool retval = false;
 
@@ -402,9 +401,9 @@ bool _bal_defer_add_socket(bal_socket* s)
     }
 
     return retval;
-}
+}*/
 
-bool _bal_defer_remove_socket(bal_descriptor sd, bal_socket* s)
+/*bool _bal_defer_remove_socket(bal_descriptor sd, bal_socket* s)
 {
     bool retval = false;
 
@@ -421,7 +420,7 @@ bool _bal_defer_remove_socket(bal_descriptor sd, bal_socket* s)
     }
 
     return retval;
-}
+}*/
 
 int _bal_getaddrinfo(int f, int af, int st, const char* host, const char* port,
     struct addrinfo** res)
@@ -467,46 +466,6 @@ int _bal_getnameinfo(int f, const bal_sockaddr* in, char* host, char* port)
     return r;
 }
 
-int _bal_aitoal(struct addrinfo* ai, bal_addrlist* out)
-{
-    int r = BAL_FALSE;
-
-    if (_bal_validptr(ai) && _bal_validptr(out)) {
-        struct addrinfo* cur = ai;
-        bal_addr** a         = &out->_a;
-        r                    = BAL_TRUE;
-
-        do {
-            *a = calloc(1UL, sizeof(bal_addr));
-            if (!_bal_validptr(*a)) {
-                _bal_handleerr(errno);
-                r = BAL_FALSE;
-                break;
-            }
-
-            memcpy(&(*a)->_sa, cur->ai_addr, cur->ai_addrlen);
-
-            a   = &(*a)->_n;
-            cur = cur->ai_next;
-        } while (NULL != cur);
-
-        bal_resetaddrlist(out);
-    }
-
-    return r;
-}
-
-int _bal_retstr(char* out, const char* in, size_t destlen)
-{
-    int r = BAL_FALSE;
-
-    strncpy(out, in, destlen - 1);
-    out[destlen - 1] = '\0';
-    r = BAL_TRUE;
-
-    return r;
-}
-
 bool _bal_haspendingconnect(bal_socket* s)
 {
     return _bal_validsock(s) && bal_isbitset(s->state.mask, BAL_S_CONNECT);
@@ -545,11 +504,12 @@ bool _bal_isclosedcircuit(const bal_socket* s)
             WSAECONNABORTED == error || WSAECONNRESET == error)
             return true;
 #else
-        if (ENETDOWN == errno     || ENOTCONN == errno     ||
-            ECONNREFUSED == errno || ESHUTDOWN == errno    ||
-            ECONNABORTED == errno || ECONNRESET == errno   ||
-            ENETUNREACH == errno  || ENETRESET == errno    ||
-            EHOSTDOWN   == errno  || EHOSTUNREACH == errno)
+        int error = errno;
+        if (ENETDOWN == error     || ENOTCONN == error     ||
+            ECONNREFUSED == error || ESHUTDOWN == error    ||
+            ECONNABORTED == error || ECONNRESET == error   ||
+            ENETUNREACH == error  || ENETRESET == error    ||
+            EHOSTDOWN   == error  || EHOSTUNREACH == error)
             return true;
 #endif
     }
@@ -595,7 +555,7 @@ _bal_eventthread(void* ctx)
 #endif
 }
 
-bal_threadret _bal_syncthread(void* ctx)
+/*bal_threadret _bal_syncthread(void* ctx)
 {
     bal_as_container* asc = (bal_as_container*)ctx;
     BAL_ASSERT(NULL != asc);
@@ -605,10 +565,10 @@ bal_threadret _bal_syncthread(void* ctx)
             while (_bal_list_empty(asc->lst_add) && _bal_list_empty(asc->lst_rem) &&
                   !_bal_get_boolean(&asc->die)) {
 #if !defined(__WIN__)
-                /* seconds; absolute fixed time. */
+                / * seconds; absolute fixed time. * /
                 bal_wait wait = {time(NULL) + 1, 0};
 #else
-                /* msec; relative from now. */
+                /    * msec; relative from now. * /
                 bal_wait wait = 1000;
 #endif
                 (void)_bal_condwait_timeout(&asc->s_cond, &asc->s_mutex, &wait);
@@ -659,11 +619,11 @@ bal_threadret _bal_syncthread(void* ctx)
 #else
     return NULL;
 #endif
-}
+}*/
 
 void _bal_processevents(bal_list* lst, uint32_t type)
 {
-    /* the list's mutex must already be locked. */
+    /* NOTE: the list's mutex must already be locked. */
     static const useconds_t wait_usec = 10000;
 
     if (_bal_list_empty(lst))
@@ -856,7 +816,7 @@ void _bal_list_reset_iterator(bal_list* lst)
         lst->iter = lst->head;
 }
 
-bool _bal_list_iterate_func(bal_list* lst, void* ctx, bal_list_iter_callback cb)
+bool _bal_list_iterate_func(bal_list* lst, void* ctx, bal_list_iter_cb cb)
 {
     bool ok = !_bal_list_empty(lst) && _bal_validptr(cb);
 
@@ -895,7 +855,6 @@ bool _bal_list_remove(bal_list* lst, bal_descriptor key, bal_socket** val)
             }
             node = node->next;
         }
-
         ok &= found;
     }
 
@@ -1274,6 +1233,7 @@ bool _bal_once(bal_once* once, bal_once_fn func)
 #endif
 }
 
+#if defined(BAL_DBGLOG)
 pid_t _bal_gettid(void)
 {
     pid_t tid = 0;
@@ -1292,10 +1252,11 @@ pid_t _bal_gettid(void)
     tid = syscall(SYS_gettid);
 # endif
 #else
-    _bal_dbglog("warning: no implementation to get thread ID on this platform");
+#pragma message("warning: no implementation to get thread ID on this platform")
 #endif
     return tid;
 }
+#endif
 
 #if defined(__WIN__)
 BOOL CALLBACK _bal_static_once_init_func(PINIT_ONCE ponce, PVOID param, PVOID* ctx)
@@ -1324,14 +1285,3 @@ void _bal_static_once_init_func(void)
 # endif
 }
 #endif
-
-void _bal_socket_tostr(const bal_socket* s, char buf[256])
-{
-    if (s) {
-        (void)snprintf(buf, 256, "%p:\n{\n\tsd = "BAL_SOCKET_SPEC"\n\t"
-            "addr_fam = %d\n\ttype = %d\n\tproto = %d\n}", (void*)s,
-            s->sd, s->addr_fam, s->type, s->proto);
-    } else {
-        (void)snprintf(buf, 256, "<null>");
-    }
-}

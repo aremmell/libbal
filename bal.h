@@ -28,6 +28,8 @@
 
 # include "balinternal.h"
 # include "balerrors.h"
+# include "baltypes.h"
+# include "balhelpers.h"
 
 /******************************************************************************\
  *                             Exported Functions                             *

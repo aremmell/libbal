@@ -30,18 +30,18 @@ cmake_policy(SET CMP0102 NEW) # mark_as_advanced
 # toolchain-related
 if (WIN32)
     set(C_FLAGS_BASE "/experimental:c11atomics")
-    set(CMAKE_C_FLAGS_DEBUG "${C_FLAGS_BASE} ${CMAKE_C_FLAGS} /MP /W4 /DDEBUG")
-    set(CMAKE_C_FLAGS_RELEASE "${C_FLAGS_BASE} ${CMAKE_C_FLAGS} /MP /W4 /DDEBUG")
+    set(CMAKE_C_FLAGS_DEBUG "${C_FLAGS_BASE} ${CMAKE_C_FLAGS} /MP /W4 /DDEBUG /DBAL_DBGLOG")
+    set(CMAKE_C_FLAGS_RELEASE "${C_FLAGS_BASE} ${CMAKE_C_FLAGS} /MP /W4 /DNDEBUG /DBAL_DBGLOG")
     set(CMAKE_CXX_FLAGS_DEBUG "${C_FLAGS_BASE} /DDEBUG")
     set(CMAKE_CXX_FLAGS_RELEASE "${C_FLAGS_BASE} /DNDEBUG")
 else()
     set(C_FLAGS_BASE "-Wall -Wextra -Wpedantic -Werror")
-    set(CMAKE_C_FLAGS_DEBUG "${C_FLAGS_BASE} -g3 -O0 -DDEBUG")
+    set(CMAKE_C_FLAGS_DEBUG "${C_FLAGS_BASE} -g3 -O0 -DDEBUG -DBAL_DBGLOG")
     set(CMAKE_C_FLAGS_RELEASE "${C_FLAGS_BASE} -O3 -D_FORTIFY_SOURCE=2 -DNDEBUG")
 
     set(CXX_FLAGS_BASE "-Wall -Wextra -Wpedantic -Werror")
     set(CMAKE_CXX_FLAGS_DEBUG "${C_FLAGS_BASE} -g3 -O0 -DDEBUG")
-    set(CMAKE_CXX_FLAGS_RELEASE "${C_FLAGS_BASE} -O3 -D_FORTIFY_SOURCE=2 -DNDEBUG")
+    set(CMAKE_CXX_FLAGS_RELEASE "${C_FLAGS_BASE} -O3 -D_FORTIFY_SOURCE=2 -DNDEBUG /DBAL_DBGLOG")
 
     set(CMAKE_EXE_LINKER_FLAGS, "${CMAKE_EXE_LINKER_FLAGS} -pthread")
 endif()
@@ -86,6 +86,7 @@ add_library(
     bal.c
     balinternal.c
     balerrors.c
+    balhelpers.c
 )
 
 add_library(
@@ -94,6 +95,7 @@ add_library(
     bal.c
     balinternal.c
     balerrors.c
+    balhelpers.c
 )
 
 if(!WIN32)

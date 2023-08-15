@@ -31,6 +31,7 @@
 # pragma comment(lib, "shlwapi.lib")
 #endif
 
+#if defined(BAL_DBGLOG)
 void __bal_dbglog(const char* func, const char* file, uint32_t line,
     const char* format, ...)
 {
@@ -73,6 +74,7 @@ void __bal_dbglog(const char* func, const char* file, uint32_t line,
         _bal_safefree(&buf);
     }
 }
+#endif
 
 int _bal_getlasterror(const bal_socket* s, bal_error* err)
 {
@@ -93,7 +95,7 @@ int _bal_getlasterror(const bal_socket* s, bal_error* err)
         DWORD flags = FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS;
         if (!FormatMessageA(flags, NULL, err->code, 0U, err->desc, BAL_MAXERROR, NULL))
             _bal_dbglog("FormatMessageA failed! err: %lu", GetLastError());
-            
+
 #else
         if (!resolved)
             err->code = errno;

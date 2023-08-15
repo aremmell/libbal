@@ -25,6 +25,7 @@
  */
 #include "bal.h"
 #include "balinternal.h"
+#include "balhelpers.h"
 
 #if defined(__WIN__)
 # pragma comment(lib, "ws2_32.lib")

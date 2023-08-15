@@ -32,7 +32,7 @@
 extern "C" {
 # endif
 
-# if defined(DEBUG) && !defined(BAL_NO_DBGLOG)
+# if defined(BAL_DBGLOG)
 void __bal_dbglog(const char* func, const char* file, uint32_t line,
     const char* format, ...);
 #  define _bal_dbglog(...) \
