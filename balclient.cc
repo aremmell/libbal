@@ -54,8 +54,11 @@ int main(int argc, char** argv)
         bal_yield_thread();
     } while (balcommon::should_run());
 
-    if (BAL_TRUE != bal_close(&s))
+    if (BAL_TRUE != bal_close(s))
         balcommon::print_last_lib_error(s, "bal_close");
+
+    if (BAL_TRUE != bal_sock_destroy(&s))
+        balcommon::print_last_lib_error(s, "bal_sock_destroy");
 
     if (!bal_cleanup())
         balcommon::print_last_lib_error(nullptr, "bal_cleanup");

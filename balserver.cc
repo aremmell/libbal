@@ -63,8 +63,11 @@ int main(int argc, char** argv)
     ret = bal_asyncselect(s, nullptr, 0U);
     EXIT_IF_FAILED(ret, s, "bal_asyncselect");
 
-    if (BAL_TRUE != bal_close(&s))
+    if (BAL_TRUE != bal_close(s))
         balcommon::print_last_lib_error(s, "bal_close");
+
+    if (BAL_TRUE != bal_sock_destroy(&s))
+        balcommon::print_last_lib_error(s, "bal_sock_destroy");
 
     if (!bal_cleanup())
         balcommon::print_last_lib_error(nullptr, "bal_cleanup");
@@ -88,14 +91,16 @@ void balserver::async_events_cb(bal_socket* s, uint32_t events)
         ret = bal_getaddrstrings(&client_addr, false, &client_strings);
         if (BAL_TRUE != ret) {
             balcommon::print_last_lib_error(nullptr, "bal_getaddrstrings");
-            bal_close(&client_socket);
+            bal_close(client_socket);
+            bal_sock_destroy(&client_socket);
             return;
         }
 
         ret = bal_asyncselect(client_socket, &async_events_cb, BAL_E_ALL);
         if (BAL_TRUE != ret) {
             balcommon::print_last_lib_error(client_socket, "bal_asyncselect");
-            bal_close(&client_socket);
+            bal_close(client_socket);
+            bal_sock_destroy(&client_socket);
             return;
         }
 
@@ -116,27 +121,39 @@ void balserver::async_events_cb(bal_socket* s, uint32_t events)
             bal_error err {};
             printf("[" BAL_SOCKET_SPEC "] read error %d (%s)!\n", s->sd,
                 bal_getlasterror(s, &err), err.desc);
+            bal_close(s);
+            bal_sock_destroy(&s);
         }
     }
 
+    static bool already_replied = false;
+
     if (bal_isbitset(events, BAL_E_WRITE)) {
-        /*static bool sent_reply = false;
-        if (!sent_reply) {*/
+        if (!already_replied) {
             static const char* reply = "O, HELO 2 U";
             constexpr const size_t reply_size = 11;
 
             int sent = bal_send(s, reply, reply_size, MSG_NOSIGNAL);
-            BAL_ASSERT(reply_size == sent);
             if (sent > 0) {
-                /*sent_reply = true;*/
+                if (reply_size == sent)
+                    already_replied = true;
                 printf("[" BAL_SOCKET_SPEC "] wrote %d bytes\n", s->sd, sent);
+            } else {
+                bal_error err {};
+                printf("[" BAL_SOCKET_SPEC "] write error %d (%s)!\n", s->sd,
+                    bal_getlasterror(s, &err), err.desc);
+                bal_close(s);
+                bal_sock_destroy(&s);
             }
-        /*}*/
+        }
     }
 
     if (bal_isbitset(events, BAL_E_CLOSE)) {
         printf("[" BAL_SOCKET_SPEC "] connection closed.\n", s->sd);
-        bal_close(&s);
+#pragma message("TODO: bal_sock_close_destroy")
+        bal_close(s);
+        bal_sock_destroy(&s);
+        already_replied = false;
     }
 
     if (bal_isbitset(events, BAL_E_EXCEPTION)) {

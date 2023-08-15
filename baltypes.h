@@ -28,17 +28,31 @@
 
 # include "balplatform.h"
 
+struct bal_socket; /* forward declaration. */
+
+/* bal_asyncselect callback. */
+typedef void (*bal_async_cb)(struct bal_socket*, uint32_t);
+
+/* Iteration callback. Returns false to stop iteration. */
+typedef bool (*bal_list_iter_callback)(bal_descriptor /*key*/,
+    struct bal_socket* /*val*/, void* /*ctx*/);
+
+typedef struct bal_state {
+    uint32_t mask;     /**< State bitmask. */
+    bal_async_cb proc; /**< Async I/O event callback. */
+} bal_state;
+
 /**
  * @struct bal_socket
  * @brief BAL state structure.
  */
-typedef struct {
-    bal_descriptor sd;      /**< Socket descriptor. */
-    int addr_fam;           /**< Address family (e.g. AF_INET). */
-    int type;               /**< Socket type (e.g., SOCK_STREAM). */
-    int proto;              /**< Protocol (e.g., IPPROTO_TCP). */
-    struct bal_sockdata* d; /**< Socket state data. */
-    // bal_mutex m;            /**< Mutex guard for socket state data. */
+typedef struct bal_socket {
+    bal_descriptor sd; /**< Socket descriptor. */
+    int addr_fam;      /**< Address family (e.g. AF_INET). */
+    int type;          /**< Socket type (e.g., SOCK_STREAM). */
+    int proto;         /**< Protocol (e.g., IPPROTO_TCP). */
+    bal_state state;   /**< Socket state data. */
+    // bal_mutex m;    /**< Mutex guard for socket state data. */
 } bal_socket;
 
 typedef struct _bal_addr {
@@ -63,25 +77,10 @@ typedef struct {
     char desc[BAL_MAXERROR];
 } bal_error;
 
-/* bal_asyncselect callback. */
-typedef void (*bal_async_callback)(bal_socket*, uint32_t);
-
-/* Socket state data (value storage for bal_list). */
-typedef struct bal_sockdata {
-    bal_socket* s;           /**< Pointer to associated socket. */
-    uint32_t mask;           /**< State bitmask. */
-    bal_async_callback proc; /**< Async I/O event callback. */
-    //bal_mutex m;             /**< Mutex guard for associated socket, mask. */
-} bal_sockdata;
-
-/* Iteration callback. Returns false to stop iteration. */
-typedef bool (*bal_list_iter_callback)(bal_descriptor /*key*/,
-    bal_sockdata* /*val*/, void* /*ctx*/);
-
 /* Node type for bal_list. */
 typedef struct _bal_list_node {
     bal_descriptor key;
-    bal_sockdata* val;
+    bal_socket* val;
     struct _bal_list_node *prev;
     struct _bal_list_node *next;
 } bal_list_node;
@@ -94,14 +93,9 @@ typedef struct {
 
 typedef struct {
     bal_descriptor key;
-    bal_sockdata** val;
+    bal_socket** val;
     bool found;
 } _bal_list_find_data;
-
-typedef struct {
-    fd_set* set;
-    uint32_t type;
-} _bal_list_dispatch_data;
 
 typedef struct {
     bal_list* lst;        /** List of active socket descriptors and their states. */
