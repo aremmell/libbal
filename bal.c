@@ -78,7 +78,6 @@ int bal_sock_create(bal_socket** s, int addr_fam, int type, int proto)
                 _bal_setlasterror(errno);
                 _bal_safefree(s);
             } else {
-               // _bal_init_socket(*s);
                 (*s)->addr_fam = addr_fam;
                 (*s)->type     = type;
                 (*s)->proto    = proto;
@@ -296,17 +295,10 @@ int bal_accept(const bal_socket* s, bal_socket** res, bal_sockaddr* resaddr)
         if (!_bal_validptr(*res)) {
             _bal_handleerr(errno);
         } else {
-            //_bal_init_socket(*res);
             socklen_t sasize = sizeof(bal_sockaddr);
             bal_descriptor sd = accept(s->sd, (struct sockaddr*)resaddr, &sasize);
 
-            assert(sd > 0 && sd < 65535);
-            if (sd > 0 && sd < 65535) {/*||
- #if defined(__WIN__)
-                WSAEWOULDBLOCK == WSAGetLastError()) {
-#else
-                EAGAIN == errno || EINPROGRESS == errno) {
-#endif */
+            if (sd > 0) {
                 (*res)->sd       = sd;
                 (*res)->addr_fam = s->addr_fam;
                 (*res)->type     = s->type;

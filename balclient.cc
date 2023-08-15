@@ -77,7 +77,7 @@ void balclient::async_events_cb(bal_socket* s, uint32_t event)
             printf("[" BAL_SOCKET_SPEC "] failed to connect to %s:%s %d (%s)\n",
                 s->sd, balcommon::localaddr, balcommon::portnum,
                 bal_getlasterror(s, &err), err.desc);
-            //balcommon::quit();
+            balcommon::quit();
         }
         break;
         case BAL_E_READ: {
