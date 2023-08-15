@@ -119,65 +119,67 @@ int _bal_asyncselect(bal_socket* s, bal_async_callback proc, uint32_t mask)
     int r = BAL_FALSE;
     if (_bal_mutex_lock(&_bal_as_container.mutex)) {
         if (0U == mask) {
+            /* this thread holds the mutex that guards the list, so in theory,
+             * a remove operation should be possible (even if it's the current
+             * iterator) without an issue, as long as no further access to the
+             * iterator is attempted. */
             bal_sockdata* d = NULL;
-            bool success    = _bal_list_find(_bal_as_container.lst, s->sd, &d);
-            _bal_mutex_lock(&s->m); // FIXME
-            _bal_mutex_lock(&d->m); // FIXME
+            bool success    = _bal_list_remove(_bal_as_container.lst, s->sd, &d);
+
             BAL_ASSERT(NULL != d && s->d == d && d->s == s);
             if (success) {
-                if (_bal_defer_remove_socket(s->sd, d)) {
-                    r = BAL_TRUE;
-                    _bal_dbglog("added socket "BAL_SOCKET_SPEC" to defer remove"
-                                " list (mask = %08x, data = %p)", s->sd, d->mask, d);
-                } else {
-                    _bal_dbglog("error: failed to add socket "BAL_SOCKET_SPEC
-                                "to defer remove list!", s->sd);
-                }
+                /* The iterator is kaput, but d and s are still allocated.
+                 * Since this is just a removal request, (flags=0), don't close
+                 * or delete the socket itself, just the data. The caller will
+                 * have to call bal_close later on. */
+                _bal_dbglog("removed socket "BAL_SOCKET_SPEC" (%p, data = %p)"
+                            " from list; detaching and freeing data...",
+                            s->sd, d);
+                _bal_safefree(&d);
+                s->d = NULL;
+                r    = BAL_TRUE;
             } else {
                 _bal_dbglog("warning: socket "BAL_SOCKET_SPEC" not found;"
                             " ignoring removal request", s->sd);
             }
-            _bal_mutex_unlock(&s->m); // FIXME
-            _bal_mutex_unlock(&d->m); // FIXME
         } else {
             bal_sockdata* d = NULL;
             if (_bal_list_find(_bal_as_container.lst, s->sd, &d)) {
                 BAL_ASSERT(NULL != d);
                 if (d) {
-                    _bal_mutex_lock(&d->m); // FIXME
                     d->mask = mask;
                     d->proc = proc;
                     r       = BAL_TRUE;
-                    _bal_mutex_lock(&d->m); // FIXME
                     _bal_dbglog("updated socket "BAL_SOCKET_SPEC, s->sd);
                 }
             } else {
-                d = calloc(1, sizeof(bal_sockdata));
+                d = calloc(1UL, sizeof(bal_sockdata));
                 BAL_ASSERT(NULL != d);
                 if (d) {
-                    _bal_init_sockdata(d);
+                    //_bal_init_sockdata(d);
                     bool success = false;
                     if (BAL_FALSE == bal_setiomode(s, true)) {
                         (void)_bal_handleerr(errno);
                     } else {
-                        _bal_mutex_lock(&s->m); // FIXME
-                        _bal_mutex_lock(&d->m); // FIXME
+                        /* _bal_mutex_lock(&s->m); // FIXME
+                        _bal_mutex_lock(&d->m); // FIXME */
                         BAL_ASSERT(s->d == NULL);
                         d->mask  = mask;
                         d->proc  = proc;
                         d->s     = s;
                         s->d     = d;
-                        _bal_mutex_unlock(&s->m); // FIXME
-                        _bal_mutex_unlock(&d->m); // FIXME
-                        success  = _bal_defer_add_socket(d);
-                        r        = success ? BAL_TRUE : BAL_FALSE;
+                        /* _bal_mutex_unlock(&s->m); // FIXME
+                        _bal_mutex_unlock(&d->m); // FIXME */
+                        /* success  = _bal_defer_add_socket(d); */
+                        success = _bal_list_add(_bal_as_container.lst, s->sd, d);
+                        r       = success ? BAL_TRUE : BAL_FALSE;
                     }
                     if (success) {
-                        _bal_dbglog("added socket "BAL_SOCKET_SPEC" to defer"
-                                    " add list (mask = %08x, data = %p)", s->sd,
+                        _bal_dbglog("added socket "BAL_SOCKET_SPEC" to list (%p"
+                                    ", mask = %08x, data = %p)", s->sd, s,
                                     d->mask, d);
                     } else {
-                        _bal_mutex_destroy(&d->m);
+                        //_bal_mutex_destroy(&d->m);
                         _bal_safefree(&d);
                         _bal_dbglog("error: failed to add socket "BAL_SOCKET_SPEC
                                     " to defer add list!", s->sd);
@@ -196,17 +198,17 @@ int _bal_asyncselect(bal_socket* s, bal_async_callback proc, uint32_t mask)
 bool _bal_initasyncselect(void)
 {
     bal_list** lists[] = {
-        &_bal_as_container.lst,
+        &_bal_as_container.lst/* ,
         &_bal_as_container.lst_add,
-        &_bal_as_container.lst_rem
+        &_bal_as_container.lst_rem */
     };
 
-    bool create = true;
+    bool init = true;
     for (size_t n = 0; n < bal_countof(lists); n++) {
-        create &= _bal_list_create(lists[n]);
-        BAL_ASSERT(create);
+        init &= _bal_list_create(lists[n]);
+        BAL_ASSERT(init);
 
-        if (!create) {
+        if (!init) {
             (void)_bal_handleerr(errno);
             _bal_dbglog("error: failed to create list(s)");
             return false;
@@ -214,33 +216,33 @@ bool _bal_initasyncselect(void)
     }
 
     bal_mutex* mutexes[] = {
-        &_bal_as_container.mutex,
-        &_bal_as_container.s_mutex
+        &_bal_as_container.mutex/* ,
+        &_bal_as_container.s_mutex */
     };
 
     for (size_t n = 0; n < bal_countof(mutexes); n++) {
-        create &= _bal_mutex_create(mutexes[n]);
-        BAL_ASSERT(create);
+        init &= _bal_mutex_create(mutexes[n]);
+        BAL_ASSERT(init);
 
-        if (!create) {
+        if (!init) {
             _bal_dbglog("error: failed to create mutex(es)");
             return false;
         }
     }
 
-    bal_condition* conditions[] = {
-        &_bal_as_container.s_cond
+    /*bal_condition* conditions[] = {
+         &_bal_as_container.s_cond
     };
 
     for (size_t n = 0; n < bal_countof(conditions); n++) {
-        create &= _bal_cond_create(conditions[n]);
-        BAL_ASSERT(create);
+        init &= _bal_cond_create(conditions[n]);
+        BAL_ASSERT(init);
 
-        if (!create) {
+        if (!init) {
             _bal_dbglog("error: failed to create condition variable(s)");
             return false;
         }
-    }
+    }*/
 
     struct {
         bal_thread* thread;
@@ -249,11 +251,11 @@ bool _bal_initasyncselect(void)
         {
             &_bal_as_container.thread,
             &_bal_eventthread
-        },
+        }/* ,
         {
             &_bal_as_container.s_thread,
             &_bal_syncthread
-        }
+        } */
     };
 
     for (size_t n = 0; n < bal_countof(threads); n++) {
@@ -274,7 +276,7 @@ bool _bal_initasyncselect(void)
             &_bal_as_container);
         BAL_ASSERT(0 == op);
 
-        create &= 0 == op;
+        init &= 0 == op;
 
         if (0 != op) {
             (void)_bal_handleerr(op);
@@ -285,9 +287,9 @@ bool _bal_initasyncselect(void)
     }
 
     _bal_set_boolean(&_bal_asyncselect_init, true);
-    _bal_dbglog("async I/O initialized %s", create ? "successfully" : "with errors");
+    _bal_dbglog("async I/O initialized %s", init ? "successfully" : "with errors");
 
-    return create;
+    return init;
 }
 
 bool _bal_cleanupasyncselect(void)
@@ -295,8 +297,8 @@ bool _bal_cleanupasyncselect(void)
     _bal_set_boolean(&_bal_as_container.die, true);
 
     bal_thread* threads[] = {
-        &_bal_as_container.thread,
-        &_bal_as_container.s_thread
+        &_bal_as_container.thread/* ,
+        &_bal_as_container.s_thread */
     };
 
     _bal_dbglog("joining %zu threads...", bal_countof(threads));
@@ -314,9 +316,9 @@ bool _bal_cleanupasyncselect(void)
 
     bool cleanup = true;
     bal_list* lists[] = {
-        _bal_as_container.lst,
+        _bal_as_container.lst/* ,
         _bal_as_container.lst_add,
-        _bal_as_container.lst_rem
+        _bal_as_container.lst_rem */
     };
 
     for (size_t n = 0UL; n < bal_countof(lists); n++) {
@@ -326,14 +328,14 @@ bool _bal_cleanupasyncselect(void)
         if (0 == n) {
             if (!_bal_list_empty(lists[n])) {
                 /* iterate and free allocated data. */
-                bal_descriptor sd  = 0;
-                bal_sockdata* d  = NULL;
+                bal_descriptor sd = 0;
+                bal_sockdata* d   = NULL;
 
                 _bal_dbglog("list %zu is not empty; freeing socket data...", n);
                 _bal_list_reset_iterator(lists[n]);
 
                 while (_bal_list_iterate(lists[n], &sd, &d)) {
-                    _bal_mutex_lock(&d->m); // FIXME
+                    //_bal_mutex_lock(&d->m); // FIXME
                     if (_bal_validptr(d->s) && !bal_isbitset(d->mask, BAL_S_CLOSE)) {
                         _bal_dbglog("socket "BAL_SOCKET_SPEC" (%p, data = %p)"
                                     " not closed; closing...", sd, d->s, d);
@@ -343,8 +345,8 @@ bool _bal_cleanupasyncselect(void)
                     /* socket already freed by bal_close; only free data.. */
                     BAL_ASSERT(NULL == d->s);
                     _bal_dbglog("freeing socket "BAL_SOCKET_SPEC" (freed, data = %p)", sd, d);
-                    _bal_mutex_unlock(&d->m); // FIXME
-                    _bal_mutex_destroy(&d->m);
+                    //_bal_mutex_unlock(&d->m); // FIXME
+                    //_bal_mutex_destroy(&d->m);
                     _bal_safefree(&d);
                 }
             } else {
@@ -358,8 +360,8 @@ bool _bal_cleanupasyncselect(void)
     }
 
     bal_mutex* mutexes[] = {
-        &_bal_as_container.mutex,
-        &_bal_as_container.s_mutex
+        &_bal_as_container.mutex/* ,
+        &_bal_as_container.s_mutex */
     };
 
     for (size_t n = 0; n < bal_countof(mutexes); n++) {
@@ -368,7 +370,7 @@ bool _bal_cleanupasyncselect(void)
         cleanup &= destroy;
     }
 
-    bal_condition* conditions[] = {
+    /* bal_condition* conditions[] = {
         &_bal_as_container.s_cond
     };
 
@@ -376,7 +378,7 @@ bool _bal_cleanupasyncselect(void)
         bool destroy = _bal_cond_destroy(conditions[n]);
         BAL_ASSERT(destroy);
         cleanup &= destroy;
-    }
+    }*/
 
     _bal_set_boolean(&_bal_asyncselect_init, false);
     _bal_dbglog("async I/O cleaned up %s", cleanup ? "successfully" : "with errors");
@@ -438,6 +440,7 @@ int _bal_getaddrinfo(int f, int af, int st, const char* host, const char* port,
     }
 
     if (0 != r) {
+#pragma message("TODO: add param to setlasterror that means gai yes/no, so it can use gai_strerror")
         _bal_dbglog("getaddrinfo() failed with error %d (%s)", r, gai_strerror(r));
         _bal_setlasterror(r);
         r = BAL_FALSE;
@@ -483,6 +486,7 @@ int _bal_aitoal(struct addrinfo* ai, bal_addrlist* out)
             }
 
             memcpy(&(*a)->_sa, cur->ai_addr, cur->ai_addrlen);
+
             a   = &(*a)->_n;
             cur = cur->ai_next;
         } while (NULL != cur);
@@ -508,13 +512,15 @@ bool _bal_haspendingconnect(bal_socket* s)
 {
     bool retval = false;
 
-    _bal_mutex_lock(&s->m); // FIXME
-    if (_bal_validsockdata(s)) {
-        _bal_mutex_lock(&s->d->m);
-        retval = bal_isbitset(s->d->mask, BAL_S_CONNECT);
-        _bal_mutex_unlock(&s->d->m);
+    if (_bal_validptr(s)) {
+        //_bal_mutex_lock(&s->m); // FIXME
+        if (_bal_validsockdata(s)) {
+            //_bal_mutex_lock(&s->d->m);
+            retval = bal_isbitset(s->d->mask, BAL_S_CONNECT);
+            //_bal_mutex_unlock(&s->d->m);
+        }
+        //_bal_mutex_unlock(&s->m); // FIXME
     }
-    _bal_mutex_unlock(&s->m); // FIXME
 
     return retval;
 }
@@ -524,13 +530,13 @@ bool _bal_islistening(bal_socket* s)
     bool retval = false;
 
     if (_bal_validptr(s)) {
-        _bal_mutex_lock(&s->m); // FIXME
+        //_bal_mutex_lock(&s->m); // FIXME
         if (_bal_validsockdata(s)) {
-            _bal_mutex_lock(&s->d->m);
+            //_bal_mutex_lock(&s->d->m);
             retval = bal_isbitset(s->d->mask, BAL_S_LISTEN);
-            _bal_mutex_unlock(&s->d->m);
+            //_bal_mutex_unlock(&s->d->m);
         }
-        _bal_mutex_unlock(&s->m); // FIXME
+        //_bal_mutex_unlock(&s->m); // FIXME
     }
 
     return retval;
@@ -937,27 +943,32 @@ bool __bal_list_dispatch_events(bal_descriptor key, bal_sockdata* val, void* ctx
         }
 
         if (snd) {
-            _bal_mutex_lock(&val->m); // FIXME
-            bal_socket* s = val->s;
-            _bal_mutex_unlock(&val->m);  // FIXME
-            if (_bal_validptr(s))
-                val->proc(s, event);
+           // _bal_mutex_lock(&val->m); // FIXME
+            //bal_socket* s = val->s;
+            //_bal_mutex_unlock(&val->m);  // FIXME
+            if (_bal_validptr(val->s))
+                val->proc(val->s, event);
         }
 
         if (BAL_E_CLOSE == event && !bal_isbitset(val->mask, BAL_S_REMOVE)) {
             /* since we are actively iterating the linked list, we cannot remove
              * an entry here. instead, defer its removal by the sync thread. */
-            bool added = _bal_defer_remove_socket(key, val);
-            BAL_ASSERT_UNUSED(added, added);
-            if (added) {
-                _bal_mutex_lock(&val->m);
+            bal_sockdata* d = NULL;
+            bool removed    = _bal_list_remove(_bal_as_container.lst, key, &d);
+            BAL_ASSERT(removed);
+
+            if (removed) {
+                //_bal_mutex_lock(&val->m);
                 val->mask |= BAL_S_REMOVE;
-                _bal_dbglog("added socket "BAL_SOCKET_SPEC" to defer remove"
-                            " list (%p, data = %p)", key, val->s, val);
-                _bal_mutex_unlock(&val->m);
+                _bal_dbglog("removed socket "BAL_SOCKET_SPEC" (%p, data = %p)"
+                            " from list (closed); detaching and freeing data...",
+                            key, val->s, val);
+                val->s->d = NULL;
+                _bal_safefree(&d);
+                //_bal_mutex_unlock(&val->m);
             } else {
-                _bal_dbglog("error: failed to add socket "BAL_SOCKET_SPEC" to"
-                            " defer remove list (closed)!", key);
+                _bal_dbglog("error: failed to remove socket "BAL_SOCKET_SPEC
+                            " from list (closed)!", key);
             }
         }
     }
@@ -967,10 +978,13 @@ bool __bal_list_dispatch_events(bal_descriptor key, bal_sockdata* val, void* ctx
 
 bool __bal_list_remove_entries(bal_descriptor key, bal_sockdata* val, void* ctx)
 {
-    bal_list* lst = (bal_list*)ctx;
+    //bal_list* lst = (bal_list*)ctx;
+    BAL_UNUSED(key);
+    BAL_UNUSED(val);
+    BAL_UNUSED(ctx);
 
     /* dissasociate data to be freed from socket. */
-    BAL_ASSERT(NULL != val);
+    /*BAL_ASSERT(NULL != val);
     if (_bal_validptr(val)) {
         _bal_mutex_lock(&val->m); // FIXME
         if (_bal_validptr(val->s)) {
@@ -997,7 +1011,7 @@ bool __bal_list_remove_entries(bal_descriptor key, bal_sockdata* val, void* ctx)
     _bal_dbglog("freeing socket data %p", val);
     _bal_mutex_unlock(&d->m); // FIXME
     _bal_mutex_destroy(&d->m); // FIXME
-    _bal_safefree(&d);
+    _bal_safefree(&d);*/
     return true;
 }
 
@@ -1284,17 +1298,17 @@ void _bal_set_boolean(bool* boolean, bool value)
 }
 #endif
 
-void _bal_init_socket(bal_socket* s)
+/* void _bal_init_socket(bal_socket* s)
 {
     bool created = _bal_mutex_create(&s->m);
     BAL_ASSERT_UNUSED(created, created);
-}
+} */
 
-void _bal_init_sockdata(bal_sockdata* d)
+/* void _bal_init_sockdata(bal_sockdata* d)
 {
     bool created = _bal_mutex_create(&d->m);
     BAL_ASSERT_UNUSED(created, created);
-}
+} */
 
 bool _bal_once(bal_once* once, bal_once_fn func)
 {

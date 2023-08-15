@@ -38,7 +38,7 @@ typedef struct {
     int type;               /**< Socket type (e.g., SOCK_STREAM). */
     int proto;              /**< Protocol (e.g., IPPROTO_TCP). */
     struct bal_sockdata* d; /**< Socket state data. */
-    bal_mutex m;            /**< Mutex guard for socket state data. */
+    // bal_mutex m;            /**< Mutex guard for socket state data. */
 } bal_socket;
 
 typedef struct _bal_addr {
@@ -71,7 +71,7 @@ typedef struct bal_sockdata {
     bal_socket* s;           /**< Pointer to associated socket. */
     uint32_t mask;           /**< State bitmask. */
     bal_async_callback proc; /**< Async I/O event callback. */
-    bal_mutex m;             /**< Mutex guard for associated socket, mask. */
+    //bal_mutex m;             /**< Mutex guard for associated socket, mask. */
 } bal_sockdata;
 
 /* Iteration callback. Returns false to stop iteration. */

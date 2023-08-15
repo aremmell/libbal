@@ -155,8 +155,8 @@ bool _bal_get_boolean(const bool* boolean);
 void _bal_set_boolean(bool* boolean, bool value);
 # endif
 
-void _bal_init_socket(bal_socket* s);
-void _bal_init_sockdata(bal_sockdata* d);
+/* void _bal_init_socket(bal_socket* s);
+void _bal_init_sockdata(bal_sockdata* d); */
 
 bool _bal_once(bal_once* once, bal_once_fn func);
 

@@ -93,7 +93,7 @@ int bal_sock_create(bal_socket** s, int addr_fam, int type, int proto)
                 _bal_setlasterror(errno);
                 _bal_safefree(s);
             } else {
-                _bal_init_socket(*s);
+               // _bal_init_socket(*s);
                 (*s)->addr_fam = addr_fam;
                 (*s)->type     = type;
                 (*s)->proto    = proto;
@@ -123,19 +123,19 @@ int bal_close(bal_socket** s)
             r = BAL_TRUE;
         }
 
-        _bal_mutex_lock(&(*s)->m); // FIXME
+        //_bal_mutex_lock(&(*s)->m); // FIXME
         if (_bal_validsockdata(*s)) {
-            _bal_mutex_lock(&(*s)->d->m); // FIXME
+            //_bal_mutex_lock(&(*s)->d->m); // FIXME
             (*s)->d->mask |= BAL_S_CLOSE;
             (*s)->d->s     = NULL;
-            _bal_mutex_unlock(&(*s)->d->m); // FIXME
+            //_bal_mutex_unlock(&(*s)->d->m); // FIXME
         }
 
         _bal_dbglog("closed socket "BAL_SOCKET_SPEC" (%p, data = %p); freeing...",
             (*s)->sd, *s, (*s)->d);
 
-        _bal_mutex_unlock(&(*s)->m); // FIXME
-        _bal_mutex_destroy(&(*s)->m);
+        //_bal_mutex_unlock(&(*s)->m); // FIXME
+        //_bal_mutex_destroy(&(*s)->m);
         memset(*s, 0, sizeof(bal_socket));
         _bal_safefree(s);
     }
@@ -203,13 +203,13 @@ int bal_connectaddrlist(bal_socket* s, bal_addrlist* al)
 #else
                 if (!r || EAGAIN == errno || EINPROGRESS == errno) {
 #endif
-                    _bal_mutex_lock(&s->m); // FIXME
+                    //_bal_mutex_lock(&s->m); // FIXME
                     if (_bal_validsockdata(s)) {
-                        _bal_mutex_lock(&s->d->m); // FIXME
+                      //  _bal_mutex_lock(&s->d->m); // FIXME
                         s->d->mask |= BAL_S_CONNECT;
-                        _bal_mutex_unlock(&s->d->m); // FIXME
+                       // _bal_mutex_unlock(&s->d->m); // FIXME
                     }
-                    _bal_mutex_unlock(&s->m); // FIXME
+                    //_bal_mutex_unlock(&s->m); // FIXME
                     r = BAL_TRUE;
                     break;
                 } else {
@@ -310,13 +310,13 @@ int bal_listen(bal_socket* s, int backlog)
     if (s) {
         r = listen(s->sd, backlog);
         if (0 == r) {
-            _bal_mutex_lock(&s->m); // FIXME
+            //_bal_mutex_lock(&s->m); // FIXME
             if (_bal_validsockdata(s)) {
-                _bal_mutex_lock(&s->d->m); // FIXME
+              //  _bal_mutex_lock(&s->d->m); // FIXME
                 s->d->mask |= BAL_S_LISTEN;
-                _bal_mutex_unlock(&s->d->m); // FIXME
+                //_bal_mutex_unlock(&s->d->m); // FIXME
             }
-            _bal_mutex_unlock(&s->m); // FIXME
+            //_bal_mutex_unlock(&s->m); // FIXME
         } else {
             (void)_bal_handleerr(errno);
         }
@@ -334,7 +334,7 @@ int bal_accept(const bal_socket* s, bal_socket** res, bal_sockaddr* resaddr)
         if (!_bal_validptr(*res)) {
             _bal_handleerr(errno);
         } else {
-            _bal_init_socket(*res);
+            //_bal_init_socket(*res);
             socklen_t sasize = sizeof(bal_sockaddr);
             bal_descriptor sd = accept(s->sd, (struct sockaddr*)resaddr, &sasize);
 
