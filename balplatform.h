@@ -170,9 +170,9 @@ typedef int pid_t;
 typedef struct sockaddr_storage bal_sockaddr;
 
 # if defined(__MACOS__)
-# undef __HAVE_SO_ACCEPTCONN__
+#  undef __HAVE_SO_ACCEPTCONN__
 # else
-# define __HAVE_SO_ACCEPTCONN__
+#  define __HAVE_SO_ACCEPTCONN__
 # endif
 
 # define BAL_TRUE     0

@@ -33,9 +33,9 @@
  *                             Internal Functions                             *
 \******************************************************************************/
 
-#if defined(__cplusplus)
+# if defined(__cplusplus)
 extern "C" {
-#endif
+# endif
 
 bool _bal_init(void);
 bool _bal_cleanup(void);
@@ -205,7 +205,7 @@ void __bal_safefree(void** pp)
     BAL_ASSERT(name##_locked); \
     if (name##_locked) {
 
-#define _BAL_LEAVE_MUTEX(m, name) \
+# define _BAL_LEAVE_MUTEX(m, name) \
     bool name##_unlocked = _bal_mutex_unlock(m); \
     BAL_ASSERT_UNUSED(name##_unlocked, name##_unlocked); \
     }
@@ -213,8 +213,8 @@ void __bal_safefree(void** pp)
 /** Converts a bal_socket into human-readable form. */
 void _bal_socket_tostr(const bal_socket* s, char buf[256]);
 
-#if defined(__cplusplus)
+# if defined(__cplusplus)
 }
-#endif
+# endif
 
 #endif /* !_BAL_INTERNAL_H_INCLUDED */
