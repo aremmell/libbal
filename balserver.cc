@@ -125,7 +125,7 @@ void balserver::async_events_cb(bal_socket* s, uint32_t events)
             static const char* reply = "O, HELO 2 U";
             constexpr const size_t reply_size = 11;
 
-            int sent = bal_send(s, reply, reply_size, 0U);
+            int sent = bal_send(s, reply, reply_size, MSG_NOSIGNAL);
             BAL_ASSERT(reply_size == sent);
             if (sent > 0) {
                 /*sent_reply = true;*/

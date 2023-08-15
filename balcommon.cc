@@ -83,10 +83,8 @@ void balcommon::print_last_lib_error(const bal_socket* s /* = nullptr */,
     const char* func /* = nullptr */)
 {
     bal_error err {};
-    [[maybe_unused]] int code = bal_getlasterror(s, &err);
-
     fprintf(stderr, "libbal error: %s %d (%s)\n", (nullptr != func ? func : ""),
-        err.code, err.desc);
+        bal_getlasterror(s, &err), err.desc);
 }
 
 #if defined(__WIN__)

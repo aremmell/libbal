@@ -580,11 +580,10 @@ bal_threadret _bal_eventthread(void* ctx)
                 FD_ZERO(&fd_except);
 
                 _bal_list_reset_iterator(asc->lst);
-                bal_descriptor key = NULL;
+                bal_descriptor key = 0;
                 bal_sockdata* val  = NULL;
 
                 while (_bal_list_iterate(asc->lst, &key, &val)) {
-
                     if (key > highest)
                         highest = key;
 
