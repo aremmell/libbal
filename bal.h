@@ -45,7 +45,7 @@ extern "C" {
 int bal_autosocket(bal_socket** s, int addr_fam, int proto, const char* host, const char* port);
 int bal_sock_create(bal_socket** s, int addr_fam, int type, int proto);
 # define bal_sock_destroy(s) _bal_sock_destroy(s)
-int bal_close(bal_socket* s);
+int bal_close(bal_socket** s, bool destroy);
 int bal_shutdown(bal_socket* s, int how);
 
 int bal_connect(const bal_socket* s, const char* host, const char* port);

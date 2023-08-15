@@ -59,8 +59,8 @@ int _bal_aitoal(struct addrinfo* ai, bal_addrlist* out);
 
 int _bal_retstr(char* out, const char* in, size_t destlen);
 
-bool _bal_islistening(bal_socket* s);
 bool _bal_haspendingconnect(bal_socket* s);
+uint32_t _bal_on_pending_conn_event(bal_socket* s);
 bool _bal_isclosedcircuit(const bal_socket* s);
 
 bal_threadret _bal_eventthread(void* ctx);
@@ -197,6 +197,8 @@ void __bal_safefree(void** pp)
 # define bal_countof(arr) (sizeof((arr)) / sizeof((arr)[0]))
 
 # define _bal_validstr(str) ((str) && (*str))
+
+# define _bal_validsock(s) (NULL != (s) && BAL_BADSOCKET != (s)->sd)
 
 # define _BAL_ENTER_MUTEX(m, name) \
     bool name##_locked = _bal_mutex_lock(m); \

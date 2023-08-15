@@ -169,6 +169,12 @@ typedef int pid_t;
 
 typedef struct sockaddr_storage bal_sockaddr;
 
+# if defined(__MACOS__)
+# undef __HAVE_SO_ACCEPTCONN__
+# else
+# define __HAVE_SO_ACCEPTCONN__
+# endif
+
 # define BAL_TRUE     0
 # define BAL_FALSE    -1
 # define BAL_MAXERROR 1024
@@ -177,9 +183,6 @@ typedef struct sockaddr_storage bal_sockaddr;
 
 # define BAL_AS_IPV6   "IPv6"
 # define BAL_AS_IPV4   "IPv4"
-
-# define BAL_F_PENDCONN  0x00000001U
-# define BAL_F_LISTENING 0x00000002U
 
 # define BAL_BADSOCKET -1
 
@@ -201,10 +204,9 @@ typedef struct sockaddr_storage bal_sockaddr;
 # define BAL_E_ACCEPT    0x00000008U
 # define BAL_E_CLOSE     0x00000010U
 # define BAL_E_CONNFAIL  0x00000020U
-# define BAL_E_EXCEPTION 0x00000040U
+# define BAL_E_EXCEPT    0x00000040U
 # define BAL_E_ALL       0x0000007FU
 
-# define BAL_S_DIE       0x0D1E0D1EU
 # define BAL_S_CONNECT   0x10000000U
 # define BAL_S_CLOSE     0x20000000U
 # define BAL_S_LISTEN    0x40000000U

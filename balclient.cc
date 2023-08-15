@@ -25,6 +25,7 @@
  */
 #include <iostream>
 #include <iomanip>
+#include <exception>
 #include <array>
 #include "balclient.hh"
 
@@ -54,11 +55,8 @@ int main(int argc, char** argv)
         bal_yield_thread();
     } while (balcommon::should_run());
 
-    if (BAL_TRUE != bal_close(s))
+    if (BAL_TRUE != bal_close(&s, true))
         balcommon::print_last_lib_error(s, "bal_close");
-
-    if (BAL_TRUE != bal_sock_destroy(&s))
-        balcommon::print_last_lib_error(s, "bal_sock_destroy");
 
     if (!bal_cleanup())
         balcommon::print_last_lib_error(nullptr, "bal_cleanup");
@@ -66,65 +64,64 @@ int main(int argc, char** argv)
     return EXIT_SUCCESS;
 }
 
-void balclient::async_events_cb(bal_socket* s, uint32_t events)
+void balclient::async_events_cb(bal_socket* s, uint32_t event)
 {
-    if (bal_isbitset(events, BAL_E_CONNECT)) {
-        printf("[" BAL_SOCKET_SPEC "] connected to %s:%s\n", s->sd, balcommon::localaddr,
-            balcommon::portnum);
-    }
-
-    if (bal_isbitset(events, BAL_E_CONNFAIL)) {
-        bal_error err;
-        bal_getlasterror(s, &err);
-        fprintf(stderr, "[" BAL_SOCKET_SPEC "] error: failed to connect to %s:%s %d (%s)\n",
-            s->sd, balcommon::localaddr, balcommon::portnum, err.code, err.desc);
-    }
-
-    if (bal_isbitset(events, BAL_E_READ)) {
-        constexpr const size_t buf_size = 2048;
-        std::array<char, buf_size> buf;
-        int read = bal_recv(s, buf.data(), buf.size() - 1, 0);
-        if (read > 0) {
-            printf("[" BAL_SOCKET_SPEC "] read %d bytes: '%s'\n", s->sd, read, buf.data());
-        } else {
-            bal_error err {};
-            printf("[" BAL_SOCKET_SPEC "] read error %d (%s)!\n", s->sd,
-                bal_getlasterror(s, &err), err.desc);
+    switch (event) {
+        case BAL_E_CONNECT: {
+            printf("[" BAL_SOCKET_SPEC "] connected to %s:%s\n", s->sd,
+                balcommon::localaddr, balcommon::portnum);
         }
-    }
-
-    if (bal_isbitset(events, BAL_E_WRITE)) {
-        static bool wrote_helo = false;
-
-        int err = bal_geterror(s);
-        if (0 != err) {
+        break;
+        case BAL_E_CONNFAIL: {
             bal_error err {};
-            printf("[" BAL_SOCKET_SPEC "] write error %d (%s)!\n", s->sd,
+            printf("[" BAL_SOCKET_SPEC "] failed to connect to %s:%s %d (%s)\n",
+                s->sd, balcommon::localaddr, balcommon::portnum,
                 bal_getlasterror(s, &err), err.desc);
-        } else {
+            //balcommon::quit();
+        }
+        break;
+        case BAL_E_READ: {
+            constexpr const size_t buf_size = 2048;
+            std::array<char, buf_size> buf;
+            int read = bal_recv(s, buf.data(), buf.size() - 1, 0);
+            if (read > 0) {
+                printf("[" BAL_SOCKET_SPEC "] read %d bytes: '%s'\n", s->sd, read,
+                    buf.data());
+            } else {
+                bal_error err {};
+                printf("[" BAL_SOCKET_SPEC "] read error %d (%s)!\n", s->sd,
+                    bal_getlasterror(s, &err), err.desc);
+            }
+        }
+        break;
+        case BAL_E_WRITE: {
+            static bool wrote_helo = false;
             if (!wrote_helo) {
                 const char* req = "HELO";
                 constexpr const size_t req_size = 4;
 
                 int ret = bal_send(s, req, req_size, MSG_NOSIGNAL);
-                if (ret <= 0)
-                    balcommon::print_last_lib_error(s, "bal_send");
-                else
+                if (ret <= 0) {
+                    bal_error err {};
+                    printf("[" BAL_SOCKET_SPEC "] write error %d (%s)!\n", s->sd,
+                        bal_getlasterror(s, &err), err.desc);
+                } else {
                     printf("[" BAL_SOCKET_SPEC "] wrote %d bytes\n", s->sd, ret);
-                wrote_helo = true;
+                    wrote_helo = true;
+                }
             }
         }
-    }
-
-    if (bal_isbitset(events, BAL_E_CLOSE)) {
-        printf("[" BAL_SOCKET_SPEC "] connection closed.\n", s->sd);
-        balcommon::quit();
-    }
-
-    if (bal_isbitset(events, BAL_E_EXCEPTION)) {
-        printf("[" BAL_SOCKET_SPEC "] error: got exception! err: %d\n", s->sd,
-            bal_geterror(s));
-        return;
+        break;
+        case BAL_E_CLOSE:
+            printf("[" BAL_SOCKET_SPEC "] connection closed.\n", s->sd);
+            balcommon::quit();
+        break;
+        case BAL_E_EXCEPT:
+            printf("[" BAL_SOCKET_SPEC "] error: got exception!\n", s->sd);
+        break;
+        default:
+            throw runtime_error("unknown async I/O event");
+        break;
     }
 }
 

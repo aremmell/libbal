@@ -90,36 +90,40 @@ int bal_sock_create(bal_socket** s, int addr_fam, int type, int proto)
     return r;
 }
 
-int bal_close(bal_socket* s)
+int bal_close(bal_socket** s, bool destroy)
 {
-    int r = BAL_FALSE;
+    int closed    = BAL_FALSE;
+    int destroyed = BAL_FALSE;
 
-    if (_bal_validptr(s)) {
-        BAL_ASSERT(BAL_BADSOCKET != s->sd);
+    if (_bal_validptrptr(s) && _bal_validsock(*s)) {
+        BAL_ASSERT(BAL_BADSOCKET != (*s)->sd);
 #if defined(__WIN__)
-        if (SOCKET_ERROR == closesocket(s->sd)) {
+        if (SOCKET_ERROR == closesocket((*s)->sd)) {
             (void)_bal_handleerr(WSAGetLastError());
         }
 #else
-        if (-1 == close(s->sd)) {
+        if (-1 == close((*s)->sd)) {
             (void)_bal_handleerr(errno);
         }
 #endif
         else {
-            _bal_dbglog("closed socket "BAL_SOCKET_SPEC" (%p)", s->sd, s);
-            s->sd = BAL_BADSOCKET;
-            r     = BAL_TRUE;
+            _bal_dbglog("closed socket "BAL_SOCKET_SPEC" (%p)", (*s)->sd, *s);
+            (*s)->state.mask |= BAL_S_CLOSE;
+            (*s)->state.mask &= ~(BAL_S_CONNECT | BAL_S_LISTEN);
+            closed            = BAL_TRUE;
         }
+
+        destroyed = destroy ? bal_sock_destroy(s) : BAL_FALSE;
     }
 
-    return r;
+    return BAL_TRUE == closed && BAL_TRUE == destroyed ? BAL_TRUE : BAL_FALSE;
 }
 
 int bal_shutdown(bal_socket* s, int how)
 {
     int r = BAL_FALSE;
 
-    if (_bal_validptr(s)) {
+    if (_bal_validsock(s)) {
         r = shutdown(s->sd, how);
         if (0 == r) {
             if (how == BAL_SHUT_RDWR)
@@ -162,7 +166,7 @@ int bal_connectaddrlist(bal_socket* s, bal_addrlist* al)
 {
     int r = BAL_FALSE;
 
-    if (_bal_validptr(s)) {
+    if (_bal_validsock(s)) {
         if (BAL_TRUE == bal_resetaddrlist(al)) {
             const bal_sockaddr* sa = NULL;
 
@@ -287,7 +291,7 @@ int bal_accept(const bal_socket* s, bal_socket** res, bal_sockaddr* resaddr)
 {
     int r = BAL_FALSE;
 
-    if (_bal_validptr(s) && _bal_validptrptr(res) && _bal_validptr(resaddr)) {
+    if (_bal_validsock(s) && _bal_validptrptr(res) && _bal_validptr(resaddr)) {
         *res = calloc(1UL, sizeof(bal_socket));
         if (!_bal_validptr(*res)) {
             _bal_handleerr(errno);
@@ -520,16 +524,16 @@ bool bal_isreadable(const bal_socket* s)
 {
     bool r = false;
 
-    if (s) {
-        fd_set fd = {0};
+    if (_bal_validsock(s)) {
+        fd_set fd        = {0};
         struct timeval t = {0};
 
         FD_ZERO(&fd);
         FD_SET(s->sd, &fd);
 
-        if (0 == select(1, &fd, NULL, NULL, &t)) {
-            if (FD_ISSET(s->sd, &fd))
-                r = true;
+        if (0 == select(s->sd + 1, &fd, NULL, NULL, &t) &&
+            FD_ISSET(s->sd, &fd)) {
+            r = true;
         }
     }
 
@@ -540,16 +544,16 @@ bool bal_iswritable(const bal_socket* s)
 {
     bool r = false;
 
-    if (s) {
-        fd_set fd = {0};
+    if (_bal_validsock(s)) {
+        fd_set fd        = {0};
         struct timeval t = {0};
 
         FD_ZERO(&fd);
         FD_SET(s->sd, &fd);
 
-        if (0 == select(1, NULL, &fd, NULL, &t)) {
-            if (FD_ISSET(s->sd, &fd))
-                r = true;
+        if (0 == select(s->sd + 1, NULL, &fd, NULL, &t) &&
+            FD_ISSET(s->sd, &fd)) {
+            r = true;
         }
     }
 
@@ -558,7 +562,9 @@ bool bal_iswritable(const bal_socket* s)
 
 bool bal_islistening(const bal_socket* s)
 {
-#pragma message("TODO: doesn't work on macOS!")
+    /* prefer using the OS, since technically the socket could have been created
+     * elsewhere and assigned to a bal_socket. */
+#if defined(__HAVE_SO_ACCEPTCONN__)
     int flag      = 0;
     int get       = bal_getoption(s, SOL_SOCKET, SO_ACCEPTCONN, &flag, sizeof(int));
 
@@ -566,6 +572,10 @@ bool bal_islistening(const bal_socket* s)
         _bal_handleerr(errno);
 
     return 0 == get && 0 != flag;
+#else
+    /* backup method: bitmask. */
+    return _bal_validsock(s) && bal_isbitset(s->state.mask, BAL_S_LISTEN);
+#endif
 }
 
 int bal_setiomode(const bal_socket* s, bool async)
@@ -622,7 +632,7 @@ int bal_getremotehostaddr(const bal_socket* s, bal_sockaddr* out)
 {
     int r = BAL_FALSE;
 
-    if (_bal_validptr(s) && _bal_validptr(out)) {
+    if (_bal_validsock(s) && _bal_validptr(out)) {
         memset(out, 0, sizeof(bal_sockaddr));
 
         socklen_t salen = sizeof(bal_sockaddr);
@@ -648,7 +658,7 @@ int bal_getlocalhostaddr(const bal_socket* s, bal_sockaddr* out)
 {
     int r = BAL_FALSE;
 
-    if (_bal_validptr(s) && _bal_validptr(out)) {
+    if (_bal_validsock(s) && _bal_validptr(out)) {
         socklen_t salen = sizeof(bal_sockaddr);
         memset(out, 0, sizeof(bal_sockaddr));
 

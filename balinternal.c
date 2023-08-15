@@ -285,7 +285,7 @@ bool _bal_cleanupasyncselect(void)
         &_bal_as_container.s_thread */
     };
 
-    _bal_dbglog("joining %zu threads...", bal_countof(threads));
+    _bal_dbglog("joining %zu thread(s)...", bal_countof(threads));
     for (size_t n = 0; n < bal_countof(threads); n++) {
 #if defined(__WIN__)
         DWORD wait = WaitForSingleObject((HANDLE)*threads[n], INFINITE);
@@ -306,11 +306,17 @@ bool _bal_cleanupasyncselect(void)
     };
 
     for (size_t n = 0UL; n < bal_countof(lists); n++) {
-        /* for the main list, some heap data may still be present;
-         * the other lists contain the same pointers, so it's not necessary to
-         * process them as well. */
          if (0 == n && !_bal_list_empty(lists[n])) {
-            _bal_dbglog("warning: list is not empty");
+            _bal_dbglog("warning: list is not empty:");
+
+            bal_descriptor key = 0;
+            bal_socket* val    = NULL;
+
+            _bal_list_reset_iterator(lists[n]);
+            while (_bal_list_iterate(lists[n], &key, &val)) {
+                _bal_dbglog("warning: dangling bal_socket "BAL_SOCKET_SPEC" (%p)",
+                    key, val);
+            }
          }
 
         bool destroy = _bal_list_destroy(&lists[n]);
@@ -363,11 +369,11 @@ int _bal_sock_destroy(bal_socket** s)
                 (*s)->sd, *s);
         }
 
-        if (BAL_BADSOCKET != (*s)->sd) {
+        if (!bal_isbitset((*s)->state.mask, BAL_S_CLOSE)) {
             _bal_dbglog("warning: freeing possibly open socket "BAL_SOCKET_SPEC
                         " (%p)...", (*s)->sd, *s);
         } else {
-            _bal_dbglog("freeing socket (%p)...", *s);
+            _bal_dbglog("freeing socket "BAL_SOCKET_SPEC" (%p)...", (*s)->sd, *s);
         }
 
         memset(*s, 0, sizeof(bal_socket));
@@ -383,7 +389,7 @@ bool _bal_defer_add_socket(bal_socket* s)
 {
     bool retval = false;
 
-    if (_bal_validptr(s)) {
+    if (_bal_validsock(s)) {
         bool locked = _bal_mutex_lock(&_bal_as_container.s_mutex);
         BAL_ASSERT(locked);
 
@@ -402,7 +408,7 @@ bool _bal_defer_remove_socket(bal_descriptor sd, bal_socket* s)
 {
     bool retval = false;
 
-    if (_bal_validptr(s)) {
+    if (_bal_validsock(s)) {
         bool locked = _bal_mutex_lock(&_bal_as_container.s_mutex);
         BAL_ASSERT(locked);
 
@@ -503,21 +509,31 @@ int _bal_retstr(char* out, const char* in, size_t destlen)
 
 bool _bal_haspendingconnect(bal_socket* s)
 {
-    return _bal_validptr(s) && bal_isbitset(s->state.mask, BAL_S_CONNECT);
+    return _bal_validsock(s) && bal_isbitset(s->state.mask, BAL_S_CONNECT);
 }
 
-bool _bal_islistening(bal_socket* s)
+uint32_t _bal_on_pending_conn_event(bal_socket* s)
 {
-    return _bal_validptr(s) && bal_isbitset(s->state.mask, BAL_S_LISTEN);
+    uint32_t r  = 0U;
+    bool closed = _bal_isclosedcircuit(s);
+
+    if (0 != bal_geterror(s) || closed) {
+        r = BAL_E_CONNFAIL;
+    } else {
+        r = BAL_E_CONNECT;
+    }
+
+    s->state.mask &= ~BAL_S_CONNECT;
+    return r;
 }
 
 bool _bal_isclosedcircuit(const bal_socket* s)
 {
-    if (NULL == s)
-        return false;
+    if (!_bal_validsock(s))
+        return true;
 
     int buf = 0;
-    int rcv = recv(s->sd, &buf, sizeof(int), MSG_PEEK);
+    int rcv = recv(s->sd, &buf, sizeof(int), MSG_PEEK | MSG_DONTWAIT);
 
     if (0 == rcv) {
         return true;
@@ -528,8 +544,12 @@ bool _bal_isclosedcircuit(const bal_socket* s)
             WSAEOPNOTSUPP == error   || WSAESHUTDOWN == error ||
             WSAECONNABORTED == error || WSAECONNRESET == error)
             return true;
-
-        if (EBADF == errno || ENOTCONN == errno || ENOTSOCK == errno)
+#else
+        if (ENETDOWN == errno     || ENOTCONN == errno     ||
+            ECONNREFUSED == errno || ESHUTDOWN == errno    ||
+            ECONNABORTED == errno || ECONNRESET == errno   ||
+            ENETUNREACH == errno  || ENETRESET == errno    ||
+            EHOSTDOWN   == errno  || EHOSTUNREACH == errno)
             return true;
 #endif
     }
@@ -687,32 +707,35 @@ void _bal_dispatchevents(const fd_set* set, bal_descriptor sd, bal_socket* s,
         switch (type) {
             case BAL_S_READ:
                 if (bal_isbitset(s->state.mask, BAL_E_READ)) {
-                    if (_bal_islistening(s))
+                    if (bal_islistening(s)) {
                         event = BAL_E_ACCEPT;
-                    else if (_bal_isclosedcircuit(s))
+                    } else if (_bal_haspendingconnect(s)) {
+                        event = _bal_on_pending_conn_event(s);
+                    } else if (_bal_isclosedcircuit(s)) {
                         event = BAL_E_CLOSE;
-                    else
+                    } else {
                         event = BAL_E_READ;
+                    }
                     snd = true;
                 }
             break;
             case BAL_S_WRITE:
                 if (bal_isbitset(s->state.mask, BAL_E_WRITE)) {
-                    if (bal_isbitset(s->state.mask, BAL_S_CONNECT)) {
-                        event         = BAL_E_CONNECT;
-                        s->state.mask &= ~BAL_S_CONNECT;
-                    } else
+                    if (_bal_haspendingconnect(s)) {
+                        event = _bal_on_pending_conn_event(s);
+                    } else {
                         event = BAL_E_WRITE;
-                    snd = true;
+                    }
+                    snd   = true;
                 }
             break;
             case BAL_S_EXCEPT:
-                if (bal_isbitset(s->state.mask, BAL_E_EXCEPTION)) {
+                if (bal_isbitset(s->state.mask, BAL_E_EXCEPT)) {
                     if (bal_isbitset(s->state.mask, BAL_S_CONNECT)) {
                         event          = BAL_E_CONNFAIL;
                         s->state.mask &= ~BAL_S_CONNECT;
                     } else
-                        event = BAL_E_EXCEPTION;
+                        event = BAL_E_EXCEPT;
                     snd = true;
                 }
             break;
@@ -721,24 +744,24 @@ void _bal_dispatchevents(const fd_set* set, bal_descriptor sd, bal_socket* s,
             break;
         }
 
-        if (snd && _bal_validptr(s) && _bal_validptr(s->state.proc))
+        if (snd && _bal_validsock(s) && _bal_validptr(s->state.proc))
             s->state.proc(s, event);
 
         if (BAL_E_CLOSE == event) {
             /* if the caller did the right thing, they have called bal_close,
              * and possibly even bal_sock_destroy. if they did not call the
              * latter, the socket still resides in the list. presume that
-             * the caller knows what they're doing, and leave the bal_socket
-             * alone. */
+             * the caller knows what they're doing, and don't destroy the socket,
+             * but remove it from the list. */
             bal_socket* d = NULL;
             bool removed  = _bal_list_remove(_bal_as_container.lst, sd, &d);
 
             if (removed) {
                 _bal_dbglog("removed socket "BAL_SOCKET_SPEC" (%p) from list"
-                            " (closed)", sd, s);
+                            " (close event)", sd, s);
             } else {
                 _bal_dbglog("socket "BAL_SOCKET_SPEC" destroyed by event"
-                            " handler", sd);
+                            " handler (close event)", sd);
             }
         }
     }
