@@ -586,11 +586,7 @@ bal_threadret _bal_eventthread(void* ctx)
 
                 _bal_list_reset_iterator(asc->lst);
                 while (_bal_list_iterate(asc->lst, &key, &val)) {
-                    fds[offset].fd = key;
-
-                    if (!bal_isbitinmask(val, BAL_E_READ))
-                        bal_setbitslow(&fds[offset].events, POLLIN);
-
+                    fds[offset].fd     = key;
                     fds[offset].events = _bal_mask_topollflags(val->state.mask);
                     offset++;
                 }
@@ -761,7 +757,6 @@ void _bal_dispatchevents(bal_descriptor sd, bal_socket* s, uint32_t events)
                         " handler (close event)", sd);
         }
     }
-
 }
 
 bool _bal_list_create(bal_list** lst)

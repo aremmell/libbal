@@ -56,6 +56,13 @@
 #   include <stropts.h>
 #  endif
 
+#  if defined(__linux__)
+#   include <sys/syscall.h>
+#  elif defined(__sun)
+#   include <sys/filio.h>
+#   include <stropts.h>
+#  endif
+
 #  include <sys/types.h>
 #  include <sys/socket.h>
 #  include <sys/select.h> // TODO: get rid of select and exchange for poll

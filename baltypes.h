@@ -104,6 +104,19 @@ typedef struct {
     bal_list_node* iter;
 } bal_list;
 
+/* Iteration callback. Returns false to stop iteration. */
+typedef bool (*bal_list_iter_callback)(bal_descriptor /*key*/,
+    bal_selectdata* /*val*/, void* /*ctx*/);
+
+/* Node type for bal_list. */
+typedef struct _bal_list_node {
+    bal_descriptor key;
+    bal_selectdata* val;
+    struct _bal_list_node *prev;
+    struct _bal_list_node *next;
+} bal_list_node;
+
+/* List of socket descriptors and associated state data. */
 typedef struct {
     bal_descriptor key;
     bal_socket** val;
