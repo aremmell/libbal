@@ -207,14 +207,14 @@ typedef unsigned bal_threadret;
 # define BAL_E_CLOSE     0x00000010U
 # define BAL_E_CONNFAIL  0x00000020U
 # define BAL_E_EXCEPT    0x00000040U
-# define BAL_E_ALL       0x0000007FU
+# define BAL_E_ERROR     0x00000080U
+# define BAL_E_INVALID   0x00000100U
+# define BAL_E_ALL       0x000001ffU
+# define BAL_E_STANDARD  (BAL_E_ALL & ~BAL_E_WRITE)
 
-# define BAL_S_CONNECT   0x10000000U
-# define BAL_S_CLOSE     0x20000000U
-# define BAL_S_LISTEN    0x40000000U
-# define BAL_S_READ      0x00000001U
-# define BAL_S_WRITE     0x00000002U
-# define BAL_S_EXCEPT    0x00000003U
+# define BAL_S_CONNECT   0x00000001U
+# define BAL_S_LISTEN    0x00000002U
+# define BAL_S_CLOSE     0x00000004U
 
 # if defined(__MACOS__)
 #  undef __HAVE_SO_ACCEPTCONN__

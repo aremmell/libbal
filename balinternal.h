@@ -58,12 +58,13 @@ bool _bal_haspendingconnect(bal_socket* s);
 uint32_t _bal_on_pending_conn_event(bal_socket* s);
 bool _bal_isclosedcircuit(const bal_socket* s);
 
+uint32_t _bal_pollflags_tomask(short flags);
+short _bal_mask_topollflags(uint32_t mask);
+
 bal_threadret _bal_eventthread(void* ctx);
 /* bal_threadret _bal_syncthread(void* ctx); */
 
-void _bal_processevents(bal_list* lst, uint32_t type);
-void _bal_dispatchevents(const fd_set* set, bal_descriptor sd, bal_socket* s,
-    uint32_t type);
+void _bal_dispatchevents(bal_descriptor sd, bal_socket* s, uint32_t events);
 
 /** Creates a new list. */
 bool _bal_list_create(bal_list** lst);
@@ -80,6 +81,9 @@ bool _bal_list_find(bal_list* lst, bal_descriptor key, bal_socket** val);
 
 /** True if the list contains zero nodes. */
 bool _bal_list_empty(const bal_list* lst);
+
+/** Returns the number of nodes contained in the list. */
+size_t _bal_list_count(bal_list* lst);
 
 /** Retrieves the key and value for the current iterator, if set. If further
  * nodes exist, advances the iterator. */

@@ -53,11 +53,22 @@ void __bal_safefree(void** pp)
 
 # define _bal_validptrptr(pp) (NULL != (pp))
 
-# define bal_countof(arr) (sizeof((arr)) / sizeof((arr)[0]))
+# define _bal_countof(arr) (sizeof((arr)) / sizeof((arr)[0]))
 
 # define _bal_validstr(str) ((str) && (*str))
 
 # define _bal_validsock(s) (NULL != (s) && BAL_BADSOCKET != (s)->sd)
+
+# define bal_isbitset(bitmask, bit) (((bitmask) & (bit)) == (bit))
+# define bal_setbitshigh(pbitmask, bits) \
+    if ((pbitmask)) { \
+        (*(pbitmask)) |= (bits); \
+    }
+
+# define bal_setbitslow(pbitmask, bits) \
+    if ((pbitmask)) { \
+        (*(pbitmask)) &= ~(bits); \
+    }
 
 # define BAL_UNUSED(var) (void)(var)
 

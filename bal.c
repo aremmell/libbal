@@ -108,8 +108,8 @@ int bal_close(bal_socket** s, bool destroy)
 #endif
         else {
             _bal_dbglog("closed socket "BAL_SOCKET_SPEC" (%p)", (*s)->sd, *s);
-            (*s)->state.mask |= BAL_S_CLOSE;
-            (*s)->state.mask &= ~(BAL_S_CONNECT | BAL_S_LISTEN);
+            (*s)->state.bits |= BAL_S_CLOSE;
+            (*s)->state.bits &= ~(BAL_S_CONNECT | BAL_S_LISTEN);
             closed            = BAL_TRUE;
         }
 
@@ -127,11 +127,12 @@ int bal_shutdown(bal_socket* s, int how)
         r = shutdown(s->sd, how);
         if (0 == r) {
             if (how == BAL_SHUT_RDWR)
-                s->state.mask &= ~(BAL_S_CONNECT | BAL_S_LISTEN);
-            else if (how == BAL_SHUT_RD)
-                s->state.mask &= ~BAL_S_LISTEN;
-            else if (how == BAL_SHUT_WR)
-                s->state.mask &= ~BAL_S_CONNECT;
+                s->state.bits &= ~(BAL_S_CONNECT | BAL_S_LISTEN);
+            else if (how == BAL_SHUT_RD) {
+                s->state.bits &= ~BAL_S_LISTEN;
+            } else if (how == BAL_SHUT_WR) {
+                s->state.bits &= ~BAL_S_CONNECT;
+            }
         } else {
             _bal_handlelasterr();
         }
@@ -177,7 +178,8 @@ int bal_connectaddrlist(bal_socket* s, bal_addrlist* al)
 #else
                 if (!r || EAGAIN == errno || EINPROGRESS == errno) {
 #endif
-                    s->state.mask |= BAL_S_CONNECT;
+                    bal_setbitshigh(&s->state.mask, BAL_E_WRITE);
+                    bal_setbitshigh(&s->state.bits, BAL_S_CONNECT);
                     r = BAL_TRUE;
                     break;
                 } else {
@@ -761,5 +763,18 @@ void bal_thread_yield(void)
 # else
     (void)pthread_yield();
 # endif
+#endif
+}
+
+void bal_sleep_msec(uint32_t msec)
+{
+    if (0U == msec)
+        return;
+
+#if defined(__WIN__)
+    (void)SleepEx((DWORD)msec, TRUE);
+#else
+    struct timespec ts = { msec / 1000, (msec % 1000) * 1000000 };
+    (void)nanosleep(&ts, NULL);
 #endif
 }

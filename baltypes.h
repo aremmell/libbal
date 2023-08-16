@@ -44,7 +44,8 @@ typedef bool (*bal_list_iter_cb)(bal_descriptor /*key*/,
 typedef bal_threadret (*bal_thread_cb)(void*);
 
 typedef struct bal_state {
-    uint32_t mask;     /**< State bitmask. */
+    uint32_t mask;     /**< Async I/O event mask. */
+    uint32_t bits;     /**< State bitmask. */
     bal_async_cb proc; /**< Async I/O event callback. */
 } bal_state;
 

@@ -189,7 +189,7 @@ bool _bal_initasyncselect(void)
     };
 
     bool init = true;
-    for (size_t n = 0; n < bal_countof(lists); n++) {
+    for (size_t n = 0; n < _bal_countof(lists); n++) {
         init &= _bal_list_create(lists[n]);
         BAL_ASSERT(init);
 
@@ -205,7 +205,7 @@ bool _bal_initasyncselect(void)
         &_bal_as_container.s_mutex */
     };
 
-    for (size_t n = 0; n < bal_countof(mutexes); n++) {
+    for (size_t n = 0; n < _bal_countof(mutexes); n++) {
         init &= _bal_mutex_create(mutexes[n]);
         BAL_ASSERT(init);
 
@@ -219,7 +219,7 @@ bool _bal_initasyncselect(void)
          &_bal_as_container.s_cond
     };
 
-    for (size_t n = 0; n < bal_countof(conditions); n++) {
+    for (size_t n = 0; n < _bal_countof(conditions); n++) {
         init &= _bal_cond_create(conditions[n]);
         BAL_ASSERT(init);
 
@@ -243,7 +243,7 @@ bool _bal_initasyncselect(void)
         } */
     };
 
-    for (size_t n = 0; n < bal_countof(threads); n++) {
+    for (size_t n = 0; n < _bal_countof(threads); n++) {
 #if defined(__WIN__)
         *threads[n].thread = _beginthreadex(NULL, 0U, threads[n].proc,
             &_bal_as_container, 0U, NULL);
@@ -282,8 +282,8 @@ bool _bal_cleanupasyncselect(void)
         &_bal_as_container.s_thread */
     };
 
-    _bal_dbglog("joining %zu thread(s)...", bal_countof(threads));
-    for (size_t n = 0; n < bal_countof(threads); n++) {
+    _bal_dbglog("joining %zu thread(s)...", _bal_countof(threads));
+    for (size_t n = 0; n < _bal_countof(threads); n++) {
 #if defined(__WIN__)
         DWORD wait = WaitForSingleObject((HANDLE)*threads[n], INFINITE);
         BAL_ASSERT_UNUSED(wait, WAIT_OBJECT_0 == wait);
@@ -302,7 +302,7 @@ bool _bal_cleanupasyncselect(void)
         _bal_as_container.lst_rem */
     };
 
-    for (size_t n = 0UL; n < bal_countof(lists); n++) {
+    for (size_t n = 0UL; n < _bal_countof(lists); n++) {
          if (0 == n && !_bal_list_empty(lists[n])) {
             _bal_dbglog("warning: list is not empty:");
 
@@ -326,7 +326,7 @@ bool _bal_cleanupasyncselect(void)
         &_bal_as_container.s_mutex */
     };
 
-    for (size_t n = 0; n < bal_countof(mutexes); n++) {
+    for (size_t n = 0; n < _bal_countof(mutexes); n++) {
         bool destroy = _bal_mutex_destroy(mutexes[n]);
         BAL_ASSERT(destroy);
         cleanup &= destroy;
@@ -336,7 +336,7 @@ bool _bal_cleanupasyncselect(void)
         &_bal_as_container.s_cond
     };
 
-    for (size_t n = 0; n < bal_countof(conditions); n++) {
+    for (size_t n = 0; n < _bal_countof(conditions); n++) {
         bool destroy = _bal_cond_destroy(conditions[n]);
         BAL_ASSERT(destroy);
         cleanup &= destroy;
@@ -366,7 +366,7 @@ int _bal_sock_destroy(bal_socket** s)
                 (*s)->sd, *s);
         }
 
-        if (!bal_isbitset((*s)->state.mask, BAL_S_CLOSE)) {
+        if (!bal_isbitset((*s)->state.bits, BAL_S_CLOSE)) {
             _bal_dbglog("warning: freeing possibly open socket "BAL_SOCKET_SPEC
                         " (%p)", (*s)->sd, *s);
         } else {
@@ -463,7 +463,7 @@ int _bal_getnameinfo(int f, const bal_sockaddr* in, char* host, char* port)
 
 bool _bal_haspendingconnect(bal_socket* s)
 {
-    return _bal_validsock(s) && bal_isbitset(s->state.mask, BAL_S_CONNECT);
+    return _bal_validsock(s) && bal_isbitset(s->state.bits, BAL_S_CONNECT);
 }
 
 uint32_t _bal_on_pending_conn_event(bal_socket* s)
@@ -477,7 +477,8 @@ uint32_t _bal_on_pending_conn_event(bal_socket* s)
         r = BAL_E_CONNECT;
     }
 
-    s->state.mask &= ~BAL_S_CONNECT;
+    s->state.mask &= ~BAL_E_WRITE;
+    s->state.bits &= ~BAL_S_CONNECT;
     return r;
 }
 
@@ -512,33 +513,113 @@ bool _bal_isclosedcircuit(const bal_socket* s)
     return false;
 }
 
-bal_threadret
-_bal_eventthread(void* ctx)
+uint32_t _bal_pollflags_tomask(short flags)
 {
+    uint32_t retval = 0U;
+
+    if (bal_isbitset(flags, POLLIN))
+        bal_setbitshigh(&retval, BAL_E_READ);
+
+    if (bal_isbitset(flags, POLLOUT))
+        bal_setbitshigh(&retval, BAL_E_WRITE);
+
+    if (bal_isbitset(flags, POLLPRI))
+        bal_setbitshigh(&retval, BAL_E_EXCEPT);
+
+    if (bal_isbitset(flags, POLLHUP))
+        bal_setbitshigh(&retval, BAL_E_CLOSE);
+
+    if (bal_isbitset(flags, POLLERR))
+        bal_setbitshigh(&retval, BAL_E_ERROR);
+
+    if (bal_isbitset(flags, POLLNVAL))
+        bal_setbitshigh(&retval, BAL_E_INVALID);
+
+    return retval;
+}
+
+short _bal_mask_topollflags(uint32_t mask)
+{
+    short retval = 0;
+
+    if (bal_isbitset(mask, BAL_E_READ))
+        bal_setbitshigh(&retval, POLLIN);
+
+    if (bal_isbitset(mask, BAL_E_WRITE))
+        bal_setbitshigh(&retval, POLLOUT);
+
+    if (bal_isbitset(mask, BAL_E_EXCEPT))
+        bal_setbitshigh(&retval, POLLPRI);
+
+    if (bal_isbitset(mask, BAL_E_CLOSE))
+        bal_setbitshigh(&retval, POLLHUP);
+
+    if (bal_isbitset(mask, BAL_E_ERROR))
+        bal_setbitshigh(&retval, POLLERR);
+
+    if (bal_isbitset(mask, BAL_E_INVALID))
+        bal_setbitshigh(&retval, POLLNVAL);
+
+    return retval;
+}
+
+bal_threadret _bal_eventthread(void* ctx)
+{
+    static const int poll_timeout = 1000;
     bal_as_container* asc = (bal_as_container*)ctx;
     BAL_ASSERT(NULL != asc);
 
     while (!_bal_get_boolean(&asc->die)) {
-        /* do three separate transactions; it's possible entries have
-         * been removed during each set of events, so we need to
-         * relinquish the mutex. */
-        _BAL_ENTER_MUTEX(&asc->mutex, read)
-        {
-            _bal_processevents(asc->lst, BAL_S_READ);
-        }
-        _BAL_LEAVE_MUTEX(&asc->mutex, read);
+        size_t count       = 0UL;
+        struct pollfd* fds = NULL;
+        _BAL_ENTER_MUTEX(&asc->mutex, dispatch)
 
-        _BAL_ENTER_MUTEX(&asc->mutex, write)
-        {
-            _bal_processevents(asc->lst, BAL_S_WRITE);
-        }
-        _BAL_LEAVE_MUTEX(&asc->mutex, write);
+        count = _bal_list_count(asc->lst);
+        if (count > 0UL) {
+            fds = calloc(count, sizeof(struct pollfd));
+            BAL_ASSERT(NULL != fds);
 
-        _BAL_ENTER_MUTEX(&asc->mutex, except)
-        {
-            _bal_processevents(asc->lst, BAL_S_EXCEPT);
+            if (_bal_validptr(fds)) {
+                size_t offset      = 0;
+                bal_descriptor key = 0;
+                bal_socket* val    = NULL;
+
+                _bal_list_reset_iterator(asc->lst);
+                while (_bal_list_iterate(asc->lst, &key, &val)) {
+                    fds[offset].fd = key;
+
+                    if (!bal_isbitinmask(val, BAL_E_READ))
+                        bal_setbitslow(&fds[offset].events, POLLIN);
+
+                    fds[offset].events = _bal_mask_topollflags(val->state.mask);
+                    offset++;
+                }
+
+                int res = poll(fds, count, poll_timeout);
+                if (-1 == res) {
+                    _bal_handlelasterr();
+                } else if (res > 0) {
+                    for (size_t n = 0UL; n < count; n++) {
+                        bal_socket* s = NULL;
+                        bool found    = _bal_list_find(asc->lst, fds[n].fd, &s);
+                        BAL_ASSERT(found && _bal_validsock(s));
+
+                        if (found && _bal_validsock(s)) {
+                            uint32_t events = _bal_pollflags_tomask(fds[n].revents);
+                            if (0U != events)
+                                _bal_dispatchevents(fds[n].fd, s, events);
+                        }
+                    }
+                }
+                _bal_safefree(&fds);
+            }
         }
-        _BAL_LEAVE_MUTEX(&asc->mutex, except);
+        _BAL_LEAVE_MUTEX(&asc->mutex, dispatch)
+
+        if (0 == count) {
+            // TODO: figure out how to wait in an alertable state
+            // when there's nothing to poll
+        }
 
         bal_thread_yield();
     }
@@ -616,110 +697,71 @@ _bal_eventthread(void* ctx)
 #endif
 }*/
 
-void _bal_processevents(bal_list* lst, uint32_t type)
+void _bal_dispatchevents(bal_descriptor sd, bal_socket* s, uint32_t events)
 {
-    /* NOTE: the list's mutex must already be locked. */
-    static const useconds_t wait_usec = 10000;
+    uint32_t _events = 0U;
 
-    if (_bal_list_empty(lst))
-        return;
-
-    bal_descriptor key  = 0;
-    bal_socket* val     = NULL;
-    bal_descriptor high = 0;
-    fd_set set          = {0};
-
-    FD_ZERO(&set);
-
-    _bal_list_reset_iterator(lst);
-    while (_bal_list_iterate(lst, &key, &val)) {
-        if (key > high)
-            high = key;
-        FD_SET(key, &set);
-    }
-
-    struct timeval tv = {0, wait_usec};
-    fd_set* fd_read   = (BAL_S_READ == type) ? &set : NULL;
-    fd_set* fd_write  = (BAL_S_WRITE == type) ? &set : NULL;
-    fd_set* fd_except = (BAL_S_EXCEPT == type) ? &set : NULL;
-
-    int poll = select(high + 1, fd_read, fd_write, fd_except, &tv);
-
-    if (-1 != poll) {
-        _bal_list_reset_iterator(lst);
-        while (_bal_list_iterate(lst, &key, &val))
-            _bal_dispatchevents(&set, key, val, type);
-    }
-}
-
-void _bal_dispatchevents(const fd_set* set, bal_descriptor sd, bal_socket* s,
-    uint32_t type)
-{
-    if (0 != FD_ISSET(sd, set)) {
-        uint32_t event = 0U;
-        bool snd       = false;
-
-        switch (type) {
-            case BAL_S_READ:
-                if (bal_isbitset(s->state.mask, BAL_E_READ)) {
-                    if (bal_islistening(s)) {
-                        event = BAL_E_ACCEPT;
-                    } else if (_bal_haspendingconnect(s)) {
-                        event = _bal_on_pending_conn_event(s);
-                    } else if (_bal_isclosedcircuit(s)) {
-                        event = BAL_E_CLOSE;
-                    } else {
-                        event = BAL_E_READ;
-                    }
-                    snd = true;
-                }
-            break;
-            case BAL_S_WRITE:
-                if (bal_isbitset(s->state.mask, BAL_E_WRITE)) {
-                    if (_bal_haspendingconnect(s)) {
-                        event = _bal_on_pending_conn_event(s);
-                    } else {
-                        event = BAL_E_WRITE;
-                    }
-                    snd   = true;
-                }
-            break;
-            case BAL_S_EXCEPT:
-                if (bal_isbitset(s->state.mask, BAL_E_EXCEPT)) {
-                    if (bal_isbitset(s->state.mask, BAL_S_CONNECT)) {
-                        event          = BAL_E_CONNFAIL;
-                        s->state.mask &= ~BAL_S_CONNECT;
-                    } else
-                        event = BAL_E_EXCEPT;
-                    snd = true;
-                }
-            break;
-            default:
-                BAL_ASSERT(!"invalid event type");
-            break;
-        }
-
-        if (snd && _bal_validsock(s) && _bal_validptr(s->state.proc))
-            s->state.proc(s, event);
-
-        if (BAL_E_CLOSE == event) {
-            /* if the caller did the right thing, they have called bal_close,
-             * and possibly even bal_sock_destroy. if they did not call the
-             * latter, the socket still resides in the list. presume that
-             * the caller knows what they're doing, and don't destroy the socket,
-             * but remove it from the list. */
-            bal_socket* d = NULL;
-            bool removed  = _bal_list_remove(_bal_as_container.lst, sd, &d);
-
-            if (removed) {
-                _bal_dbglog("removed socket "BAL_SOCKET_SPEC" (%p) from list"
-                            " (close event)", sd, s);
-            } else {
-                _bal_dbglog("socket "BAL_SOCKET_SPEC" destroyed by event"
-                            " handler (close event)", sd);
-            }
+    if (bal_isbitset(s->state.mask, BAL_E_READ) &&
+        bal_isbitset(events, BAL_E_READ)) {
+        if (bal_islistening(s)) {
+            _events |= BAL_E_ACCEPT;
+        } else if (_bal_haspendingconnect(s)) {
+            _events |= _bal_on_pending_conn_event(s);
+        } else {
+            _events |= BAL_E_READ;
         }
     }
+
+    if (bal_isbitset(s->state.mask, BAL_E_WRITE) &&
+        bal_isbitset(events, BAL_E_WRITE)) {
+        if (_bal_haspendingconnect(s)) {
+            _events |= _bal_on_pending_conn_event(s);
+        } else if (bal_isbitset(s->state.mask, BAL_E_CLOSE) &&
+            _bal_isclosedcircuit(s)) {
+            _events |= BAL_E_CLOSE;
+        } else {
+            _events |= BAL_E_WRITE;
+        }
+    }
+
+    if (bal_isbitset(s->state.mask, BAL_E_CLOSE) &&
+        bal_isbitset(events, BAL_E_CLOSE)) {
+        _events |= BAL_E_CLOSE;
+    }
+
+    if (bal_isbitset(s->state.mask, BAL_E_EXCEPT) &&
+        bal_isbitset(events, BAL_E_EXCEPT)) {
+        _events |= BAL_E_EXCEPT;
+    }
+
+    if (bal_isbitset(s->state.mask, BAL_E_ERROR) &&
+        bal_isbitset(events, BAL_E_ERROR)) {
+        _events |= BAL_E_ERROR;
+    }
+
+    bool close = bal_isbitset(events, BAL_E_CLOSE);
+
+    if (0U != _events && _bal_validsock(s) && _bal_validptr(s->state.proc))
+        s->state.proc(s, _events);
+
+    if (close) {
+        /* if the caller did the right thing, they have called bal_close,
+         * and possibly even bal_sock_destroy. if they did not call the
+         * latter, the socket still resides in the list. presume that
+         * the caller knows what they're doing, and don't destroy the socket,
+         * but remove it from the list. */
+        bal_socket* d = NULL;
+        bool removed  = _bal_list_remove(_bal_as_container.lst, sd, &d);
+
+        if (removed) {
+            _bal_dbglog("removed socket "BAL_SOCKET_SPEC" (%p) from list"
+                        " (close event)", sd, s);
+        } else {
+            _bal_dbglog("socket "BAL_SOCKET_SPEC" destroyed by event"
+                        " handler (close event)", sd);
+        }
+    }
+
 }
 
 bool _bal_list_create(bal_list** lst)
@@ -787,6 +829,23 @@ bool _bal_list_find(bal_list* lst, bal_descriptor key, bal_socket** val)
 bool _bal_list_empty(const bal_list* lst)
 {
     return !lst || !lst->head;
+}
+
+size_t _bal_list_count(bal_list* lst)
+{
+    size_t count = 0UL;
+
+    if (!_bal_list_empty(lst)) {
+        bal_descriptor key = 0;
+        bal_socket* val    = NULL;
+
+        _bal_list_reset_iterator(lst);
+        while (_bal_list_iterate(lst, &key, &val)) {
+            count++;
+        }
+    }
+
+    return count;
 }
 
 bool _bal_list_iterate(bal_list* lst, bal_descriptor* key, bal_socket** val)
