@@ -152,21 +152,6 @@ void balserver::async_events_cb(bal_socket* s, uint32_t events)
         }
     }
 
-    if (bal_isbitset(events, BAL_E_WRITE)) {
-        static bool sent_reply = false;
-        if (!sent_reply) {
-            static const char* reply = "O, HELO 2 U";
-            constexpr const size_t reply_size = 11;
-
-            int sent = bal_send(s, reply, reply_size, 0U);
-            BAL_ASSERT(reply_size == sent);
-            if (sent > 0) {
-                sent_reply = true;
-                printf("[" BAL_SOCKET_SPEC "] wrote %d bytes\n", s->sd, sent);
-            }
-        }
-    }
-
     if (bal_isbitset(events, BAL_E_CLOSE)) {
         printf("[" BAL_SOCKET_SPEC "] connection closed.\n", s->sd);
         bal_close(&s, true);
