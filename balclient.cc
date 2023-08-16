@@ -36,8 +36,9 @@ int main(int argc, char** argv)
     BAL_UNUSED(argc);
     BAL_UNUSED(argv);
 
-    if (!balcommon::initialize())
+    if (!balcommon::initialize()) {
         return EXIT_FAILURE;
+    }
 
     bal_socket* s = nullptr;
     int ret = bal_sock_create(&s, AF_INET, SOCK_STREAM, IPPROTO_TCP);
@@ -56,11 +57,13 @@ int main(int argc, char** argv)
         bal_thread_yield();
     } while (balcommon::should_run());
 
-    if (BAL_TRUE != bal_close(&s, true))
+    if (BAL_TRUE != bal_close(&s, true)) {
         balcommon::print_last_lib_error("bal_close");
+    }
 
-    if (!bal_cleanup())
+    if (!bal_cleanup()) {
         balcommon::print_last_lib_error("bal_cleanup");
+    }
 
     return EXIT_SUCCESS;
 }

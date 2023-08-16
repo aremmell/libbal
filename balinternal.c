@@ -55,7 +55,7 @@ bool _bal_init(void)
     WSADATA wd = {0};
 
     if (0 != WSAStartup(wVer, &wd)) {
-        _bal_handlelasterr()
+        _bal_handlelasterr();
         return false;
     }
 #endif

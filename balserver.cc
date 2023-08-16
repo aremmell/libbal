@@ -35,8 +35,9 @@ int main(int argc, char** argv)
     BAL_UNUSED(argc);
     BAL_UNUSED(argv);
 
-    if (!balcommon::initialize())
+    if (!balcommon::initialize()) {
         return EXIT_FAILURE;
+    }
 
     bal_socket* s = nullptr;
     int ret = bal_sock_create(&s, AF_INET, SOCK_STREAM, IPPROTO_TCP);
@@ -65,11 +66,13 @@ int main(int argc, char** argv)
     ret = bal_asyncselect(s, nullptr, 0U);
     EXIT_IF_FAILED(ret, "bal_asyncselect");
 
-    if (BAL_TRUE != bal_close(&s, true))
+    if (BAL_TRUE != bal_close(&s, true)) {
         balcommon::print_last_lib_error("bal_close");
+    }
 
-    if (!bal_cleanup())
+    if (!bal_cleanup()) {
         balcommon::print_last_lib_error("bal_cleanup");
+    }
 
     return EXIT_SUCCESS;
 }
@@ -134,8 +137,9 @@ void balserver::async_events_cb(bal_socket* s, uint32_t events)
 
             int sent = bal_send(s, reply, reply_size, MSG_NOSIGNAL);
             if (sent > 0) {
-                if (reply_size == sent)
+                if (reply_size == sent) {
                     already_replied = true;
+                }
                 printf("[" BAL_SOCKET_SPEC "] wrote %d bytes\n", s->sd, sent);
             } else {
                 bal_error err {};

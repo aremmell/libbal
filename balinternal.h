@@ -123,31 +123,31 @@ bool _bal_mutex_create(bal_mutex* mutex);
 bool _bal_mutex_lock(bal_mutex* mutex);
 
 /** Determines if a mutex is locked without waiting. */
-bool _bal_mutex_trylock(bal_mutex* mutex);
+//bool _bal_mutex_trylock(bal_mutex* mutex);
 
 /** Unlocks a previously locked mutex. */
-bool _bal_mutex_unlock(bal_mutex* mutex);
+//bool _bal_mutex_unlock(bal_mutex* mutex);
 
 /** Destroys a mutex. */
-bool _bal_mutex_destroy(bal_mutex* mutex);
+//bool _bal_mutex_destroy(bal_mutex* mutex);
 
 /** Creates/initializes a new condition variable. */
-bool _bal_cond_create(bal_condition* cond);
+//bool _bal_cond_create(bal_condition* cond);
 
 /** Signals a condition variable. */
-bool _bal_cond_signal(bal_condition* cond);
+//bool _bal_cond_signal(bal_condition* cond);
 
 /** Broadcast signals a condition variable. */
-bool _bal_cond_broadcast(bal_condition* cond);
+//bool _bal_cond_broadcast(bal_condition* cond);
 
 /** Destroys a condition variable. */
-bool _bal_cond_destroy(bal_condition* cond);
+//bool _bal_cond_destroy(bal_condition* cond);
 
 /** Waits indefinitely for a condition variable to become signaled. */
-bool _bal_cond_wait(bal_condition* cond, bal_mutex* mutex);
+//bool _bal_cond_wait(bal_condition* cond, bal_mutex* mutex);
 
 /** Waits a given amount of time for a condition variable to become signaled. */
-bool _bal_condwait_timeout(bal_condition* cond, bal_mutex* mutex, bal_wait* how_long);
+//bool _bal_condwait_timeout(bal_condition* cond, bal_mutex* mutex, bal_wait* how_long);
 
 # if defined(__HAVE_STDATOMICS__)
 bool _bal_get_boolean(const atomic_bool* boolean);

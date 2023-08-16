@@ -32,8 +32,9 @@ atomic_bool _run;
 
 bool balcommon::initialize()
 {
-    if (!balcommon::install_ctrl_c_handler())
+    if (!balcommon::install_ctrl_c_handler()) {
         return false;
+    }
 
     if (!bal_init()) {
         print_last_lib_error("bal_init");
