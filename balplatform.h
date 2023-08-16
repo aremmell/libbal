@@ -39,6 +39,15 @@
 #   undef _BSD_SOURCE
 #   define _BSD_SOURCE
 #  endif
+#  if !defined(_POSIX_C_SOURCE)
+#   define _POSIX_C_SOURCE 200809L
+#  endif
+#  if !defined(_DEFAULT_SOURCE)
+#   define _DEFAULT_SOURCE
+#  endif
+#  if !defined(_XOPEN_SOURCE)
+#   define _XOPEN_SOURCE 700
+#  endif
 
 #  if defined(__linux__)
 #   include <sys/syscall.h>
@@ -181,12 +190,6 @@ typedef unsigned bal_threadret;
 # include <inttypes.h>
 # include <assert.h>
 
-# if defined(__MACOS__)
-#  undef __HAVE_SO_ACCEPTCONN__
-# else
-#  define __HAVE_SO_ACCEPTCONN__
-# endif
-
 # define BAL_TRUE        0
 # define BAL_FALSE      -1
 # define BAL_BADSOCKET  -1
@@ -212,6 +215,49 @@ typedef unsigned bal_threadret;
 # define BAL_S_READ      0x00000001U
 # define BAL_S_WRITE     0x00000002U
 # define BAL_S_EXCEPT    0x00000003U
+
+# if defined(__MACOS__)
+#  undef __HAVE_SO_ACCEPTCONN__
+# else
+#  define __HAVE_SO_ACCEPTCONN__
+# endif
+
+# if defined(__WIN__) && defined(__STDC_SECURE_LIB__)
+#  define __HAVE_STDC_SECURE_OR_EXT1__
+# elif defined(__STDC_LIB_EXT1__)
+#  define __HAVE_STDC_SECURE_OR_EXT1__
+# elif defined(__STDC_ALLOC_LIB__)
+#  define __HAVE_STDC_EXT2__
+# endif
+
+#if defined(__MACOS__) || defined(__BSD__) || \
+    (defined(_POSIX_C_SOURCE) && (_POSIX_C_SOURCE >= 200112L && !defined(_GNU_SOURCE)))
+# define __HAVE_XSI_STRERROR_R__
+# if defined(__GLIBC__)
+#  if (__GLIBC__ >= 2 && __GLIBC_MINOR__ < 13)
+#   define __HAVE_XSI_STRERROR_R_ERRNO__
+#  endif
+# endif
+#elif defined(_GNU_SOURCE) && defined(__GLIBC__)
+# define __HAVE_GNU_STRERROR_R__
+#elif defined(__HAVE_STDC_SECURE_OR_EXT1__)
+# define __HAVE_STRERROR_S__
+#endif
+
+# if (__STDC_VERSION__ >= 201112 && !defined(__STDC_NO_THREADS__)) || \
+     (defined(__SUNPRO_C) || defined(__SUNPRO_CC))
+#  if defined(_AIX) && defined(__GNUC__)
+#   define _bal_thread_local __thread
+#  else
+#   define _bal_thread_local _Thread_local
+#  endif
+# elif defined(__WIN__)
+#  define _bal_thread_local __declspec(thread)
+# elif defined(__GNUC__) || (defined(_AIX) && (defined(__xlC_ver__) || defined(__ibmxl__)))
+#  define _bal_thread_local __thread
+# else
+#  error "unable to resolve thread local attribute; please contact the author."
+# endif
 
 # if (defined(__clang__) || defined(__GNUC__)) && defined(__FILE_NAME__)
 #  define __file__ __FILE_NAME__

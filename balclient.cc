@@ -41,25 +41,25 @@ int main(int argc, char** argv)
 
     bal_socket* s = nullptr;
     int ret = bal_sock_create(&s, AF_INET, SOCK_STREAM, IPPROTO_TCP);
-    EXIT_IF_FAILED(ret, nullptr, "bal_sock_create");
+    EXIT_IF_FAILED(ret, "bal_sock_create");
 
     ret = bal_asyncselect(s, &balclient::async_events_cb, BAL_E_ALL);
-    EXIT_IF_FAILED(ret, s, "bal_asyncselect");
+    EXIT_IF_FAILED(ret, "bal_asyncselect");
 
     ret = bal_connect(s, balcommon::localaddr, balcommon::portnum);
-    EXIT_IF_FAILED(ret, s, "bal_connect");
+    EXIT_IF_FAILED(ret, "bal_connect");
 
     printf("running; ctrl+c to exit...\n");
 
     do {
-        bal_yield_thread();
+        bal_thread_yield();
     } while (balcommon::should_run());
 
     if (BAL_TRUE != bal_close(&s, true))
-        balcommon::print_last_lib_error(s, "bal_close");
+        balcommon::print_last_lib_error("bal_close");
 
     if (!bal_cleanup())
-        balcommon::print_last_lib_error(nullptr, "bal_cleanup");
+        balcommon::print_last_lib_error("bal_cleanup");
 
     return EXIT_SUCCESS;
 }
@@ -76,7 +76,7 @@ void balclient::async_events_cb(bal_socket* s, uint32_t event)
             bal_error err {};
             printf("[" BAL_SOCKET_SPEC "] failed to connect to %s:%s %d (%s)\n",
                 s->sd, balcommon::localaddr, balcommon::portnum,
-                bal_getlasterror(s, &err), err.desc);
+                bal_getlasterror(&err), err.desc);
             balcommon::quit();
         }
         break;
@@ -90,7 +90,7 @@ void balclient::async_events_cb(bal_socket* s, uint32_t event)
             } else {
                 bal_error err {};
                 printf("[" BAL_SOCKET_SPEC "] read error %d (%s)!\n", s->sd,
-                    bal_getlasterror(s, &err), err.desc);
+                    bal_getlasterror(&err), err.desc);
             }
         }
         break;
@@ -104,7 +104,7 @@ void balclient::async_events_cb(bal_socket* s, uint32_t event)
                 if (ret <= 0) {
                     bal_error err {};
                     printf("[" BAL_SOCKET_SPEC "] write error %d (%s)!\n", s->sd,
-                        bal_getlasterror(s, &err), err.desc);
+                        bal_getlasterror(&err), err.desc);
                 } else {
                     printf("[" BAL_SOCKET_SPEC "] wrote %d bytes\n", s->sd, ret);
                     wrote_helo = true;

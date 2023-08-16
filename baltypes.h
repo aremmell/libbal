@@ -74,10 +74,20 @@ typedef struct {
     char port[NI_MAXSERV];
 } bal_addrstrings;
 
+/** The public error type. */
 typedef struct {
     int code;
     char desc[BAL_MAXERROR];
 } bal_error;
+
+/** The internal error type. */
+typedef struct {
+    int code;
+    const char* func;
+    const char* file;
+    uint32_t line;
+    bool gai;
+} bal_error_info;
 
 /* Node type for bal_list. */
 typedef struct _bal_list_node {
@@ -97,7 +107,7 @@ typedef struct {
     bal_descriptor key;
     bal_socket** val;
     bool found;
-} _bal_list_find_data;
+} bal_list_find_data;
 
 typedef struct {
     bal_list* lst;        /** List of active socket descriptors and their states. */

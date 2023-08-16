@@ -27,9 +27,64 @@
 #include "balerrors.h"
 #include "balinternal.h"
 
+static _bal_thread_local bal_error_info _error_info = {
+    0, BAL_UNKNOWN, BAL_UNKNOWN, 0U, false
+};
+
 #if defined(__WIN__)
 # pragma comment(lib, "shlwapi.lib")
 #endif
+
+int _bal_getlasterror(bal_error* err)
+{
+    int retval = -1;
+
+    if (_bal_validptr(err)) {
+        memset(err, 0, sizeof(bal_error));
+        err->code = _error_info.code;
+
+        if (_error_info.gai) {
+            const char* tmp = gai_strerror(err->code);
+            (void)strncpy(err->desc, tmp, strnlen(tmp, BAL_MAXERROR));
+        } else {
+            int finderr = -1;
+# if defined(__HAVE_XSI_STRERROR_R__)
+            finderr = strerror_r(err->code, err->desc, BAL_MAXERROR);
+# if defined(__HAVE_XSI_STRERROR_R_ERRNO__)
+            if (finderr == -1)
+                finderr = errno;
+# endif
+# elif defined(__HAVE_GNU_STRERROR_R__)
+            char* tmp = strerror_r(err->code, err->desc, BAL_MAXERROR);
+            if (tmp != err->desc)
+                (void)strncpy(err->desc, tmp, strnlen(tmp, BAL_MAXERROR));
+# elif defined(__HAVE_STRERROR_S__)
+          finderr = (int)strerror_s(err->desc, BAL_MAXERROR, err->code);
+# else
+            char* tmp = strerror(err->code);
+            (void)strncpy(err->desc, tmp, strnlen(tmp, BAL_MAXERROR));
+# endif
+# if defined(__HAVE_XSI_STRERROR_R__) || defined(__HAVE_STRERROR_S__)
+            assert(0 == finderr);
+# endif
+            BAL_UNUSED(finderr);
+        }
+        return err->code;
+    }
+    return retval;
+}
+
+bool __bal_setlasterror(int code, const char* func, const char* file,
+    uint32_t line, bool gai)
+{
+    _error_info.code = code;
+    _error_info.func = func;
+    _error_info.file = file;
+    _error_info.line = line;
+    _error_info.gai  = gai;
+
+    return false;
+}
 
 #if defined(BAL_DBGLOG)
 void __bal_dbglog(const char* func, const char* file, uint32_t line,
@@ -75,65 +130,3 @@ void __bal_dbglog(const char* func, const char* file, uint32_t line,
     }
 }
 #endif
-
-int _bal_getlasterror(const bal_socket* s, bal_error* err)
-{
-    int retval = 0;
-    if (_bal_validptr(err)) {
-        memset(err, 0, sizeof(bal_error));
-
-        bool resolved = false;
-        if (s) {
-            err->code = bal_geterror(s);
-            resolved  = -1 != err->code && 0 != err->code;
-        }
-
-#if defined(__WIN__)
-        if (!resolved)
-            err->code = WSAGetLastError();
-
-        DWORD flags = FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS;
-        if (!FormatMessageA(flags, NULL, err->code, 0U, err->desc, BAL_MAXERROR, NULL))
-            _bal_dbglog("FormatMessageA failed! err: %lu", GetLastError());
-
-#else
-        if (!resolved)
-            err->code = errno;
-# pragma message("TODO: these error codes are only appplicable when getaddrinfo or getnameinfo fail")
-/*         switch (err->code) {
-            case EAI_AGAIN:
-            case EAI_FAIL:
-            case EAI_MEMORY:
-            case EAI_NODATA:
-            case EAI_SOCKTYPE:
-            case EAI_BADFLAGS:
-            case EAI_BADHINTS:
-            case EAI_FAMILY:
-            case EAI_ADDRFAMILY:
-            case EAI_NONAME:
-            case EAI_SERVICE:
-                if (0 == _bal_retstr(err->desc, gai_strerror(err->code), BAL_MAXERROR))
-                    r = BAL_TRUE;
-            break;
-            default: */
-                (void)_bal_retstr(err->desc, strerror(err->code), BAL_MAXERROR);
-
-         /*    break;
-        } */
-#endif
-        retval = err->code;
-    }
-
-    return retval;
-}
-
-bool _bal_setlasterror(int err)
-{
-    _bal_dbglog("setting last error to %d", err);
-#if defined(__WIN__)
-    WSASetLastError(err);
-#else
-    errno = err;
-#endif
-    return false;
-}

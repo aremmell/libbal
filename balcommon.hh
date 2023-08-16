@@ -43,12 +43,11 @@ namespace balcommon
     bool should_run();
     bool install_ctrl_c_handler();
     void ctrl_c_handler_impl();
-    void print_last_lib_error(const bal_socket* s = nullptr,
-        const char* func = nullptr);
+    void print_last_lib_error(const char* func = nullptr);
 
-# define EXIT_IF_FAILED(retval, s, func) \
+# define EXIT_IF_FAILED(retval, func) \
     if (BAL_TRUE != retval) { \
-        balcommon::print_last_lib_error(s, func); \
+        balcommon::print_last_lib_error(func); \
         return EXIT_FAILURE; \
     }
 

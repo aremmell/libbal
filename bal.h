@@ -113,7 +113,7 @@ bool bal_islistening(const bal_socket* s);
 int bal_setiomode(const bal_socket* s, bool async);
 size_t bal_recvqueuesize(const bal_socket* s);
 
-int bal_getlasterror(const bal_socket* s, bal_error* err);
+int bal_getlasterror(bal_error* err);
 
 int bal_resolvehost(const char* host, bal_addrlist* out);
 int bal_getremotehostaddr(const bal_socket* s, bal_sockaddr* out);
@@ -126,7 +126,7 @@ int bal_resetaddrlist(bal_addrlist* al);
 const bal_sockaddr* bal_enumaddrlist(bal_addrlist* al);
 int bal_freeaddrlist(bal_addrlist* al);
 
-void bal_yield_thread(void);
+void bal_thread_yield(void);
 
 static inline
 bool bal_isbitset(uint32_t bitmask, uint32_t bit)

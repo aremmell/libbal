@@ -32,6 +32,24 @@
 extern "C" {
 # endif
 
+int _bal_getlasterror(bal_error* err);
+bool __bal_setlasterror(int code, const char* func, const char* file,
+    uint32_t line, bool gai);
+
+# define _bal_handleerr(err)  \
+    __bal_setlasterror(err, __func__, __file__, __LINE__, false)
+
+# if defined(__WIN__)
+#   define _bal_handlelasterr() \
+    __bal_setlasterror(WSAGetLastError(), __func__, __file__, __LINE__, false)
+# else
+#   define _bal_handlelasterr() \
+    __bal_setlasterror(errno, __func__, __file__, __LINE__, false)
+# endif
+
+#define _bal_handlegaierr(err) \
+    __bal_setlasterror(err, __func__, __file__, __LINE__, true)
+
 # if defined(BAL_DBGLOG)
 void __bal_dbglog(const char* func, const char* file, uint32_t line,
     const char* format, ...);
@@ -52,11 +70,6 @@ void __bal_dbglog(const char* func, const char* file, uint32_t line,
         BAL_ASSERT(expr); \
         BAL_UNUSED(var); \
     }
-
-int _bal_getlasterror(const bal_socket* s, bal_error* err);
-bool _bal_setlasterror(int err);
-
-# define _bal_handleerr(err) _bal_setlasterror(err)
 
 # if defined(__cplusplus)
 }

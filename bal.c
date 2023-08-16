@@ -72,11 +72,11 @@ int bal_sock_create(bal_socket** s, int addr_fam, int type, int proto)
     if (_bal_validptrptr(s)) {
         *s = calloc(1UL, sizeof(bal_socket));
         if (!_bal_validptr(*s)) {
-            _bal_handleerr(errno);
+            _bal_handlelasterr();
         } else {
             (*s)->sd = socket(addr_fam, type, proto);
             if (-1 == (*s)->sd) {
-                _bal_setlasterror(errno);
+                _bal_handlelasterr();
                 _bal_safefree(s);
             } else {
                 (*s)->addr_fam = addr_fam;
@@ -99,11 +99,11 @@ int bal_close(bal_socket** s, bool destroy)
         BAL_ASSERT(BAL_BADSOCKET != (*s)->sd);
 #if defined(__WIN__)
         if (SOCKET_ERROR == closesocket((*s)->sd)) {
-            (void)_bal_handleerr(WSAGetLastError());
+            _bal_handlelasterr()
         }
 #else
         if (-1 == close((*s)->sd)) {
-            (void)_bal_handleerr(errno);
+            _bal_handlelasterr();
         }
 #endif
         else {
@@ -133,7 +133,7 @@ int bal_shutdown(bal_socket* s, int how)
             else if (how == BAL_SHUT_WR)
                 s->state.mask &= ~BAL_S_CONNECT;
         } else {
-            (void)_bal_handleerr(errno);
+            _bal_handlelasterr();
         }
     }
 
@@ -181,7 +181,7 @@ int bal_connectaddrlist(bal_socket* s, bal_addrlist* al)
                     r = BAL_TRUE;
                     break;
                 } else {
-                    _bal_handleerr(errno);
+                    _bal_handlelasterr();
                 }
             }
         }
@@ -280,7 +280,7 @@ int bal_listen(bal_socket* s, int backlog)
         if (0 == r) {
             s->state.mask |= BAL_S_LISTEN;
         } else {
-            (void)_bal_handleerr(errno);
+            _bal_handlelasterr();
         }
     }
 
@@ -294,7 +294,7 @@ int bal_accept(const bal_socket* s, bal_socket** res, bal_sockaddr* resaddr)
     if (_bal_validsock(s) && _bal_validptrptr(res) && _bal_validptr(resaddr)) {
         *res = calloc(1UL, sizeof(bal_socket));
         if (!_bal_validptr(*res)) {
-            _bal_handleerr(errno);
+            _bal_handlelasterr();
         } else {
             socklen_t sasize = sizeof(bal_sockaddr);
             bal_descriptor sd = accept(s->sd, (struct sockaddr*)resaddr, &sasize);
@@ -306,7 +306,7 @@ int bal_accept(const bal_socket* s, bal_socket** res, bal_sockaddr* resaddr)
                 (*res)->proto    = s->proto;
                 r                = BAL_TRUE;
             } else {
-                _bal_handleerr(errno);
+                _bal_handlelasterr();
                 _bal_safefree(res);
             }
         }
@@ -562,7 +562,7 @@ bool bal_islistening(const bal_socket* s)
     int get       = bal_getoption(s, SOL_SOCKET, SO_ACCEPTCONN, &flag, sizeof(int));
 
     if (0 != get)
-        _bal_handleerr(errno);
+        _bal_handlelasterr();
 
     return 0 == get && 0 != flag;
 #else
@@ -599,9 +599,9 @@ size_t bal_recvqueuesize(const bal_socket* s)
     return r;
 }
 
-int bal_getlasterror(const bal_socket* s, bal_error* err)
+int bal_getlasterror(bal_error* err)
 {
-    return _bal_getlasterror(s, err);
+    return _bal_getlasterror(err);
 }
 
 int bal_resolvehost(const char* host, bal_addrlist* out)
@@ -685,7 +685,7 @@ int bal_getaddrstrings(const bal_sockaddr* in, bool dns, bal_addrstrings* out)
             if (dns) {
                 get = _bal_getnameinfo(_BAL_NI_DNS, in, out->host, out->port);
                 if (BAL_FALSE == get)
-                    (void)_bal_retstr(out->host, BAL_UNKNOWN, NI_MAXHOST);
+                    (void)strncpy(out->host, BAL_UNKNOWN, NI_MAXHOST);
             }
 
             if (PF_INET == ((struct sockaddr*)in)->sa_family)
@@ -751,12 +751,11 @@ int bal_freeaddrlist(bal_addrlist* al)
     return r;
 }
 
-void bal_yield_thread(void)
+void bal_thread_yield(void)
 {
 #if defined(__WIN__)
-    Sleep(1);
+    (void)SwitchToThread();
 #else
-    int yield = sched_yield();
-    BAL_ASSERT_UNUSED(yield, 0 == yield);
+    (void)pthread_yield();
 #endif
 }

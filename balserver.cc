@@ -40,35 +40,35 @@ int main(int argc, char** argv)
 
     bal_socket* s = nullptr;
     int ret = bal_sock_create(&s, AF_INET, SOCK_STREAM, IPPROTO_TCP);
-    EXIT_IF_FAILED(ret, nullptr, "bal_sock_create");
+    EXIT_IF_FAILED(ret, "bal_sock_create");
 
     ret = bal_setreuseaddr(s, 1);
-    EXIT_IF_FAILED(ret, s, "bal_setreuseaddr");
+    EXIT_IF_FAILED(ret, "bal_setreuseaddr");
 
     ret = bal_bind(s, balcommon::localaddr, balcommon::portnum);
-    EXIT_IF_FAILED(ret, s, "bal_bind");
+    EXIT_IF_FAILED(ret, "bal_bind");
 
     ret = bal_asyncselect(s, &balserver::async_events_cb, BAL_E_ALL);
-    EXIT_IF_FAILED(ret, s, "bal_asyncselect");
+    EXIT_IF_FAILED(ret, "bal_asyncselect");
 
     ret = bal_listen(s, SOMAXCONN);
-    EXIT_IF_FAILED(ret, s, "bal_listen");
+    EXIT_IF_FAILED(ret, "bal_listen");
 
     printf("listening on %s:%s; ctrl+c to exit...\n",
         balcommon::localaddr, balcommon::portnum);
 
     do {
-        bal_yield_thread();
+        bal_thread_yield();
     } while (balcommon::should_run());
 
     ret = bal_asyncselect(s, nullptr, 0U);
-    EXIT_IF_FAILED(ret, s, "bal_asyncselect");
+    EXIT_IF_FAILED(ret, "bal_asyncselect");
 
     if (BAL_TRUE != bal_close(&s, true))
-        balcommon::print_last_lib_error(s, "bal_close");
+        balcommon::print_last_lib_error("bal_close");
 
     if (!bal_cleanup())
-        balcommon::print_last_lib_error(nullptr, "bal_cleanup");
+        balcommon::print_last_lib_error("bal_cleanup");
 
     return EXIT_SUCCESS;
 }
@@ -84,21 +84,21 @@ void balserver::async_events_cb(bal_socket* s, uint32_t event)
 
             int ret = bal_accept(s, &client_socket, &client_addr);
             if (BAL_TRUE != ret) {
-                balcommon::print_last_lib_error(s, "bal_accept");
+                balcommon::print_last_lib_error("bal_accept");
                 return;
             }
 
             bal_addrstrings client_strings {};
             ret = bal_getaddrstrings(&client_addr, false, &client_strings);
             if (BAL_TRUE != ret) {
-                balcommon::print_last_lib_error(nullptr, "bal_getaddrstrings");
+                balcommon::print_last_lib_error("bal_getaddrstrings");
                 bal_close(&client_socket, true);
                 return;
             }
 
             ret = bal_asyncselect(client_socket, &async_events_cb, BAL_E_ALL);
             if (BAL_TRUE != ret) {
-                balcommon::print_last_lib_error(client_socket, "bal_asyncselect");
+                balcommon::print_last_lib_error("bal_asyncselect");
                 bal_close(&client_socket, true);
                 return;
             }
@@ -120,7 +120,7 @@ void balserver::async_events_cb(bal_socket* s, uint32_t event)
             } else {
                 bal_error err {};
                 printf("[" BAL_SOCKET_SPEC "] read error %d (%s)!\n", s->sd,
-                    bal_getlasterror(s, &err), err.desc);
+                    bal_getlasterror(&err), err.desc);
                 bal_close(&s, true);
             }
         }
@@ -138,7 +138,7 @@ void balserver::async_events_cb(bal_socket* s, uint32_t event)
                 } else {
                     bal_error err {};
                     printf("[" BAL_SOCKET_SPEC "] write error %d (%s)!\n", s->sd,
-                        bal_getlasterror(s, &err), err.desc);
+                        bal_getlasterror(&err), err.desc);
                     bal_close(&s, true);
                 }
             }

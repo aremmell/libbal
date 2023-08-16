@@ -55,7 +55,7 @@ bool _bal_init(void)
     WSADATA wd = {0};
 
     if (0 != WSAStartup(wVer, &wd)) {
-        (void)_bal_handleerr(WSAGetLastError());
+        _bal_handlelasterr()
         return false;
     }
 #endif
@@ -156,7 +156,7 @@ int _bal_asyncselect(bal_socket* s, bal_async_cb proc, uint32_t mask)
             } else {
                 bool success = false;
                 if (BAL_FALSE == bal_setiomode(s, true)) {
-                    (void)_bal_handleerr(errno);
+                    _bal_handlelasterr();
                 } else {
                     s->state.mask = mask;
                     s->state.proc = proc;
@@ -194,7 +194,7 @@ bool _bal_initasyncselect(void)
         BAL_ASSERT(init);
 
         if (!init) {
-            (void)_bal_handleerr(errno);
+            _bal_handlelasterr();
             _bal_dbglog("error: failed to create list(s)");
             return false;
         }
@@ -252,7 +252,7 @@ bool _bal_initasyncselect(void)
         create &= 0ULL != *threads[n].thread;
 
         if (0ULL == *threads[n].thread) {
-            (void)_bal_handleerr(errno);
+            _bal_handlelasterr();
             return false;
         }
 #else
@@ -262,10 +262,8 @@ bool _bal_initasyncselect(void)
 
         init &= 0 == op;
 
-        if (0 != op) {
-            (void)_bal_handleerr(op);
-            return false;
-        }
+        if (0 != op)
+            return _bal_handleerr(op);
 #endif
     }
 
@@ -370,9 +368,9 @@ int _bal_sock_destroy(bal_socket** s)
 
         if (!bal_isbitset((*s)->state.mask, BAL_S_CLOSE)) {
             _bal_dbglog("warning: freeing possibly open socket "BAL_SOCKET_SPEC
-                        " (%p)...", (*s)->sd, *s);
+                        " (%p)", (*s)->sd, *s);
         } else {
-            _bal_dbglog("freeing socket "BAL_SOCKET_SPEC" (%p)...", (*s)->sd, *s);
+            _bal_dbglog("freeing socket "BAL_SOCKET_SPEC" (%p)", (*s)->sd, *s);
         }
 
         memset(*s, 0, sizeof(bal_socket));
@@ -438,9 +436,7 @@ int _bal_getaddrinfo(int f, int af, int st, const char* host, const char* port,
     }
 
     if (0 != r) {
-#pragma message("TODO: add param to setlasterror that means gai yes/no, so it can use gai_strerror")
-        _bal_dbglog("getaddrinfo() failed with error %d (%s)", r, gai_strerror(r));
-        _bal_setlasterror(r);
+        _bal_handlegaierr(r);
         r = BAL_FALSE;
     }
 
@@ -458,8 +454,7 @@ int _bal_getnameinfo(int f, const bal_sockaddr* in, char* host, char* port)
     }
 
     if (0 != r) {
-        _bal_dbglog("getnameinfo() failed with error %d (%s)", r, gai_strerror(r));
-        _bal_setlasterror(r);
+        _bal_handlegaierr(r);
         r = BAL_FALSE;
     }
 
@@ -545,7 +540,7 @@ _bal_eventthread(void* ctx)
         }
         _BAL_LEAVE_MUTEX(&asc->mutex, except);
 
-        bal_yield_thread();
+        bal_thread_yield();
     }
 
 #if defined(__WIN__)
@@ -611,7 +606,7 @@ _bal_eventthread(void* ctx)
             BAL_ASSERT_UNUSED(unlocked, unlocked);
         }
 
-        bal_yield_thread();
+        bal_thread_yield();
     }
 
 #if defined(__WIN__)
@@ -782,7 +777,7 @@ bool _bal_list_find(bal_list* lst, bal_descriptor key, bal_socket** val)
     bool ok = !_bal_list_empty(lst) && _bal_validptr(val);
 
     if (ok) {
-        _bal_list_find_data lfd = {key, val, false};
+        bal_list_find_data lfd = {key, val, false};
         ok = _bal_list_iterate_func(lst, &lfd, &__bal_list_find_key) && lfd.found;
     }
 
@@ -911,7 +906,7 @@ bool _bal_list_destroy_node(bal_list_node** node)
 
 bool __bal_list_find_key(bal_descriptor key, bal_socket* val, void* ctx)
 {
-    _bal_list_find_data* lfd = (_bal_list_find_data*)ctx;
+    bal_list_find_data* lfd = (bal_list_find_data*)ctx;
     if (key == lfd->key) {
         *lfd->val = val;
         lfd->found = true;
@@ -961,7 +956,6 @@ bool _bal_mutex_create(bal_mutex* mutex)
                     return true;
             }
         }
-
         (void)_bal_handleerr(op);
     }
 

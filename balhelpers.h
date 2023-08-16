@@ -30,7 +30,6 @@
 # include "baltypes.h"
 
 int _bal_aitoal(struct addrinfo* ai, bal_addrlist* out);
-int _bal_retstr(char* out, const char* in, size_t destlen);
 
 /** Prints a bal_socket to stdout. */
 void _bal_socket_print(const bal_socket* s);

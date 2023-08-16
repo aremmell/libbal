@@ -38,7 +38,7 @@ int _bal_aitoal(struct addrinfo* ai, bal_addrlist* out)
         do {
             *a = calloc(1UL, sizeof(bal_addr));
             if (!_bal_validptr(*a)) {
-                _bal_handleerr(errno);
+                _bal_handlelasterr();
                 r = BAL_FALSE;
                 break;
             }
@@ -51,17 +51,6 @@ int _bal_aitoal(struct addrinfo* ai, bal_addrlist* out)
 
         bal_resetaddrlist(out);
     }
-
-    return r;
-}
-
-int _bal_retstr(char* out, const char* in, size_t destlen)
-{
-    int r = BAL_FALSE;
-
-    strncpy(out, in, destlen - 1);
-    out[destlen - 1] = '\0';
-    r = BAL_TRUE;
 
     return r;
 }
