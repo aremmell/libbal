@@ -24,8 +24,8 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 #include "bal.h"
-#include "balerrors.h"
-#include "balinternal.h"
+#include "bal/errors.h"
+#include "bal/internal.h"
 
 static _bal_thread_local bal_error_info _error_info = {
     0, BAL_UNKNOWN, BAL_UNKNOWN, 0U, false

@@ -25,6 +25,7 @@
  */
 #include "balcommon.hh"
 #include <cstdio>
+#include <iostream>
 
 using namespace std;
 
@@ -80,11 +81,18 @@ void balcommon::ctrl_c_handler_impl()
     quit();
 }
 
-void balcommon::print_last_lib_error(const char* func /* = nullptr */)
+void balcommon::print_last_lib_error(const std::string& func /* = std::string() */)
 {
     bal_error err {};
-    fprintf(stderr, "libbal error: %s%s%d (%s)\n", (nullptr != func ? func : ""),
-        (nullptr != func ? " " : ""), bal_getlasterror(&err), err.desc);
+    bal_getlasterror(&err);
+
+    cerr << "libbal error: " << (func.empty() ? func + " " : "") << err.code
+         << " (" << err.desc << ")" << endl;
+}
+
+void balcommon::print_startup_banner(const std::string& name)
+{
+    cout << name << " (libbal " << bal_get_versionstring() << ")" << endl;
 }
 
 #if defined(__WIN__)

@@ -1,5 +1,5 @@
 /*
- * version.h.in
+ * balhelpers.c
  *
  * Author:    Ryan M. Lederman <lederman@gmail.com>
  * Copyright: Copyright (c) 2004-2023
@@ -23,41 +23,46 @@
  * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-#ifndef _BAL_VERSION_H_INCLUDED
-# define _BAL_VERSION_H_INCLUDED
+#include "bal/helpers.h"
+#include "bal.h"
 
-# include <stdint.h>
-# include <stdbool.h>
-
-# define BAL_GIT_COMMIT_HASH "${GIT_COMMIT_HASH}"
-# define BAL_VERSION_MAJOR   ${PROJECT_VERSION_MAJOR}
-# define BAL_VERSION_MINOR   ${PROJECT_VERSION_MINOR}
-# define BAL_VERSION_PATCH   ${PROJECT_VERSION_PATCH}
-# define BAL_VERSION_SUFFIX  ${PROJECT_VERSION_SUFFIX}
-# define BAL_IS_DEV_BUILD    ${PROJECT_IS_DEV_BUILD}
-
-# define _BAL_VER2STR(n) #n
-# define _BAL_MK_VERSTR(maj, min, patch) \
-    _BAL_VER2STR(maj) "." _BAL_VER2STR(min) "." _BAL_VER2STR(patch) \
-        BAL_VERSION_SUFFIX " (" BAL_GIT_COMMIT_HASH ")"
-
-static inline
-const char* bal_get_versionstring(void)
+int _bal_aitoal(struct addrinfo* ai, bal_addrlist* out)
 {
-    return _BAL_MK_VERSTR(BAL_VERSION_MAJOR, BAL_VERSION_MINOR, BAL_VERSION_PATCH);
+    int r = BAL_FALSE;
+
+    if (_bal_validptr(ai) && _bal_validptr(out)) {
+        struct addrinfo* cur = ai;
+        bal_addr** a         = &out->addr;
+        r                    = BAL_TRUE;
+
+        do {
+            *a = calloc(1UL, sizeof(bal_addr));
+            if (!_bal_validptr(*a)) {
+                _bal_handlelasterr();
+                r = BAL_FALSE;
+                break;
+            }
+
+            memcpy(&(*a)->addr, cur->ai_addr, cur->ai_addrlen);
+
+            a   = &(*a)->next;
+            cur = cur->ai_next;
+        } while (NULL != cur);
+
+        bal_resetaddrlist(out);
+    }
+
+    return r;
 }
 
-static inline
-uint32_t bal_get_versionhex(void)
+void _bal_socket_print(const bal_socket* s)
 {
-    return (BAL_VERSION_MAJOR << 16) | (BAL_VERSION_MINOR <<  8) |
-        BAL_VERSION_PATCH;
+    if (_bal_validptr(s)) {
+        printf("%p:\n{\n  sd = "BAL_SOCKET_SPEC"\n  addr_fam = %d\n  type = %d\n"
+               "  proto = %d\nstate =\n  {\n  mask = %"PRIx32"\n  proc = %p\n  }"
+               "\n}\n", (void*)s, s->sd, s->addr_fam, s->type, s->proto,
+               s->state.mask, (void*)s->state.proc);
+    } else {
+        printf("<null>\n");
+    }
 }
-
-static inline
-bool bal_is_developmentbuild(void)
-{
-    return BAL_IS_DEV_BUILD;
-}
-
-#endif /* !_BAL_VERSION_H_INCLUDED */

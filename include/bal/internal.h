@@ -1,5 +1,5 @@
 /*
- * balinternal.h
+ * internal.h
  *
  * Author:    Ryan M. Lederman <lederman@gmail.com>
  * Copyright: Copyright (c) 2004-2023
@@ -26,8 +26,8 @@
 #ifndef _BAL_INTERNAL_H_INCLUDED
 # define _BAL_INTERNAL_H_INCLUDED
 
-# include "balplatform.h"
-# include "baltypes.h"
+# include "platform.h"
+# include "types.h"
 
 /******************************************************************************\
  *                             Internal Functions                             *

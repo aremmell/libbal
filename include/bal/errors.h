@@ -1,5 +1,5 @@
 /*
- * balerrors.h
+ * errors.h
  *
  * Author:    Ryan M. Lederman <lederman@gmail.com>
  * Copyright: Copyright (c) 2004-2023
@@ -26,7 +26,7 @@
 #ifndef _BAL_ERRORS_H_INCLUDED
 # define _BAL_ERRORS_H_INCLUDED
 
-# include "baltypes.h"
+# include "types.h"
 
 # if defined(__cplusplus)
 extern "C" {

@@ -3,9 +3,9 @@
 if which cppcheck >/dev/null 2>&1; then
     echo "Running cppcheck..."
     cppcheck --check-level=exhaustive --max-ctu-depth=8 \
-             --force --std=c11 --enable=all --language=c ./*.c && \
+             --force --std=c11 --enable=all --language=c ./src/*.c && \
     cppcheck --check-level=exhaustive --max-ctu-depth=8 \
-             --force --std=c++20 --enable=all --language=c++ ./*.cc || {
+             --force --std=c++20 --enable=all --language=c++ ./src/*.cc || {
         echo "cppcheck returned error code $?; exiting"
         exit $?
     }
@@ -16,9 +16,9 @@ fi
 if which clang-tidy >/dev/null 2>&1; then
     echo "Running clang-tidy..."
     clang-tidy -p build --export-fixes=clang-fixes.yml \
-               --checks=clang-diagnostic-*,clang-analyzer-* ./*.c &&
+               --checks=clang-diagnostic-*,clang-analyzer-* ./src/*.c &&
     clang-tidy -p build --export-fixes=clang-fixes.yml \
-               --checks=clang-diagnostic-*,clang-analyzer-*,modernize-*,readability-* ./*.cc || {
+               --checks=clang-diagnostic-*,clang-analyzer-*,modernize-*,readability-* ./src/*.cc || {
         echo "clang-tidy returned error code $?; exiting"
         exit $?
     }
@@ -26,4 +26,3 @@ if which clang-tidy >/dev/null 2>&1; then
 else
     echo "clang-tidy not found; skipping"
 fi
-

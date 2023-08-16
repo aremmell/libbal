@@ -24,8 +24,8 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 #include "bal.h"
-#include "balinternal.h"
-#include "balhelpers.h"
+#include "bal/internal.h"
+#include "bal/helpers.h"
 
 #if defined(__WIN__)
 # pragma comment(lib, "ws2_32.lib")

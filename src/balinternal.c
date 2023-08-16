@@ -23,8 +23,8 @@
  * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-#include "balinternal.h"
-#include "balhelpers.h"
+#include "bal/internal.h"
+#include "bal/helpers.h"
 #include "bal.h"
 
 /******************************************************************************\
@@ -969,7 +969,7 @@ bool __bal_list_find_key(bal_descriptor key, bal_socket* val, void* ctx)
     return true;
 }
 
-bool __bal_list_remove_entries(bal_descriptor key, bal_socket* val, void* ctx)
+/* bool __bal_list_remove_entries(bal_descriptor key, bal_socket* val, void* ctx)
 {
     bal_list* lst = (bal_list*)ctx;
     bal_socket* d = NULL;
@@ -982,9 +982,9 @@ bool __bal_list_remove_entries(bal_descriptor key, bal_socket* val, void* ctx)
         _bal_dbglog("removed socket "BAL_SOCKET_SPEC" (%p) from list", key, val);
 
     return true;
-}
+} */
 
-bool __bal_list_add_entries(bal_descriptor key, bal_socket* val, void* ctx)
+/* bool __bal_list_add_entries(bal_descriptor key, bal_socket* val, void* ctx)
 {
     bal_list* lst = (bal_list*)ctx;
     bool added    = _bal_list_add(lst, key, val);
@@ -994,7 +994,7 @@ bool __bal_list_add_entries(bal_descriptor key, bal_socket* val, void* ctx)
         _bal_dbglog("added socket "BAL_SOCKET_SPEC" (%p) to list", key, val);
 
     return true;
-}
+} */
 
 #if !defined(__WIN__) /* pthread mutex implementation. */
 bool _bal_mutex_create(bal_mutex* mutex)

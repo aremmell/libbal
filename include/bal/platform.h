@@ -1,5 +1,5 @@
 /*
- * balplatform.h
+ * platform.h
  *
  * Author:    Ryan M. Lederman <lederman@gmail.com>
  * Copyright: Copyright (c) 2004-2023
@@ -187,8 +187,6 @@ typedef unsigned bal_threadret;
 #  define BAL_SHUT_WR   SD_SEND
 
 # endif /* !_WIN32 */
-
-# include "version.h"
 
 # include <stdio.h>
 # include <stdarg.h>

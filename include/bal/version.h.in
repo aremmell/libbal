@@ -1,5 +1,5 @@
 /*
- * balcommon.hh
+ * version.h
  *
  * Author:    Ryan M. Lederman <lederman@gmail.com>
  * Copyright: Copyright (c) 2004-2023
@@ -23,40 +23,49 @@
  * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-#ifndef _BAL_COMMON_HH_INCLUDED
-# define _BAL_COMMON_HH_INCLUDED
+#ifndef _BAL_VERSION_H_INCLUDED
+# define _BAL_VERSION_H_INCLUDED
 
-# include "bal.h"
-# include <atomic>
+# include <stdint.h>
+# include <stdbool.h>
 
-# if !defined(__WIN__)
-#  include <signal.h>
+# if defined(__cplusplus)
+extern "C" {
 # endif
 
-namespace balcommon
+# define BAL_GIT_COMMIT_HASH "${GIT_COMMIT_HASH}"
+# define BAL_VERSION_MAJOR   ${PROJECT_VERSION_MAJOR}
+# define BAL_VERSION_MINOR   ${PROJECT_VERSION_MINOR}
+# define BAL_VERSION_PATCH   ${PROJECT_VERSION_PATCH}
+# define BAL_VERSION_SUFFIX  ${PROJECT_VERSION_SUFFIX}
+# define BAL_IS_DEV_BUILD    ${PROJECT_IS_DEV_BUILD}
+
+# define _BAL_VER2STR(n) #n
+# define _BAL_MK_VERSTR(maj, min, patch) \
+    _BAL_VER2STR(maj) "." _BAL_VER2STR(min) "." _BAL_VER2STR(patch) \
+        BAL_VERSION_SUFFIX " (" BAL_GIT_COMMIT_HASH ")"
+
+static inline
+const char* bal_get_versionstring(void)
 {
-    constexpr const char* localaddr   = "127.0.0.1";
-    constexpr const char* portnum     = "9000";
-    constexpr const uint32_t sleepfor = 1000;
+    return _BAL_MK_VERSTR(BAL_VERSION_MAJOR, BAL_VERSION_MINOR, BAL_VERSION_PATCH);
+}
 
-    bool initialize();
-    void quit();
-    bool should_run();
-    bool install_ctrl_c_handler();
-    void ctrl_c_handler_impl();
-    void print_last_lib_error(const char* func = nullptr);
+static inline
+uint32_t bal_get_versionhex(void)
+{
+    return (BAL_VERSION_MAJOR << 16) | (BAL_VERSION_MINOR <<  8) |
+        BAL_VERSION_PATCH;
+}
 
-# define EXIT_IF_FAILED(retval, func) \
-    if (BAL_TRUE != retval) { \
-        balcommon::print_last_lib_error(func); \
-        return EXIT_FAILURE; \
-    }
+static inline
+bool bal_is_developmentbuild(void)
+{
+    return BAL_IS_DEV_BUILD;
+}
 
-# if defined(__WIN__)
-    BOOL WINAPI on_ctrl_c(DWORD ctl_type);
-# else
-    void on_ctrl_c(int sig);
+# if defined(__cplusplus)
+}
 # endif
-} // !namespace balcommon
 
-#endif // !_BAL_COMMON_HH_INCLUDED
+#endif /* !_BAL_VERSION_H_INCLUDED */

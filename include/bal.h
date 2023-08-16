@@ -26,10 +26,11 @@
 #ifndef _BAL_H_INCLUDED
 # define _BAL_H_INCLUDED
 
-# include "balinternal.h"
-# include "balerrors.h"
-# include "baltypes.h"
-# include "balhelpers.h"
+# include "bal/internal.h"
+# include "bal/errors.h"
+# include "bal/types.h"
+# include "bal/helpers.h"
+# include "bal/version.h"
 
 /******************************************************************************\
  *                             Exported Functions                             *

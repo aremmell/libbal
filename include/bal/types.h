@@ -1,5 +1,5 @@
 /*
- * baltypes.h
+ * types.h
  *
  * Author:    Ryan M. Lederman <lederman@gmail.com>
  * Copyright: Copyright (c) 2004-2023
@@ -26,7 +26,7 @@
 #ifndef _BAL_TYPES_H_INCLUDED
 # define _BAL_TYPES_H_INCLUDED
 
-# include "balplatform.h"
+# include "platform.h"
 
 /** The sockaddr_storage wrapper type. */
 typedef struct sockaddr_storage bal_sockaddr;

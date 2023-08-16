@@ -31,8 +31,9 @@ cmake_policy(SET CMP0102 NEW) # mark_as_advanced
 if (WIN32)
     set(C_FLAGS_BASE "/experimental:c11atomics")
     set(CMAKE_C_FLAGS_DEBUG "${C_FLAGS_BASE} ${CMAKE_C_FLAGS} /MP /W4 /DDEBUG /DBAL_DBGLOG")
-    set(CMAKE_C_FLAGS_RELEASE "${C_FLAGS_BASE} ${CMAKE_C_FLAGS} /MP /W4 /DNDEBUG /DBAL_DBGLOG")
-    set(CMAKE_CXX_FLAGS_DEBUG "${C_FLAGS_BASE} /DDEBUG")
+    set(CMAKE_C_FLAGS_RELEASE "${C_FLAGS_BASE} ${CMAKE_C_FLAGS} /MP /W4 /DNDEBUG")
+
+    set(CMAKE_CXX_FLAGS_DEBUG "${C_FLAGS_BASE} /DDEBUG /DBAL_DBGLOG")
     set(CMAKE_CXX_FLAGS_RELEASE "${C_FLAGS_BASE} /DNDEBUG")
 else()
     set(C_FLAGS_BASE "-Wall -Wextra -Wpedantic -Werror")
@@ -40,8 +41,8 @@ else()
     set(CMAKE_C_FLAGS_RELEASE "${C_FLAGS_BASE} -O3 -D_FORTIFY_SOURCE=2 -DNDEBUG")
 
     set(CXX_FLAGS_BASE "-Wall -Wextra -Wpedantic -Werror")
-    set(CMAKE_CXX_FLAGS_DEBUG "${C_FLAGS_BASE} -g3 -O0 -DDEBUG")
-    set(CMAKE_CXX_FLAGS_RELEASE "${C_FLAGS_BASE} -O3 -D_FORTIFY_SOURCE=2 -DNDEBUG /DBAL_DBGLOG")
+    set(CMAKE_CXX_FLAGS_DEBUG "${C_FLAGS_BASE} -g3 -O0 -DDEBUG -DBAL_DBGLOG")
+    set(CMAKE_CXX_FLAGS_RELEASE "${C_FLAGS_BASE} -O3 -D_FORTIFY_SOURCE=2 -DNDEBUG")
 
     set(CMAKE_EXE_LINKER_FLAGS, "${CMAKE_EXE_LINKER_FLAGS} -pthread")
 endif()
@@ -63,39 +64,39 @@ execute_process(
 )
 
 configure_file(
-    version.h.in
-    include/version.h
+    include/bal/version.h.in
+    include/bal/version.h
     NEWLINE_STYLE LF
 )
 
 add_executable(
     ${CLIENT_EXECUTABLE_NAME}
-    balclient.cc
-    balcommon.cc
+    sample/balclient.cc
+    sample/balcommon.cc
 )
 
 add_executable(
     ${SERVER_EXECUTABLE_NAME}
-    balserver.cc
-    balcommon.cc
+    sample/balserver.cc
+    sample/balcommon.cc
+)
+
+file(
+    GLOB
+    BAL_SRC
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/*.c
 )
 
 add_library(
     ${STATIC_LIBRARY_NAME}
     STATIC
-    bal.c
-    balinternal.c
-    balerrors.c
-    balhelpers.c
+    ${BAL_SRC}
 )
 
 add_library(
     ${SHARED_LIBRARY_NAME}
     SHARED
-    bal.c
-    balinternal.c
-    balerrors.c
-    balhelpers.c
+    ${BAL_SRC}
 )
 
 if(!WIN32)
@@ -106,14 +107,16 @@ endif()
 target_include_directories(
     ${STATIC_LIBRARY_NAME}
     PUBLIC
-    .
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_BINARY_DIR}/include
 )
 
 target_include_directories(
     ${SHARED_LIBRARY_NAME}
     PUBLIC
-    .
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_BINARY_DIR}/include
 )
 
@@ -158,9 +161,22 @@ install(
     CONFIGURATIONS Release
 )
 
+file(
+    GLOB
+    BAL_HEADERS
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/*/*.h
+)
+
 install(
-    FILES bal.h include/version.h
-    DESTINATION include/libbal
+    FILES ${BAL_HEADERS} ${CMAKE_CURRENT_BINARY_DIR}/include/bal/version.h
+    DESTINATION include/bal
+    PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+    CONFIGURATIONS Release
+)
+
+install(
+    FILES ${CMAKE_CURRENT_SOURCE_DIR}/include/bal.h
+    DESTINATION include
     PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
     CONFIGURATIONS Release
 )
