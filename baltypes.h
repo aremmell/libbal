@@ -28,54 +28,81 @@
 
 # include "balplatform.h"
 
-/**
- * @struct bal_socket
- * @brief BAL state structure.
- */
-typedef struct {
+/** The sockaddr_storage wrapper type. */
+typedef struct sockaddr_storage bal_sockaddr;
+
+struct bal_socket; /* forward declaration. */
+
+/** bal_asyncselect callback. */
+typedef void (*bal_async_cb)(struct bal_socket*, uint32_t);
+
+/** List iteration callback. Returns false to stop iteration. */
+typedef bool (*bal_list_iter_cb)(bal_descriptor /*key*/,
+    struct bal_socket* /*val*/, void* /*ctx*/);
+
+/** Worker thread callback. */
+typedef bal_threadret (*bal_thread_cb)(void*);
+
+typedef struct bal_state {
+    uint32_t mask;     /**< Async I/O event mask. */
+    uint32_t bits;     /**< State bitmask. */
+    bal_async_cb proc; /**< Async I/O event callback. */
+} bal_state;
+
+typedef struct bal_socket {
     bal_descriptor sd; /**< Socket descriptor. */
-    int af;            /**< Address family (e.g. AF_INET). */
-    int st;            /**< Socket type (e.g., SOCK_STREAM). */
-    int pf;            /**< Protocol family (e.g., IPPROTO_TCP). */
-    uint32_t _f;       /**< Internally-used state flags. */
+    int addr_fam;      /**< Address family (e.g. AF_INET). */
+    int type;          /**< Socket type (e.g., SOCK_STREAM). */
+    int proto;         /**< Protocol (e.g., IPPROTO_TCP). */
+    bal_state state;   /**< Internal socket state data. */
+    // bal_mutex m;    /**< Mutex guard for socket state data. */
 } bal_socket;
 
-typedef struct {
-    struct addrinfo* _ai;
-    struct addrinfo* _p;
-} bal_addrinfo;
-
 typedef struct _bal_addr {
-    bal_sockaddr _sa;
-    struct _bal_addr* _n;
+    bal_sockaddr addr;
+    struct _bal_addr* next;
 } bal_addr;
 
 typedef struct {
-    bal_addr* _a;
-    bal_addr* _p;
+    bal_addr* addr;
+    bal_addr* iter;
 } bal_addrlist;
 
 typedef struct {
     char host[NI_MAXHOST];
-    char ip[NI_MAXHOST];
-    char* type;
+    char addr[NI_MAXHOST];
+    const char* type;
     char port[NI_MAXSERV];
 } bal_addrstrings;
 
+/** The public error type. */
 typedef struct {
     int code;
     char desc[BAL_MAXERROR];
 } bal_error;
 
-/* bal_asyncselect callback. */
-typedef void (*bal_async_callback)(bal_socket*, uint32_t);
-
-/* Value storage for bal_list. */
+/** The internal error type. */
 typedef struct {
-    bal_socket* s;
-    uint32_t mask;
-    bal_async_callback proc;
-} bal_selectdata;
+    int code;
+    const char* func;
+    const char* file;
+    uint32_t line;
+    bool gai;
+} bal_error_info;
+
+/* Node type for bal_list. */
+typedef struct _bal_list_node {
+    bal_descriptor key;
+    bal_socket* val;
+    struct _bal_list_node *prev;
+    struct _bal_list_node *next;
+} bal_list_node;
+
+/* List of socket descriptors and associated state data. */
+typedef struct {
+    bal_list_node* head;
+    bal_list_node* iter;
+} bal_list;
 
 /* Iteration callback. Returns false to stop iteration. */
 typedef bool (*bal_list_iter_callback)(bal_descriptor /*key*/,
@@ -91,27 +118,10 @@ typedef struct _bal_list_node {
 
 /* List of socket descriptors and associated state data. */
 typedef struct {
-    bal_list_node* head;
-    bal_list_node* iter;
-} bal_list;
-
-typedef struct {
     bal_descriptor key;
-    bal_selectdata** val;
+    bal_socket** val;
     bool found;
-} _bal_list_find_data;
-
-typedef struct {
-    fd_set* set;
-    uint32_t type;
-} _bal_list_dispatch_data;
-
-typedef struct {
-    fd_set* fd_read;
-    fd_set* fd_write;
-    fd_set* fd_except;
-    bal_descriptor high_watermark;
-} _bal_list_event_prepare_data;
+} bal_list_find_data;
 
 typedef struct {
     bal_list* lst;        /** List of active socket descriptors and their states. */

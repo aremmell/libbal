@@ -26,29 +26,28 @@
 #ifndef _BAL_H_INCLUDED
 # define _BAL_H_INCLUDED
 
-# include "balplatform.h"
-# include "baltypes.h"
+# include "balinternal.h"
 # include "balerrors.h"
+# include "baltypes.h"
+# include "balhelpers.h"
 
-
-/*─────────────────────────────────────────────────────────────────────────────╮
-│                            Exported Functions                                │
-╰─────────────────────────────────────────────────────────────────────────────*/
-
+/******************************************************************************\
+ *                             Exported Functions                             *
+\******************************************************************************/
 
 # if defined(__cplusplus)
 extern "C" {
 # endif
 
-bool bal_init(void);
-bool bal_cleanup(void);
+# define bal_init _bal_init
+# define bal_cleanup _bal_cleanup
 
-int bal_asyncselect(const bal_socket* s, bal_async_callback proc, uint32_t mask);
+# define bal_asyncselect(s, proc, mask) _bal_asyncselect(s, proc, mask)
 
-int bal_autosocket(bal_socket* s, int af, int pt, const char* host, const char* port);
-int bal_sock_create(bal_socket* s, int af, int pt, int st);
-void bal_reset(bal_socket* s);
-int bal_close(bal_socket* s);
+int bal_autosocket(bal_socket** s, int addr_fam, int proto, const char* host, const char* port);
+int bal_sock_create(bal_socket** s, int addr_fam, int type, int proto);
+# define bal_sock_destroy(s) _bal_sock_destroy(s)
+int bal_close(bal_socket** s, bool destroy);
 int bal_shutdown(bal_socket* s, int how);
 
 int bal_connect(const bal_socket* s, const char* host, const char* port);
@@ -68,7 +67,7 @@ int bal_recvfrom(const bal_socket* s, void* data, size_t len, int flags,
 int bal_bind(const bal_socket* s, const char* addr, const char* port);
 
 int bal_listen(bal_socket* s, int backlog);
-int bal_accept(const bal_socket* s, bal_socket* res, bal_sockaddr* resaddr);
+int bal_accept(const bal_socket* s, bal_socket** res, bal_sockaddr* resaddr);
 
 int bal_getoption(const bal_socket* s, int level, int name, void* optval,
     socklen_t len);
@@ -109,31 +108,46 @@ int bal_geterror(const bal_socket* s);
 
 bool bal_isreadable(const bal_socket* s);
 bool bal_iswritable(const bal_socket* s);
+bool bal_islistening(const bal_socket* s);
+
+static inline
+void bal_addtomask(bal_socket* s, uint32_t bits)
+{
+    if (_bal_validsock(s))
+        bal_setbitshigh(&s->state.mask, bits);
+}
+
+static inline
+void bal_remfrommask(bal_socket* s, uint32_t bits)
+{
+    if (_bal_validsock(s))
+        bal_setbitslow(&s->state.mask, bits);
+}
+
+static inline
+bool bal_isbitinmask(bal_socket* s, uint32_t bit)
+{
+    return _bal_validsock(s) ? bal_isbitset(s->state.mask, bit) : false;
+}
 
 int bal_setiomode(const bal_socket* s, bool async);
 size_t bal_recvqueuesize(const bal_socket* s);
 
-int bal_lastliberror(bal_error* err);
-int bal_lastsockerror(const bal_socket* s, bal_error* err);
+int bal_getlasterror(bal_error* err);
 
 int bal_resolvehost(const char* host, bal_addrlist* out);
 int bal_getremotehostaddr(const bal_socket* s, bal_sockaddr* out);
 int bal_getremotehoststrings(const bal_socket* s, int dns, bal_addrstrings* out);
 int bal_getlocalhostaddr(const bal_socket* s, bal_sockaddr* out);
 int bal_getlocalhoststrings(const bal_socket* s, int dns, bal_addrstrings* out);
+int bal_getaddrstrings(const bal_sockaddr* in, bool dns, bal_addrstrings* out);
 
 int bal_resetaddrlist(bal_addrlist* al);
 const bal_sockaddr* bal_enumaddrlist(bal_addrlist* al);
 int bal_freeaddrlist(bal_addrlist* al);
-int bal_getaddrstrings(const bal_sockaddr* in, bool dns, bal_addrstrings* out);
 
-void bal_yield_thread(void);
-
-static inline
-bool bal_isbitset(uint32_t bitmask, uint32_t bit)
-{
-    return (bitmask & bit) == bit;
-}
+void bal_thread_yield(void);
+void bal_sleep_msec(uint32_t msec);
 
 # if defined(__cplusplus)
 }

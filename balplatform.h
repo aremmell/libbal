@@ -39,6 +39,22 @@
 #   undef _BSD_SOURCE
 #   define _BSD_SOURCE
 #  endif
+#  if !defined(_POSIX_C_SOURCE)
+#   define _POSIX_C_SOURCE 200809L
+#  endif
+#  if !defined(_DEFAULT_SOURCE)
+#   define _DEFAULT_SOURCE
+#  endif
+#  if !defined(_XOPEN_SOURCE)
+#   define _XOPEN_SOURCE 700
+#  endif
+
+#  if defined(__linux__)
+#   include <sys/syscall.h>
+#  elif defined(__sun)
+#   include <sys/filio.h>
+#   include <stropts.h>
+#  endif
 
 #  if defined(__linux__)
 #   include <sys/syscall.h>
@@ -94,6 +110,9 @@ typedef pthread_once_t bal_once;
 /** The one-time execution function type. */
 typedef void (*bal_once_fn)(void);
 
+/** The thread callback return type. */
+typedef void* bal_threadret;
+
 /** The one-time initializer. */
 #  define BAL_ONCE_INIT PTHREAD_ONCE_INIT
 
@@ -103,12 +122,17 @@ typedef void (*bal_once_fn)(void);
 /** The mutex initializer. */
 #  define BAL_MUTEX_INIT PTHREAD_MUTEX_INITIALIZER
 
+#  define BAL_SHUT_RDWR SHUT_RDWR
+#  define BAL_SHUT_RD   SHUT_RD
+#  define BAL_SHUT_WR   SHUT_WR
+
 # else /* _WIN32 */
 
 #  define __WIN__
 #  define _CRT_SECURE_NO_WARNINGS
 #  include <winsock2.h>
 #  include <ws2tcpip.h>
+#  include <shlwapi.h>
 #  include <process.h>
 #  include <time.h>
 
@@ -143,6 +167,12 @@ typedef INIT_ONCE bal_once;
 /** The one-time execution function type. */
 typedef BOOL(CALLBACK* bal_once_fn)(PINIT_ONCE, PVOID, PVOID*);
 
+/** The process/thread identifier type. */
+typedef int pid_t;
+
+/** The thread callback return type. */
+typedef unsigned bal_threadret;
+
 /** The one-time initializer. */
 #  define BAL_ONCE_INIT INIT_ONCE_STATIC_INIT
 
@@ -151,6 +181,10 @@ typedef BOOL(CALLBACK* bal_once_fn)(PINIT_ONCE, PVOID, PVOID*);
 
 /** The mutex initializer. */
 #  define BAL_MUTEX_INIT {0}
+
+#  define BAL_SHUT_RDWR SD_BOTH
+#  define BAL_SHUT_RD   SD_RECEIVE
+#  define BAL_SHUT_WR   SD_SEND
 
 # endif /* !_WIN32 */
 
@@ -163,55 +197,73 @@ typedef BOOL(CALLBACK* bal_once_fn)(PINIT_ONCE, PVOID, PVOID*);
 # include <inttypes.h>
 # include <assert.h>
 
-typedef struct sockaddr_storage bal_sockaddr;
-
-# define BAL_TRUE     0
-# define BAL_FALSE    -1
+# define BAL_TRUE        0
+# define BAL_FALSE      -1
+# define BAL_BADSOCKET  -1
 # define BAL_MAXERROR 1024
 
 # define BAL_UNKNOWN "<unknown>"
 
-# define BAL_AS_IPV6   "IPv6"
-# define BAL_AS_IPV4   "IPv4"
+# define BAL_AS_IPV6 "IPv6"
+# define BAL_AS_IPV4 "IPv4"
 
-# define BAL_F_PENDCONN  0x00000001u
-# define BAL_F_LISTENING 0x00000002u
+# define BAL_E_READ      0x00000001U
+# define BAL_E_WRITE     0x00000002U
+# define BAL_E_CONNECT   0x00000004U
+# define BAL_E_ACCEPT    0x00000008U
+# define BAL_E_CLOSE     0x00000010U
+# define BAL_E_CONNFAIL  0x00000020U
+# define BAL_E_EXCEPT    0x00000040U
+# define BAL_E_ERROR     0x00000080U
+# define BAL_E_INVALID   0x00000100U
+# define BAL_E_ALL       0x000001ffU
+# define BAL_E_STANDARD  (BAL_E_ALL & ~BAL_E_WRITE)
 
-# define BAL_BADSOCKET -1
+# define BAL_S_CONNECT   0x00000001U
+# define BAL_S_LISTEN    0x00000002U
+# define BAL_S_CLOSE     0x00000004U
 
-# define BAL_UNUSED(var) (void)(var)
-
-# if defined(__WIN__)
-#  define BAL_SHUT_RDWR SD_BOTH
-#  define BAL_SHUT_RD   SD_RECEIVE
-#  define BAL_SHUT_WR   SD_SEND
+# if defined(__MACOS__)
+#  undef __HAVE_SO_ACCEPTCONN__
 # else
-#  define BAL_SHUT_RDWR SHUT_RDWR
-#  define BAL_SHUT_RD   SHUT_RD
-#  define BAL_SHUT_WR   SHUT_WR
+#  define __HAVE_SO_ACCEPTCONN__
 # endif
 
-# define BAL_E_READ      0x00000001u
-# define BAL_E_WRITE     0x00000002u
-# define BAL_E_CONNECT   0x00000004u
-# define BAL_E_ACCEPT    0x00000008u
-# define BAL_E_CLOSE     0x00000010u
-# define BAL_E_CONNFAIL  0x00000020u
-# define BAL_E_EXCEPTION 0x00000040u
-# define BAL_E_ALL       0x0000007Fu
+# if defined(__WIN__) && defined(__STDC_SECURE_LIB__)
+#  define __HAVE_STDC_SECURE_OR_EXT1__
+# elif defined(__STDC_LIB_EXT1__)
+#  define __HAVE_STDC_SECURE_OR_EXT1__
+# elif defined(__STDC_ALLOC_LIB__)
+#  define __HAVE_STDC_EXT2__
+# endif
 
-# define BAL_S_DIE       0x0D1E0D1Eu
-# define BAL_S_CONNECT   0x10000000u
-# define BAL_S_LISTEN    0x20000000u
-# define BAL_S_CLOSE     0x40000000u
-# define BAL_S_READ      0x00000001u
-# define BAL_S_WRITE     0x00000002u
-# define BAL_S_EXCEPT    0x00000003u
+#if defined(__MACOS__) || defined(__BSD__) || \
+    (defined(_POSIX_C_SOURCE) && (_POSIX_C_SOURCE >= 200112L && !defined(_GNU_SOURCE)))
+# define __HAVE_XSI_STRERROR_R__
+# if defined(__GLIBC__)
+#  if (__GLIBC__ >= 2 && __GLIBC_MINOR__ < 13)
+#   define __HAVE_XSI_STRERROR_R_ERRNO__
+#  endif
+# endif
+#elif defined(_GNU_SOURCE) && defined(__GLIBC__)
+# define __HAVE_GNU_STRERROR_R__
+#elif defined(__HAVE_STDC_SECURE_OR_EXT1__)
+# define __HAVE_STRERROR_S__
+#endif
 
-# if defined(__WIN__)
-#  define BALTHREAD unsigned __stdcall
+# if (__STDC_VERSION__ >= 201112 && !defined(__STDC_NO_THREADS__)) || \
+     (defined(__SUNPRO_C) || defined(__SUNPRO_CC))
+#  if defined(_AIX) && defined(__GNUC__)
+#   define _bal_thread_local __thread
+#  else
+#   define _bal_thread_local _Thread_local
+#  endif
+# elif defined(__WIN__)
+#  define _bal_thread_local __declspec(thread)
+# elif defined(__GNUC__) || (defined(_AIX) && (defined(__xlC_ver__) || defined(__ibmxl__)))
+#  define _bal_thread_local __thread
 # else
-#  define BALTHREAD void*
+#  error "unable to resolve thread local attribute; please contact the author."
 # endif
 
 # if (defined(__clang__) || defined(__GNUC__)) && defined(__FILE_NAME__)
