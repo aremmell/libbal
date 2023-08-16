@@ -32,7 +32,7 @@ int _bal_aitoal(struct addrinfo* ai, bal_addrlist* out)
 
     if (_bal_validptr(ai) && _bal_validptr(out)) {
         struct addrinfo* cur = ai;
-        bal_addr** a         = &out->_a;
+        bal_addr** a         = &out->addr;
         r                    = BAL_TRUE;
 
         do {
@@ -43,9 +43,9 @@ int _bal_aitoal(struct addrinfo* ai, bal_addrlist* out)
                 break;
             }
 
-            memcpy(&(*a)->_sa, cur->ai_addr, cur->ai_addrlen);
+            memcpy(&(*a)->addr, cur->ai_addr, cur->ai_addrlen);
 
-            a   = &(*a)->_n;
+            a   = &(*a)->next;
             cur = cur->ai_next;
         } while (NULL != cur);
 

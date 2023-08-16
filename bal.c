@@ -707,7 +707,7 @@ int bal_resetaddrlist(bal_addrlist* al)
     int r = BAL_FALSE;
 
     if (al) {
-        al->_p = al->_a;
+        al->iter = al->addr;
         r = BAL_TRUE;
     }
 
@@ -718,10 +718,10 @@ const bal_sockaddr* bal_enumaddrlist(bal_addrlist* al)
 {
     const bal_sockaddr* r = NULL;
 
-    if (al && al->_a) {
-        if (al->_p) {
-            r = &al->_p->_sa;
-            al->_p = al->_p->_n;
+    if (al && al->addr) {
+        if (al->iter) {
+            r = &al->iter->addr;
+            al->iter = al->iter->next;
         } else {
             bal_resetaddrlist(al);
         }
@@ -736,16 +736,16 @@ int bal_freeaddrlist(bal_addrlist* al)
 
     if (al) {
         bal_addr* a = NULL;
-        al->_p = al->_a;
+        al->iter = al->addr;
 
-        while (al->_p) {
-            a = al->_p->_n;
-            _bal_safefree(&al->_p);
-            al->_p = a;
+        while (al->iter) {
+            a = al->iter->next;
+            _bal_safefree(&al->iter);
+            al->iter = a;
         }
 
         r      = BAL_TRUE;
-        al->_p = al->_a = NULL;
+        al->iter = al->addr = NULL;
     }
 
     return r;
@@ -756,6 +756,10 @@ void bal_thread_yield(void)
 #if defined(__WIN__)
     (void)SwitchToThread();
 #else
+# if defined(_POSIX_PRIORITY_SCHEDULING)
+    (void)sched_yield();
+# else
     (void)pthread_yield();
+# endif
 #endif
 }

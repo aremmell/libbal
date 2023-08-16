@@ -58,13 +58,13 @@ typedef struct bal_socket {
 } bal_socket;
 
 typedef struct _bal_addr {
-    bal_sockaddr _sa;
-    struct _bal_addr* _n;
+    bal_sockaddr addr;
+    struct _bal_addr* next;
 } bal_addr;
 
 typedef struct {
-    bal_addr* _a;
-    bal_addr* _p;
+    bal_addr* addr;
+    bal_addr* iter;
 } bal_addrlist;
 
 typedef struct {
