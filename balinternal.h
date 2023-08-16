@@ -111,10 +111,10 @@ bool _bal_list_destroy_node(bal_list_node** node);
 bool __bal_list_find_key(bal_descriptor key, bal_socket* val, void* ctx);
 
 /** Callback for removing entries from a list. */
-bool __bal_list_remove_entries(bal_descriptor key, bal_socket* val, void* ctx);
+//bool __bal_list_remove_entries(bal_descriptor key, bal_socket* val, void* ctx);
 
 /** Callback for adding entries to a list. */
-bool __bal_list_add_entries(bal_descriptor key, bal_socket* val, void* ctx);
+//bool __bal_list_add_entries(bal_descriptor key, bal_socket* val, void* ctx);
 
 /** Creates/initializes a new mutex. */
 bool _bal_mutex_create(bal_mutex* mutex);
@@ -126,10 +126,10 @@ bool _bal_mutex_lock(bal_mutex* mutex);
 //bool _bal_mutex_trylock(bal_mutex* mutex);
 
 /** Unlocks a previously locked mutex. */
-//bool _bal_mutex_unlock(bal_mutex* mutex);
+bool _bal_mutex_unlock(bal_mutex* mutex);
 
 /** Destroys a mutex. */
-//bool _bal_mutex_destroy(bal_mutex* mutex);
+bool _bal_mutex_destroy(bal_mutex* mutex);
 
 /** Creates/initializes a new condition variable. */
 //bool _bal_cond_create(bal_condition* cond);
