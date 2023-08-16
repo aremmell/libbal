@@ -25,6 +25,7 @@
  */
 #include "bal.h"
 #include "balinternal.h"
+#include "balhelpers.h"
 
 #if defined(__WIN__)
 # pragma comment(lib, "ws2_32.lib")
@@ -33,21 +34,6 @@
 /******************************************************************************\
  *                             Exported Functions                             *
 \******************************************************************************/
-
-bool bal_init(void)
-{
-    return _bal_init();
-}
-
-bool bal_cleanup(void)
-{
-    return _bal_cleanup();
-}
-
-int bal_asyncselect(bal_socket* s, bal_async_callback proc, uint32_t mask)
-{
-    return _bal_asyncselect(s, proc, mask);
-}
 
 int bal_autosocket(bal_socket** s, int addr_fam, int proto, const char* host,
     const char* port)
@@ -86,14 +72,13 @@ int bal_sock_create(bal_socket** s, int addr_fam, int type, int proto)
     if (_bal_validptrptr(s)) {
         *s = calloc(1UL, sizeof(bal_socket));
         if (!_bal_validptr(*s)) {
-            _bal_handleerr(errno);
+            _bal_handlelasterr();
         } else {
             (*s)->sd = socket(addr_fam, type, proto);
             if (-1 == (*s)->sd) {
-                _bal_setlasterror(errno);
+                _bal_handlelasterr();
                 _bal_safefree(s);
             } else {
-                _bal_init_socket(*s);
                 (*s)->addr_fam = addr_fam;
                 (*s)->type     = type;
                 (*s)->proto    = proto;
@@ -105,61 +90,51 @@ int bal_sock_create(bal_socket** s, int addr_fam, int type, int proto)
     return r;
 }
 
-int bal_close(bal_socket** s)
+int bal_close(bal_socket** s, bool destroy)
 {
-    int r = BAL_FALSE;
+    int closed    = BAL_FALSE;
+    int destroyed = BAL_FALSE;
 
-    if (_bal_validptrptr(s) && _bal_validptr(*s)) {
+    if (_bal_validptrptr(s) && _bal_validsock(*s)) {
+        BAL_ASSERT(BAL_BADSOCKET != (*s)->sd);
 #if defined(__WIN__)
         if (SOCKET_ERROR == closesocket((*s)->sd)) {
-            (void)_bal_handleerr(WSAGetLastError());
+            _bal_handlelasterr()
         }
 #else
         if (-1 == close((*s)->sd)) {
-            (void)_bal_handleerr(errno);
+            _bal_handlelasterr();
         }
 #endif
         else {
-            r = BAL_TRUE;
+            _bal_dbglog("closed socket "BAL_SOCKET_SPEC" (%p)", (*s)->sd, *s);
+            (*s)->state.bits |= BAL_S_CLOSE;
+            (*s)->state.bits &= ~(BAL_S_CONNECT | BAL_S_LISTEN);
+            closed            = BAL_TRUE;
         }
 
-        _bal_mutex_lock(&(*s)->m); // FIXME
-        if (_bal_validsockdata(*s)) {
-            _bal_mutex_lock(&(*s)->d->m); // FIXME
-            (*s)->d->mask |= BAL_S_CLOSE;
-            (*s)->d->s     = NULL;
-            _bal_mutex_unlock(&(*s)->d->m); // FIXME
-        }
-
-        _bal_dbglog("closed socket "BAL_SOCKET_SPEC" (%p, data = %p); freeing...",
-            (*s)->sd, *s, (*s)->d);
-
-        _bal_mutex_unlock(&(*s)->m); // FIXME
-        _bal_mutex_destroy(&(*s)->m);
-        memset(*s, 0, sizeof(bal_socket));
-        _bal_safefree(s);
+        destroyed = destroy ? bal_sock_destroy(s) : BAL_FALSE;
     }
 
-    return r;
+    return BAL_TRUE == closed && BAL_TRUE == destroyed ? BAL_TRUE : BAL_FALSE;
 }
 
 int bal_shutdown(bal_socket* s, int how)
 {
     int r = BAL_FALSE;
 
-    if (_bal_validptr(s)) {
+    if (_bal_validsock(s)) {
         r = shutdown(s->sd, how);
         if (0 == r) {
-            if (_bal_validsockdata(s)) {
-                if (how == BAL_SHUT_RDWR)
-                    s->d->mask &= ~(BAL_S_CONNECT | BAL_S_LISTEN);
-                else if (how == BAL_SHUT_RD)
-                    s->d->mask &= ~BAL_S_LISTEN;
-                else if (how == BAL_SHUT_WR)
-                    s->d->mask &= ~BAL_S_CONNECT;
+            if (how == BAL_SHUT_RDWR)
+                s->state.bits &= ~(BAL_S_CONNECT | BAL_S_LISTEN);
+            else if (how == BAL_SHUT_RD) {
+                s->state.bits &= ~BAL_S_LISTEN;
+            } else if (how == BAL_SHUT_WR) {
+                s->state.bits &= ~BAL_S_CONNECT;
             }
         } else {
-            (void)_bal_handleerr(errno);
+            _bal_handlelasterr();
         }
     }
 
@@ -192,7 +167,7 @@ int bal_connectaddrlist(bal_socket* s, bal_addrlist* al)
 {
     int r = BAL_FALSE;
 
-    if (s) {
+    if (_bal_validsock(s)) {
         if (BAL_TRUE == bal_resetaddrlist(al)) {
             const bal_sockaddr* sa = NULL;
 
@@ -203,17 +178,12 @@ int bal_connectaddrlist(bal_socket* s, bal_addrlist* al)
 #else
                 if (!r || EAGAIN == errno || EINPROGRESS == errno) {
 #endif
-                    _bal_mutex_lock(&s->m); // FIXME
-                    if (_bal_validsockdata(s)) {
-                        _bal_mutex_lock(&s->d->m); // FIXME
-                        s->d->mask |= BAL_S_CONNECT;
-                        _bal_mutex_unlock(&s->d->m); // FIXME
-                    }
-                    _bal_mutex_unlock(&s->m); // FIXME
+                    bal_setbitshigh(&s->state.mask, BAL_E_WRITE);
+                    bal_setbitshigh(&s->state.bits, BAL_S_CONNECT);
                     r = BAL_TRUE;
                     break;
                 } else {
-                    _bal_handleerr(errno);
+                    _bal_handlelasterr();
                 }
             }
         }
@@ -310,15 +280,9 @@ int bal_listen(bal_socket* s, int backlog)
     if (s) {
         r = listen(s->sd, backlog);
         if (0 == r) {
-            _bal_mutex_lock(&s->m); // FIXME
-            if (_bal_validsockdata(s)) {
-                _bal_mutex_lock(&s->d->m); // FIXME
-                s->d->mask |= BAL_S_LISTEN;
-                _bal_mutex_unlock(&s->d->m); // FIXME
-            }
-            _bal_mutex_unlock(&s->m); // FIXME
+            s->state.mask |= BAL_S_LISTEN;
         } else {
-            (void)_bal_handleerr(errno);
+            _bal_handlelasterr();
         }
     }
 
@@ -329,28 +293,22 @@ int bal_accept(const bal_socket* s, bal_socket** res, bal_sockaddr* resaddr)
 {
     int r = BAL_FALSE;
 
-    if (_bal_validptr(s) && _bal_validptrptr(res) && _bal_validptr(resaddr)) {
+    if (_bal_validsock(s) && _bal_validptrptr(res) && _bal_validptr(resaddr)) {
         *res = calloc(1UL, sizeof(bal_socket));
         if (!_bal_validptr(*res)) {
-            _bal_handleerr(errno);
+            _bal_handlelasterr();
         } else {
-            _bal_init_socket(*res);
             socklen_t sasize = sizeof(bal_sockaddr);
             bal_descriptor sd = accept(s->sd, (struct sockaddr*)resaddr, &sasize);
 
-            if (sd > 0 ||
-#if defined(__WIN__)
-                WSAEWOULDBLOCK == WSAGetLastError()) {
-#else
-                EAGAIN == errno || EINPROGRESS == errno) {
-#endif
+            if (sd > 0) {
                 (*res)->sd       = sd;
                 (*res)->addr_fam = s->addr_fam;
                 (*res)->type     = s->type;
                 (*res)->proto    = s->proto;
                 r                = BAL_TRUE;
             } else {
-                _bal_handleerr(errno);
+                _bal_handlelasterr();
                 _bal_safefree(res);
             }
         }
@@ -561,16 +519,16 @@ bool bal_isreadable(const bal_socket* s)
 {
     bool r = false;
 
-    if (s) {
-        fd_set fd = {0};
+    if (_bal_validsock(s)) {
+        fd_set fd        = {0};
         struct timeval t = {0};
 
         FD_ZERO(&fd);
         FD_SET(s->sd, &fd);
 
-        if (0 == select(1, &fd, NULL, NULL, &t)) {
-            if (FD_ISSET(s->sd, &fd))
-                r = true;
+        if (0 == select(s->sd + 1, &fd, NULL, NULL, &t) &&
+            FD_ISSET(s->sd, &fd)) {
+            r = true;
         }
     }
 
@@ -581,16 +539,16 @@ bool bal_iswritable(const bal_socket* s)
 {
     bool r = false;
 
-    if (s) {
-        fd_set fd = {0};
+    if (_bal_validsock(s)) {
+        fd_set fd        = {0};
         struct timeval t = {0};
 
         FD_ZERO(&fd);
         FD_SET(s->sd, &fd);
 
-        if (0 == select(1, NULL, &fd, NULL, &t)) {
-            if (FD_ISSET(s->sd, &fd))
-                r = true;
+        if (0 == select(s->sd + 1, NULL, &fd, NULL, &t) &&
+            FD_ISSET(s->sd, &fd)) {
+            r = true;
         }
     }
 
@@ -599,14 +557,20 @@ bool bal_iswritable(const bal_socket* s)
 
 bool bal_islistening(const bal_socket* s)
 {
-#pragma message("TODO: doesn't work on macOS!")
+    /* prefer using the OS, since technically the socket could have been created
+     * elsewhere and assigned to a bal_socket. */
+#if defined(__HAVE_SO_ACCEPTCONN__)
     int flag      = 0;
     int get       = bal_getoption(s, SOL_SOCKET, SO_ACCEPTCONN, &flag, sizeof(int));
 
     if (0 != get)
-        _bal_handleerr(errno);
+        _bal_handlelasterr();
 
     return 0 == get && 0 != flag;
+#else
+    /* backup method: bitmask. */
+    return _bal_validsock(s) && bal_isbitset(s->state.mask, BAL_S_LISTEN);
+#endif
 }
 
 int bal_setiomode(const bal_socket* s, bool async)
@@ -637,9 +601,9 @@ size_t bal_recvqueuesize(const bal_socket* s)
     return r;
 }
 
-int bal_getlasterror(const bal_socket* s, bal_error* err)
+int bal_getlasterror(bal_error* err)
 {
-    return _bal_getlasterror(s, err);
+    return _bal_getlasterror(err);
 }
 
 int bal_resolvehost(const char* host, bal_addrlist* out)
@@ -663,7 +627,7 @@ int bal_getremotehostaddr(const bal_socket* s, bal_sockaddr* out)
 {
     int r = BAL_FALSE;
 
-    if (_bal_validptr(s) && _bal_validptr(out)) {
+    if (_bal_validsock(s) && _bal_validptr(out)) {
         memset(out, 0, sizeof(bal_sockaddr));
 
         socklen_t salen = sizeof(bal_sockaddr);
@@ -689,7 +653,7 @@ int bal_getlocalhostaddr(const bal_socket* s, bal_sockaddr* out)
 {
     int r = BAL_FALSE;
 
-    if (_bal_validptr(s) && _bal_validptr(out)) {
+    if (_bal_validsock(s) && _bal_validptr(out)) {
         socklen_t salen = sizeof(bal_sockaddr);
         memset(out, 0, sizeof(bal_sockaddr));
 
@@ -723,7 +687,7 @@ int bal_getaddrstrings(const bal_sockaddr* in, bool dns, bal_addrstrings* out)
             if (dns) {
                 get = _bal_getnameinfo(_BAL_NI_DNS, in, out->host, out->port);
                 if (BAL_FALSE == get)
-                    (void)_bal_retstr(out->host, BAL_UNKNOWN, NI_MAXHOST);
+                    (void)strncpy(out->host, BAL_UNKNOWN, NI_MAXHOST);
             }
 
             if (PF_INET == ((struct sockaddr*)in)->sa_family)
@@ -745,7 +709,7 @@ int bal_resetaddrlist(bal_addrlist* al)
     int r = BAL_FALSE;
 
     if (al) {
-        al->_p = al->_a;
+        al->iter = al->addr;
         r = BAL_TRUE;
     }
 
@@ -756,10 +720,10 @@ const bal_sockaddr* bal_enumaddrlist(bal_addrlist* al)
 {
     const bal_sockaddr* r = NULL;
 
-    if (al && al->_a) {
-        if (al->_p) {
-            r = &al->_p->_sa;
-            al->_p = al->_p->_n;
+    if (al && al->addr) {
+        if (al->iter) {
+            r = &al->iter->addr;
+            al->iter = al->iter->next;
         } else {
             bal_resetaddrlist(al);
         }
@@ -774,27 +738,43 @@ int bal_freeaddrlist(bal_addrlist* al)
 
     if (al) {
         bal_addr* a = NULL;
-        al->_p = al->_a;
+        al->iter = al->addr;
 
-        while (al->_p) {
-            a = al->_p->_n;
-            _bal_safefree(&al->_p);
-            al->_p = a;
+        while (al->iter) {
+            a = al->iter->next;
+            _bal_safefree(&al->iter);
+            al->iter = a;
         }
 
         r      = BAL_TRUE;
-        al->_p = al->_a = NULL;
+        al->iter = al->addr = NULL;
     }
 
     return r;
 }
 
-void bal_yield_thread(void)
+void bal_thread_yield(void)
 {
 #if defined(__WIN__)
-    Sleep(1);
+    (void)SwitchToThread();
 #else
-    int yield = sched_yield();
-    BAL_ASSERT_UNUSED(yield, 0 == yield);
+# if defined(_POSIX_PRIORITY_SCHEDULING)
+    (void)sched_yield();
+# else
+    (void)pthread_yield();
+# endif
+#endif
+}
+
+void bal_sleep_msec(uint32_t msec)
+{
+    if (0U == msec)
+        return;
+
+#if defined(__WIN__)
+    (void)SleepEx((DWORD)msec, TRUE);
+#else
+    struct timespec ts = { msec / 1000, (msec % 1000) * 1000000 };
+    (void)nanosleep(&ts, NULL);
 #endif
 }

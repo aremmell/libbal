@@ -36,7 +36,7 @@ bool balcommon::initialize()
         return false;
 
     if (!bal_init()) {
-        print_last_lib_error(nullptr, "bal_init");
+        print_last_lib_error("bal_init");
         return false;
     }
 
@@ -79,12 +79,11 @@ void balcommon::ctrl_c_handler_impl()
     quit();
 }
 
-void balcommon::print_last_lib_error(const bal_socket* s /* = nullptr */,
-    const char* func /* = nullptr */)
+void balcommon::print_last_lib_error(const char* func /* = nullptr */)
 {
     bal_error err {};
-    fprintf(stderr, "libbal error: %s %d (%s)\n", (nullptr != func ? func : ""),
-        bal_getlasterror(s, &err), err.desc);
+    fprintf(stderr, "libbal error: %s%s%d (%s)\n", (nullptr != func ? func : ""),
+        (nullptr != func ? " " : ""), bal_getlasterror(&err), err.desc);
 }
 
 #if defined(__WIN__)

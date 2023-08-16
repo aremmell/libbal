@@ -1,5 +1,5 @@
 /*
- * balcommon.hh
+ * balhelpers.c
  *
  * Author:    Ryan M. Lederman <lederman@gmail.com>
  * Copyright: Copyright (c) 2004-2023
@@ -23,40 +23,46 @@
  * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-#ifndef _BAL_COMMON_HH_INCLUDED
-# define _BAL_COMMON_HH_INCLUDED
+#include "balhelpers.h"
+#include "bal.h"
 
-# include "bal.h"
-# include <atomic>
-
-# if !defined(__WIN__)
-#  include <signal.h>
-# endif
-
-namespace balcommon
+int _bal_aitoal(struct addrinfo* ai, bal_addrlist* out)
 {
-    constexpr const char* localaddr   = "127.0.0.1";
-    constexpr const char* portnum     = "9000";
-    constexpr const uint32_t sleepfor = 1000;
+    int r = BAL_FALSE;
 
-    bool initialize();
-    void quit();
-    bool should_run();
-    bool install_ctrl_c_handler();
-    void ctrl_c_handler_impl();
-    void print_last_lib_error(const char* func = nullptr);
+    if (_bal_validptr(ai) && _bal_validptr(out)) {
+        struct addrinfo* cur = ai;
+        bal_addr** a         = &out->addr;
+        r                    = BAL_TRUE;
 
-# define EXIT_IF_FAILED(retval, func) \
-    if (BAL_TRUE != retval) { \
-        balcommon::print_last_lib_error(func); \
-        return EXIT_FAILURE; \
+        do {
+            *a = calloc(1UL, sizeof(bal_addr));
+            if (!_bal_validptr(*a)) {
+                _bal_handlelasterr();
+                r = BAL_FALSE;
+                break;
+            }
+
+            memcpy(&(*a)->addr, cur->ai_addr, cur->ai_addrlen);
+
+            a   = &(*a)->next;
+            cur = cur->ai_next;
+        } while (NULL != cur);
+
+        bal_resetaddrlist(out);
     }
 
-# if defined(__WIN__)
-    BOOL WINAPI on_ctrl_c(DWORD ctl_type);
-# else
-    void on_ctrl_c(int sig);
-# endif
-} // !namespace balcommon
+    return r;
+}
 
-#endif // !_BAL_COMMON_HH_INCLUDED
+void _bal_socket_print(const bal_socket* s)
+{
+    if (_bal_validptr(s)) {
+        printf("%p:\n{\n  sd = "BAL_SOCKET_SPEC"\n  addr_fam = %d\n  type = %d\n"
+               "  proto = %d\nstate =\n  {\n  mask = %"PRIx32"\n  proc = %p\n  }"
+               "\n}\n", (void*)s, s->sd, s->addr_fam, s->type, s->proto,
+               s->state.mask, (void*)s->state.proc);
+    } else {
+        printf("<null>\n");
+    }
+}
