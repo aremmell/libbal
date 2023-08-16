@@ -40,14 +40,14 @@ bool __bal_setlasterror(int code, const char* func, const char* file,
     __bal_setlasterror(err, __func__, __file__, __LINE__, false)
 
 # if defined(__WIN__)
-#   define _bal_handlelasterr() \
+#  define _bal_handlelasterr() \
     __bal_setlasterror(WSAGetLastError(), __func__, __file__, __LINE__, false)
 # else
-#   define _bal_handlelasterr() \
+#  define _bal_handlelasterr() \
     __bal_setlasterror(errno, __func__, __file__, __LINE__, false)
 # endif
 
-#define _bal_handlegaierr(err) \
+# define _bal_handlegaierr(err) \
     __bal_setlasterror(err, __func__, __file__, __LINE__, true)
 
 # if defined(BAL_DBGLOG)

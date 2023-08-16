@@ -48,25 +48,25 @@ int _bal_getlasterror(bal_error* err)
             (void)strncpy(err->desc, tmp, strnlen(tmp, BAL_MAXERROR));
         } else {
             int finderr = -1;
-# if defined(__HAVE_XSI_STRERROR_R__)
+#if defined(__HAVE_XSI_STRERROR_R__)
             finderr = strerror_r(err->code, err->desc, BAL_MAXERROR);
 # if defined(__HAVE_XSI_STRERROR_R_ERRNO__)
             if (finderr == -1)
                 finderr = errno;
 # endif
-# elif defined(__HAVE_GNU_STRERROR_R__)
+#elif defined(__HAVE_GNU_STRERROR_R__)
             char* tmp = strerror_r(err->code, err->desc, BAL_MAXERROR);
             if (tmp != err->desc)
                 (void)strncpy(err->desc, tmp, strnlen(tmp, BAL_MAXERROR));
-# elif defined(__HAVE_STRERROR_S__)
+#elif defined(__HAVE_STRERROR_S__)
           finderr = (int)strerror_s(err->desc, BAL_MAXERROR, err->code);
-# else
+#else
             char* tmp = strerror(err->code);
             (void)strncpy(err->desc, tmp, strnlen(tmp, BAL_MAXERROR));
-# endif
-# if defined(__HAVE_XSI_STRERROR_R__) || defined(__HAVE_STRERROR_S__)
+#endif
+#if defined(__HAVE_XSI_STRERROR_R__) || defined(__HAVE_STRERROR_S__)
             assert(0 == finderr);
-# endif
+#endif
             BAL_UNUSED(finderr);
         }
         return err->code;
@@ -113,17 +113,17 @@ void __bal_dbglog(const char* func, const char* file, uint32_t line,
         va_end(args2);
 
         const char* color = "0";
-#if defined(__WIN__)
+# if defined(__WIN__)
         if (NULL != StrStrIA(buf, "error") || NULL != StrStrIA(buf, "assert"))
             color = "91";
         else if (NULL != StrStrIA(buf, "warn"))
             color = "33";
-#else
+# else
         if (NULL != strcasestr(buf, "error") || NULL != strcasestr(buf, "assert"))
             color = "91";
         else if (NULL != strcasestr(buf, "warn"))
             color = "33";
-#endif
+# endif
         printf("\x1b[%sm%s%s\x1b[0m\n", color, prefix, buf);
 
         _bal_safefree(&buf);

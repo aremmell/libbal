@@ -237,19 +237,19 @@ typedef unsigned bal_threadret;
 #  define __HAVE_STDC_EXT2__
 # endif
 
-#if defined(__MACOS__) || defined(__BSD__) || \
+# if defined(__MACOS__) || defined(__BSD__) || \
     (defined(_POSIX_C_SOURCE) && (_POSIX_C_SOURCE >= 200112L && !defined(_GNU_SOURCE)))
-# define __HAVE_XSI_STRERROR_R__
-# if defined(__GLIBC__)
-#  if (__GLIBC__ >= 2 && __GLIBC_MINOR__ < 13)
-#   define __HAVE_XSI_STRERROR_R_ERRNO__
+#  define __HAVE_XSI_STRERROR_R__
+#  if defined(__GLIBC__)
+#   if (__GLIBC__ >= 2 && __GLIBC_MINOR__ < 13)
+#    define __HAVE_XSI_STRERROR_R_ERRNO__
+#   endif
 #  endif
+# elif defined(_GNU_SOURCE) && defined(__GLIBC__)
+#  define __HAVE_GNU_STRERROR_R__
+# elif defined(__HAVE_STDC_SECURE_OR_EXT1__)
+#  define __HAVE_STRERROR_S__
 # endif
-#elif defined(_GNU_SOURCE) && defined(__GLIBC__)
-# define __HAVE_GNU_STRERROR_R__
-#elif defined(__HAVE_STDC_SECURE_OR_EXT1__)
-# define __HAVE_STRERROR_S__
-#endif
 
 # if (__STDC_VERSION__ >= 201112 && !defined(__STDC_NO_THREADS__)) || \
      (defined(__SUNPRO_C) || defined(__SUNPRO_CC))

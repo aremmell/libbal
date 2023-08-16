@@ -1285,23 +1285,23 @@ bool _bal_once(bal_once* once, bal_once_fn func)
 pid_t _bal_gettid(void)
 {
     pid_t tid = 0;
-#if defined(__WIN__)
+# if defined(__WIN__)
     tid = (pid_t)GetCurrentThreadId();
-#elif defined(__MACOS__)
+# elif defined(__MACOS__)
     uint64_t tid64 = 0;
     int gettid = pthread_threadid_np(NULL, &tid64);
     if (0 != gettid)
         (void)_bal_handleerr(gettid);
     tid = (pid_t)tid64;
-#elif defined(__linux__)
-# if (defined(__GLIBC__) && (__GLIBC__ >= 2 && __GLIBC_MINOR__ >= 30))
+# elif defined(__linux__)
+#  if (defined(__GLIBC__) && (__GLIBC__ >= 2 && __GLIBC_MINOR__ >= 30))
     tid = gettid();
-# else
+#  else
     tid = syscall(SYS_gettid);
+#  endif
+# else
+#  pragma message("warning: no implementation to get thread ID on this platform")
 # endif
-#else
-#pragma message("warning: no implementation to get thread ID on this platform")
-#endif
     return tid;
 }
 #endif
