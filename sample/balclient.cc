@@ -93,7 +93,6 @@ void balclient::async_events_cb(bal_socket* s, uint32_t events)
         if (read > 0) {
             printf("[" BAL_SOCKET_SPEC "] read %d bytes: '%s'\n", s->sd, read,
                 buf.data());
-            bal_addtomask(s, BAL_E_WRITE);
         } else if (-1 == read) {
             bal_error err {};
             printf("[" BAL_SOCKET_SPEC "] read error %d (%s)!\n", s->sd,
