@@ -615,6 +615,8 @@ bal_threadret _bal_eventthread(void* ctx)
         if (0 == count) {
             // TODO: figure out how to wait in an alertable state
             // when there's nothing to poll
+            static const uint32_t empty_sleep = 100;
+            bal_sleep_msec(empty_sleep);
         }
 
         bal_thread_yield();

@@ -38,7 +38,7 @@ namespace balcommon
 {
     constexpr const char* localaddr   = "127.0.0.1";
     constexpr const char* portnum     = "9000";
-    constexpr const uint32_t sleepfor = 1000;
+    constexpr const uint32_t sleepfor = 100;
 
     bool initialize();
     void quit();
