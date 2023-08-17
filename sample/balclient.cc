@@ -46,7 +46,7 @@ int main(int argc, char** argv)
     int ret = bal_sock_create(&s, AF_INET, SOCK_STREAM, IPPROTO_TCP);
     EXIT_IF_FAILED(ret, "bal_sock_create");
 
-    ret = bal_asyncselect(s, &balclient::async_events_cb, BAL_E_ALL);
+    ret = bal_asyncselect(s, &balclient::async_events_cb, BAL_E_STANDARD);
     EXIT_IF_FAILED(ret, "bal_asyncselect");
 
     ret = bal_connect(s, balcommon::localaddr, balcommon::portnum);
