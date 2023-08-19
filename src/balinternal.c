@@ -123,7 +123,7 @@ int _bal_asyncselect(bal_socket* s, bal_async_cb proc, uint32_t mask)
     }
 
     int r = BAL_FALSE;
-    if (_bal_mutex_lock(&_bal_as_container.mutex)) {
+    _BAL_ENTER_MUTEX(&_bal_as_container.mutex, asio) {
         if (0U == mask) {
             /* this thread holds the mutex that guards the list, so in theory,
              * a remove operation should be possible (even if it's the current
@@ -155,9 +155,7 @@ int _bal_asyncselect(bal_socket* s, bal_async_cb proc, uint32_t mask)
                 _bal_dbglog("updated socket "BAL_SOCKET_SPEC" (%p)", s->sd, s);
             } else {
                 bool success = false;
-                if (BAL_FALSE == bal_setiomode(s, true)) {
-                    _bal_handlelasterr();
-                } else {
+                if (BAL_TRUE == bal_setiomode(s, true)) {
                     s->state.mask = mask;
                     s->state.proc = proc;
                     success = _bal_list_add(_bal_as_container.lst, s->sd, s);
@@ -173,8 +171,7 @@ int _bal_asyncselect(bal_socket* s, bal_async_cb proc, uint32_t mask)
             }
         }
 
-        bool unlocked = _bal_mutex_unlock(&_bal_as_container.mutex);
-        BAL_ASSERT_UNUSED(unlocked, unlocked);
+        _BAL_LEAVE_MUTEX(&_bal_as_container.mutex, asio);
     }
 
     return r;
@@ -182,9 +179,7 @@ int _bal_asyncselect(bal_socket* s, bal_async_cb proc, uint32_t mask)
 
 bool _bal_initasyncselect(void)
 {
-    bool init = true;
-
-    init &= _bal_list_create(&_bal_as_container.lst);
+    bool init = _bal_list_create(&_bal_as_container.lst);
     BAL_ASSERT(init);
 
     if (!init) {
@@ -217,12 +212,10 @@ bool _bal_initasyncselect(void)
             &_bal_as_container, 0U, NULL);
         BAL_ASSERT(0ULL != *threads[n].thread);
 
-        create &= 0ULL != *threads[n].thread;
+        init &= 0ULL != *threads[n].thread;
 
-        if (0ULL == *threads[n].thread) {
+        if (0ULL == *threads[n].thread)
             _bal_handlelasterr();
-            return false;
-        }
 #else
         int op = pthread_create(threads[n].thread, NULL, threads[n].proc,
             &_bal_as_container);
@@ -231,7 +224,7 @@ bool _bal_initasyncselect(void)
         init &= 0 == op;
 
         if (0 != op)
-            return _bal_handleerr(op);
+            _bal_handleerr(op);
 #endif
     }
 
@@ -333,11 +326,12 @@ int _bal_getaddrinfo(int flags, int addr_fam, int type, const char* host,
         hints.ai_socktype = type;
 
         r = getaddrinfo(host, port, (const struct addrinfo*)&hints, res);
-    }
-
-    if (0 != r) {
-        _bal_handlegaierr(r);
-        r = BAL_FALSE;
+        if (0 == r) {
+            r = BAL_TRUE;
+        } else {
+            _bal_handlegaierr(r);
+            r = BAL_FALSE;
+        }
     }
 
     return r;
@@ -351,11 +345,12 @@ int _bal_getnameinfo(int f, const bal_sockaddr* in, char* host, char* port)
         socklen_t inlen = _BAL_SASIZE(*in);
         r = getnameinfo((const struct sockaddr*)in, inlen, host, NI_MAXHOST, port,
             NI_MAXSERV, f);
-    }
-
-    if (0 != r) {
-        _bal_handlegaierr(r);
-        r = BAL_FALSE;
+        if (0 == r) {
+            r = BAL_TRUE;
+        } else {
+            _bal_handlegaierr(r);
+            r = BAL_FALSE;
+        }
     }
 
     return r;
@@ -389,7 +384,6 @@ bool _bal_isclosedcircuit(const bal_socket* s)
 
     int buf = 0;
     int rcv = recv(s->sd, &buf, sizeof(int), MSG_PEEK | MSG_DONTWAIT);
-
     if (0 == rcv) {
         return true;
     } else if (-1 == rcv) {
@@ -472,6 +466,7 @@ bal_threadret _bal_eventthread(void* ctx)
     while (!_bal_get_boolean(&asc->die)) {
         size_t count       = 0UL;
         struct pollfd* fds = NULL;
+
         _BAL_ENTER_MUTEX(&asc->mutex, dispatch)
 
         count = _bal_list_count(asc->lst);
@@ -510,6 +505,7 @@ bal_threadret _bal_eventthread(void* ctx)
                 _bal_safefree(&fds);
             }
         }
+
         _BAL_LEAVE_MUTEX(&asc->mutex, dispatch)
 
         if (0 == count) {
@@ -817,7 +813,6 @@ bool _bal_mutex_create(bal_mutex* mutex)
         }
         (void)_bal_handleerr(op);
     }
-
     return false;
 }
 
@@ -827,7 +822,6 @@ bool _bal_mutex_lock(bal_mutex* mutex)
         int op = pthread_mutex_lock(mutex);
         return 0 == op ? true : _bal_handleerr(op);
     }
-
     return false;
 }
 
@@ -837,7 +831,6 @@ bool _bal_mutex_unlock(bal_mutex* mutex)
         int op = pthread_mutex_unlock(mutex);
         return 0 == op ? true : _bal_handleerr(op);
     }
-
     return false;
 }
 
@@ -847,7 +840,6 @@ bool _bal_mutex_destroy(bal_mutex* mutex)
         int op = pthread_mutex_destroy(mutex);
         return 0 == op ? true : _bal_handleerr(op);
     }
-
     return false;
 }
 #else /* __WIN__ */
@@ -857,7 +849,6 @@ bool _bal_mutex_create(bal_mutex* mutex)
         InitializeCriticalSection(mutex);
         return true;
     }
-
     return false;
 }
 
@@ -867,7 +858,6 @@ bool _bal_mutex_lock(bal_mutex* mutex)
         EnterCriticalSection(mutex);
         return true;
     }
-
     return false;
 }
 
@@ -875,7 +865,6 @@ bool _bal_mutex_trylock(bal_mutex* mutex)
 {
     if (_bal_validptr(mutex))
         return FALSE != TryEnterCriticalSection(mutex);
-
     return false;
 }
 
@@ -885,7 +874,6 @@ bool _bal_mutex_unlock(bal_mutex* mutex)
         LeaveCriticalSection(mutex);
         return true;
     }
-
     return false;
 }
 
@@ -895,7 +883,6 @@ bool _bal_mutex_destroy(bal_mutex* mutex)
         DeleteCriticalSection(mutex);
         return true;
     }
-
     return false;
 }
 #endif /* !__WIN__ */
@@ -974,24 +961,18 @@ BOOL CALLBACK _bal_static_once_init_func(PINIT_ONCE ponce, PVOID param, PVOID* c
     BAL_UNUSED(ponce);
     BAL_UNUSED(param);
     BAL_UNUSED(ctx);
-# if defined(__HAVE_STDATOMICS__)
-    atomic_init(&_bal_asyncselect_init, false);
-    atomic_init(&_bal_as_container.die, false);
-# else
-    _bal_asyncselect_init = false;
-    _bal_as_container.die = false;
-# endif
-    return TRUE;
-}
 #else
 void _bal_static_once_init_func(void)
 {
-# if defined(__HAVE_STDATOMICS__)
+#endif
+#if defined(__HAVE_STDATOMICS__)
     atomic_init(&_bal_asyncselect_init, false);
     atomic_init(&_bal_as_container.die, false);
-# else
+#else
     _bal_asyncselect_init = false;
     _bal_as_container.die = false;
-# endif
-}
 #endif
+#if defined(__WIN__)
+    return TRUE;
+#endif
+}
