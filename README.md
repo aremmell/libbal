@@ -1,8 +1,11 @@
-# BAL
+# libbal
 
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/a7e6cfb38dc44542b34b9ce447fcc792)](https://app.codacy.com/gh/aremmell/libbal/dashboard)
 
-Berkeley Abstraction Layer: a portable C/C++ wrapper for Berkeley sockets (w/ IPv6 support)
+libbal: a portable C/C++ wrapper for Berkeley sockets (w/ IPv6 support)
+
+<!-- SPDX-License-Identifier: MIT -->
+<!-- Copyright (c) 2004-current Ryan M. Lederman <lederman@gmail.com> -->
 
 ## UPDATE August 2023
 

@@ -1,3 +1,7 @@
+/*
+    SPDX-License-Identifier: MIT
+    SPDX-FileCopyrightText: Copyright (c) 2004-current Ryan M. Lederman
+*/
 {
     "version": 6,
     "cmakeMinimumRequired": {

@@ -1,0 +1,29 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: libbal
+Upstream-Contact: Ryan M. Lederman <lederman@gmail.com>
+Source: https://github.com/aremmell/libbal
+
+# Example code files
+Files: sample/*
+Copyright: 2004-current Ryan M. Lederman <lederman@gmail.com>
+License: MIT
+
+# Visual Studio Code files
+Files: .vscode/*
+Copyright: 2004-current Ryan M. Lederman <lederman@gmail.com>
+License: MIT
+
+# Workspace files
+Files: sir.code-workspace
+Copyright: 2004-current Ryan M. Lederman <lederman@gmail.com>
+License: MIT
+
+# All other C source files
+Files: src/*.c
+Copyright: 2004-current Ryan M. Lederman <lederman@gmail.com>
+License: MIT
+
+# All other C header files
+Files: include/*.h
+Copyright: 2004-current Ryan M. Lederman <lederman@gmail.com>
+License: MIT
