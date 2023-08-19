@@ -297,7 +297,7 @@ int bal_listen(bal_socket* s, int backlog)
     if (s) {
         r = listen(s->sd, backlog);
         if (0 == r) {
-            s->state.mask |= BAL_S_LISTEN;
+            bal_setbitshigh(&s->state.bits, BAL_S_LISTEN);
         } else {
             _bal_handlelasterr();
         }
