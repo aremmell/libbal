@@ -566,7 +566,7 @@ bool bal_islistening(const bal_socket* s)
     return 0 == get && 0 != flag;
 #else
     /* backup method: bitmask. */
-    return _bal_validsock(s) && bal_isbitset(s->state.mask, BAL_S_LISTEN);
+    return _bal_validsock(s) && bal_isbitset(s->state.bits, BAL_S_LISTEN);
 #endif
 }
 
