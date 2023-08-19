@@ -325,7 +325,7 @@ int _bal_getaddrinfo(int flags, int addr_fam, int type, const char* host,
 {
     int r = BAL_FALSE;
 
-    if (_bal_validstr(host) && _bal_validptrptr(res)) {
+    if ((_bal_validstr(host) || _bal_validstr(port)) && _bal_validptrptr(res)) {
         struct addrinfo hints = {0};
 
         hints.ai_flags    = flags;

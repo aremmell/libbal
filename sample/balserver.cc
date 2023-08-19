@@ -48,8 +48,8 @@ int main(int argc, char** argv)
     ret = bal_setreuseaddr(s, 1);
     EXIT_IF_FAILED(ret, "bal_setreuseaddr");
 
-    ret = bal_bind(s, balcommon::localaddr, balcommon::portnum);
-    EXIT_IF_FAILED(ret, "bal_bind");
+    ret = bal_bindall(s, balcommon::portnum);
+    EXIT_IF_FAILED(ret, "bal_bindall");
 
     ret = bal_asyncselect(s, &balserver::async_events_cb, BAL_E_STANDARD);
     EXIT_IF_FAILED(ret, "bal_asyncselect");
@@ -57,8 +57,7 @@ int main(int argc, char** argv)
     ret = bal_listen(s, SOMAXCONN);
     EXIT_IF_FAILED(ret, "bal_listen");
 
-    printf("listening on %s:%s; ctrl+c to exit...\n",
-        balcommon::localaddr, balcommon::portnum);
+    printf("listening on %s; ctrl+c to exit...\n", balcommon::portnum);
 
     do {
         bal_sleep_msec(balcommon::sleepfor);

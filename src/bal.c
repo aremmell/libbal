@@ -51,15 +51,15 @@ int bal_asyncselect(bal_socket* s, bal_async_cb proc, uint32_t mask)
 }
 
 int bal_autosocket(bal_socket** s, int addr_fam, int proto, const char* host,
-    const char* port)
+    const char* srv)
 {
     int r = BAL_FALSE;
 
     if (_bal_validptrptr(s) && _bal_validstr(host)) {
-        int type = (proto == 0 ? 0 : (proto == IPPROTO_TCP ? SOCK_STREAM : SOCK_DGRAM));
         struct addrinfo* ai = NULL;
-
-        if (BAL_TRUE == _bal_getaddrinfo(0, addr_fam, type, host, port, &ai) && NULL != ai) {
+        int type = (proto == 0 ? 0 : (proto == IPPROTO_TCP ? SOCK_STREAM : SOCK_DGRAM));
+        int get = _bal_getaddrinfo(0, addr_fam, type, host, srv, &ai);
+        if (BAL_TRUE == get && NULL != ai) {
             struct addrinfo* cur = ai;
             do {
                 if (BAL_TRUE == bal_sock_create(s, cur->ai_family, cur->ai_protocol,
@@ -267,15 +267,15 @@ int bal_recvfrom(const bal_socket* s, void* data, size_t len, int flags,
     }
 }
 
-int bal_bind(const bal_socket* s, const char* addr, const char* port)
+int bal_bind(const bal_socket* s, const char* addr, const char* srv)
 {
     int r = BAL_FALSE;
 
-    if (s && _bal_validstr(addr) && _bal_validstr(port)) {
+    if (_bal_validsock(s) && _bal_validstr(addr) && _bal_validstr(srv)) {
         struct addrinfo* ai = NULL;
-
-        if (BAL_TRUE == _bal_getaddrinfo(AI_NUMERICHOST, s->addr_fam, s->type,
-            addr, port, &ai) && NULL != ai) {
+        int flags = AI_NUMERICHOST;
+        int get = _bal_getaddrinfo(flags, s->addr_fam, s->type, addr, srv, &ai);
+        if (BAL_TRUE == get && NULL != ai) {
             struct addrinfo* cur = ai;
             do {
                 if (0 == bind(s->sd, (const struct sockaddr*)cur->ai_addr,
@@ -287,6 +287,27 @@ int bal_bind(const bal_socket* s, const char* addr, const char* port)
             } while (NULL != cur);
 
             freeaddrinfo(ai);
+        }
+    }
+
+    return r;
+}
+
+int bal_bindall(const bal_socket* s, const char* srv)
+{
+    int r = BAL_FALSE;
+
+    if (_bal_validsock(s) && _bal_validstr(srv)) {
+        struct addrinfo* ai = NULL;
+        int flags = AI_PASSIVE | AI_NUMERICHOST;
+        int get = _bal_getaddrinfo(flags, s->addr_fam, s->type, NULL, srv, &ai);
+        if (BAL_TRUE == get && NULL != ai) {
+            if (0 != bind(s->sd, (const struct sockaddr*)ai->ai_addr,
+                ai->ai_addrlen)) {
+                _bal_handlelasterr();
+            } else {
+                r = BAL_TRUE;
+            }
         }
     }
 

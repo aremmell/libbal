@@ -46,7 +46,7 @@ bool bal_cleanup(void);
 int bal_asyncselect(bal_socket* s, bal_async_cb proc, uint32_t mask);
 
 int bal_autosocket(bal_socket** s, int addr_fam, int proto, const char* host,
-    const char* port);
+    const char* srv);
 int bal_sock_create(bal_socket** s, int addr_fam, int type, int proto);
 int bal_sock_destroy(bal_socket** s);
 int bal_close(bal_socket** s, bool destroy);
@@ -66,7 +66,8 @@ int bal_sendtoaddr(const bal_socket* s, const bal_sockaddr* sa, const void* data
 int bal_recvfrom(const bal_socket* s, void* data, size_t len, int flags,
     bal_sockaddr* res);
 
-int bal_bind(const bal_socket* s, const char* addr, const char* port);
+int bal_bind(const bal_socket* s, const char* addr, const char* srv);
+int bal_bindall(const bal_socket* s, const char* srv);
 
 int bal_listen(bal_socket* s, int backlog);
 int bal_accept(const bal_socket* s, bal_socket** res, bal_sockaddr* resaddr);
