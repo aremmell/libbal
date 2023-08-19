@@ -361,36 +361,6 @@ bool _bal_ispendingconn(bal_socket* s)
     return _bal_validsock(s) && bal_isbitset(s->state.bits, BAL_S_CONNECT);
 }
 
-bool _bal_isclosedcircuit(const bal_socket* s)
-{
-    if (!_bal_validsock(s))
-        return true;
-
-    int buf = 0;
-    int rcv = bal_recv(s, &buf, sizeof(int), MSG_PEEK | MSG_DONTWAIT);
-    if (0 == rcv) {
-        return true;
-    } else if (-1 == rcv) {
-#if defined(__WIN__)
-        int error = WSAGetLastError();
-        if (WSAENETDOWN == error     || WSAENOTCONN == error  ||
-            WSAEOPNOTSUPP == error   || WSAESHUTDOWN == error ||
-            WSAECONNABORTED == error || WSAECONNRESET == error)
-            return true;
-#else
-        int error = errno;
-        if (ENETDOWN == error     || ENOTCONN == error     ||
-            ECONNREFUSED == error || ESHUTDOWN == error    ||
-            ECONNABORTED == error || ECONNRESET == error   ||
-            ENETUNREACH == error  || ENETRESET == error    ||
-            EHOSTDOWN   == error  || EHOSTUNREACH == error)
-            return true;
-#endif
-    }
-
-    return false;
-}
-
 uint32_t _bal_pollflags_tomask(short flags)
 {
     uint32_t retval = 0U;
@@ -531,7 +501,7 @@ void _bal_dispatchevents(bal_descriptor sd, bal_socket* s, uint32_t events)
 
     uint32_t _events = 0U;
 
-    _bal_dbglog("events %"PRIx32" for socket "BAL_SOCKET_SPEC, events, sd);
+    //_bal_dbglog("events %"PRIx32" for socket "BAL_SOCKET_SPEC, events, sd);
 
     if (bal_isbitset(events, BAL_EVT_READ) && bal_bitsinmask(s, BAL_EVT_READ)) {
         if (bal_islistening(s)) {

@@ -231,8 +231,8 @@ typedef unsigned bal_threadret;
 # define BAL_EVT_INVALID  0x00000100U
 # define BAL_EVT_OOBREAD  0x00000200U
 # define BAL_EVT_OOBWRITE 0x00000400U
-# define BAL_EVT_ALL      0x000007ffU
-# define BAL_EVT_NORMAL   0x00000bbdU
+# define BAL_EVT_ALL      0x000007ffU /**< Includes all available event types. */
+# define BAL_EVT_NORMAL   0x00000bbdU /**< Excludes write, oob-write, priority. */
 
 # define BAL_S_CONNECT 0x00000001U
 # define BAL_S_LISTEN  0x00000002U
