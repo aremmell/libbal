@@ -42,8 +42,8 @@ bool _bal_cleanup(void);
 
 int _bal_asyncpoll(bal_socket* s, bal_async_cb proc, uint32_t mask);
 
-bool _bal_initasyncselect(void);
-bool _bal_cleanupasyncselect(void);
+bool _bal_initasyncpoll(void);
+bool _bal_cleanupasyncpoll(void);
 
 int _bal_sock_destroy(bal_socket** s);
 

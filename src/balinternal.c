@@ -68,12 +68,12 @@ bool _bal_init(void)
         return false;
     }
 
-    init = _bal_initasyncselect();
+    init = _bal_initasyncpoll();
     BAL_ASSERT(init);
 
     if (!init) {
-        _bal_dbglog("error: _bal_initasyncselect failed");
-        bool cleanup = _bal_cleanupasyncselect();
+        _bal_dbglog("error: _bal_initasyncpoll failed");
+        bool cleanup = _bal_cleanupasyncpoll();
         BAL_ASSERT_UNUSED(cleanup, cleanup);
         return false;
     }
@@ -87,8 +87,8 @@ bool _bal_cleanup(void)
     (void)WSACleanup();
 #endif
 
-    if (!_bal_cleanupasyncselect()) {
-        _bal_dbglog("error: _bal_cleanupasyncselect failed");
+    if (!_bal_cleanupasyncpoll()) {
+        _bal_dbglog("error: _bal_cleanupasyncpoll failed");
         return false;
     }
 
@@ -177,7 +177,7 @@ int _bal_asyncpoll(bal_socket* s, bal_async_cb proc, uint32_t mask)
     return r;
 }
 
-bool _bal_initasyncselect(void)
+bool _bal_initasyncpoll(void)
 {
     bool init = _bal_list_create(&_bal_as_container.lst);
     BAL_ASSERT(init);
@@ -234,7 +234,7 @@ bool _bal_initasyncselect(void)
     return init;
 }
 
-bool _bal_cleanupasyncselect(void)
+bool _bal_cleanupasyncpoll(void)
 {
     _bal_set_boolean(&_bal_as_container.die, true);
     _bal_set_boolean(&_bal_asyncpoll_init, false);
