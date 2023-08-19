@@ -115,21 +115,21 @@ bool bal_islistening(const bal_socket* s);
 static inline
 void bal_addtomask(bal_socket* s, uint32_t bits)
 {
-    if (_bal_validsock(s))
+    if (_bal_validptr(s))
         bal_setbitshigh(&s->state.mask, bits);
 }
 
 static inline
 void bal_remfrommask(bal_socket* s, uint32_t bits)
 {
-    if (_bal_validsock(s))
+    if (_bal_validptr(s))
         bal_setbitslow(&s->state.mask, bits);
 }
 
 static inline
-bool bal_isbitinmask(bal_socket* s, uint32_t bit)
+bool bal_bitsinmask(bal_socket* s, uint32_t bits)
 {
-    return _bal_validsock(s) ? bal_isbitset(s->state.mask, bit) : false;
+    return _bal_validptr(s) ? bal_isbitset(s->state.mask, bits) : false;
 }
 
 int bal_setiomode(const bal_socket* s, bool async);
