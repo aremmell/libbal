@@ -107,18 +107,18 @@ int _bal_asyncselect(bal_socket* s, bal_async_cb proc, uint32_t mask)
         return BAL_FALSE;
     }
 
+    BAL_ASSERT(NULL != s);
     if (!_bal_validptr(s)) {
-        BAL_ASSERT(NULL != s);
         return BAL_FALSE;
     }
 
+    BAL_ASSERT(BAL_BADSOCKET != s->sd && 0 != s->sd);
     if (0 >= s->sd) {
-        BAL_ASSERT(BAL_BADSOCKET != s->sd && 0 != s->sd);
         return BAL_FALSE;
     }
 
+    BAL_ASSERT(NULL != proc || 0U == mask);
     if (!_bal_validptr(proc) && 0U != mask) {
-        BAL_ASSERT(NULL != proc || 0U == mask);
         return BAL_FALSE;
     }
 
@@ -697,6 +697,11 @@ bal_threadret _bal_eventthread(void* ctx)
 
 void _bal_dispatchevents(bal_descriptor sd, bal_socket* s, uint32_t events)
 {
+    BAL_ASSERT(NULL != s);
+    if (!_bal_validptr(s)) {
+        return;
+    }
+
     uint32_t _events = 0U;
 
     if (bal_isbitset(s->state.mask, BAL_E_READ) &&
@@ -739,7 +744,7 @@ void _bal_dispatchevents(bal_descriptor sd, bal_socket* s, uint32_t events)
 
     bool close = bal_isbitset(events, BAL_E_CLOSE);
 
-    if (0U != _events && _bal_validsock(s) && _bal_validptr(s->state.proc))
+    if (0U != _events && _bal_validptr(s->state.proc))
         s->state.proc(s, _events);
 
     if (close) {
@@ -800,9 +805,10 @@ bool _bal_list_add(bal_list* lst, bal_descriptor key, bal_socket* val)
             lst->iter = lst->head;
         } else {
             bal_list_node* node = lst->head;
-            while (node && node->next) node = node->next;
-
-            ok = _bal_list_create_node(&node->next, key, val);
+            while (node && node->next)
+                node = node->next;
+            ok = NULL != node && _bal_list_create_node(&node->next, key, val) &&
+                 NULL != node->next;
             if (ok)
                 node->next->prev = node;
         }

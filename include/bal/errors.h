@@ -66,10 +66,8 @@ void __bal_dbglog(const char* func, const char* file, uint32_t line,
 # endif
 
 # define BAL_ASSERT_UNUSED(var, expr) \
-    if (!(expr)) { \
-        BAL_ASSERT(expr); \
-        BAL_UNUSED(var); \
-    }
+    BAL_ASSERT(expr); \
+    BAL_UNUSED(var);
 
 # if defined(__cplusplus)
 }

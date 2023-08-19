@@ -41,9 +41,6 @@ int bal_autosocket(bal_socket** s, int addr_fam, int proto, const char* host,
     int r = BAL_FALSE;
 
     if (_bal_validptrptr(s) && _bal_validstr(host)) {
-        if (0 == addr_fam)
-            addr_fam = PF_UNSPEC;
-
         int type = (proto == 0 ? 0 : (proto == IPPROTO_TCP ? SOCK_STREAM : SOCK_DGRAM));
         struct addrinfo* ai = NULL;
 
@@ -746,8 +743,8 @@ int bal_freeaddrlist(bal_addrlist* al)
             al->iter = a;
         }
 
-        r      = BAL_TRUE;
-        al->iter = al->addr = NULL;
+        al->addr = NULL;
+        r        = BAL_TRUE;
     }
 
     return r;
