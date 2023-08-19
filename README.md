@@ -1,8 +1,14 @@
 # BAL
 
-Berkeley Abstraction Layer: a portable C/C++ wrapper for Berkeley sockets (IPv6 support)
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/a7e6cfb38dc44542b34b9ce447fcc792)](https://app.codacy.com/gh/aremmell/libbal/dashboard)
 
-> NOTE: This code is ancient; I have definitely run into bugs while trying to write test applications, so this is very much a WIP.
+Berkeley Abstraction Layer: a portable C/C++ wrapper for Berkeley sockets (w/ IPv6 support)
+
+## UPDATE August 2023
+
+I originally inteded to simply clean up the code, rename it, and add some documentation, but I have ended up making radical changes, including rewriting the async I/O mechanism. I'll be adding libbal to a strong CI pipeline as soon as I write a test suite.
+
+I also tossed the C++ wrapper because I only had the header; the .cpp file was AWOL. I'll be writing that from scratch using C++20 as the standard.
 
 ## UPDATE July 2023
 
