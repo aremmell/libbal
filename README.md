@@ -1,6 +1,6 @@
 # libbal
 
-[![Codacy Badge](https://app.codacy.com/project/badge/Grade/a7e6cfb38dc44542b34b9ce447fcc792)](https://app.codacy.com/gh/aremmell/libbal/dashboard)
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/a7e6cfb38dc44542b34b9ce447fcc792)](https://app.codacy.com/gh/aremmell/libbal/dashboard)&nbsp;[![REUSE status](https://api.reuse.software/badge/github.com/aremmell/libbal)](https://api.reuse.software/info/github.com/aremmell/libbal)
 
 libbal: a portable C/C++ wrapper for Berkeley sockets (w/ IPv6 support)
 
