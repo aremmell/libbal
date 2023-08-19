@@ -903,6 +903,47 @@ bool _bal_once(bal_once* once, bal_once_fn func)
 #endif
 }
 
+int _bal_aitoal(struct addrinfo* ai, bal_addrlist* out)
+{
+    int r = BAL_FALSE;
+
+    if (_bal_validptr(ai) && _bal_validptr(out)) {
+        struct addrinfo* cur = ai;
+        bal_addr** a         = &out->addr;
+        r                    = BAL_TRUE;
+
+        do {
+            *a = calloc(1UL, sizeof(bal_addr));
+            if (!_bal_validptr(*a)) {
+                _bal_handlelasterr();
+                r = BAL_FALSE;
+                break;
+            }
+
+            memcpy(&(*a)->addr, cur->ai_addr, cur->ai_addrlen);
+
+            a   = &(*a)->next;
+            cur = cur->ai_next;
+        } while (NULL != cur);
+
+        bal_resetaddrlist(out);
+    }
+
+    return r;
+}
+
+void _bal_socket_print(const bal_socket* s)
+{
+    if (_bal_validptr(s)) {
+        printf("%p:\n{\n  sd = "BAL_SOCKET_SPEC"\n  addr_fam = %d\n  type = %d\n"
+               "  proto = %d\nstate =\n  {\n  mask = %"PRIx32"\n  proc = %p\n  }"
+               "\n}\n", (void*)s, s->sd, s->addr_fam, s->type, s->proto,
+               s->state.mask, (void*)s->state.proc);
+    } else {
+        printf("<null>\n");
+    }
+}
+
 #if defined(BAL_DBGLOG)
 pid_t _bal_gettid(void)
 {

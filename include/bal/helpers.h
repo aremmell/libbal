@@ -29,11 +29,6 @@
 # include "types.h"
 # include "errors.h"
 
-int _bal_aitoal(struct addrinfo* ai, bal_addrlist* out);
-
-/** Prints a bal_socket to stdout. */
-void _bal_socket_print(const bal_socket* s);
-
 static inline
 void __bal_safefree(void** pp)
 {

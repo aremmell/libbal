@@ -126,6 +126,11 @@ void _bal_set_boolean(bool* boolean, bool value);
 
 bool _bal_once(bal_once* once, bal_once_fn func);
 
+int _bal_aitoal(struct addrinfo* ai, bal_addrlist* out);
+
+/** Prints a bal_socket to stdout. */
+void _bal_socket_print(const bal_socket* s);
+
 # if defined(BAL_DBGLOG)
 /** Returns the current thread identifier (used by _bal_dbglog). */
 pid_t _bal_gettid(void);
