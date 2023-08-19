@@ -14,8 +14,7 @@ Copyright: 2004-current Ryan M. Lederman <lederman@gmail.com>
 License: MIT
 
 # C++ sample applications
-Files: sample/*.cc
-Files: sample/*.hh
+Files: sample/*.cc sample/*.hh
 Copyright: 2004-current Ryan M. Lederman <lederman@gmail.com>
 License: MIT
 
@@ -25,7 +24,6 @@ Copyright: 2004-current Ryan M. Lederman <lederman@gmail.com>
 License: MIT
 
 # C headers
-Files: include/*.h
-Files: include/bal/version.h.in
+Files: include/*.h include/bal/version.h.in
 Copyright: 2004-current Ryan M. Lederman <lederman@gmail.com>
 License: MIT
