@@ -22,3 +22,7 @@ build/
 
 # Visual Studio files
 .vs/
+
+# Linter files
+pvsreport/
+log.pvs
