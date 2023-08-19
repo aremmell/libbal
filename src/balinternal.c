@@ -36,9 +36,9 @@ static bal_once _bal_static_once_init = BAL_ONCE_INIT;
 
 /* whether or not the async select handler is initialized. */
 #if defined(__HAVE_STDATOMICS__)
-static atomic_bool _bal_asyncselect_init;
+static atomic_bool _bal_asyncpoll_init;
 #else
-static volatile bool _bal_asyncselect_init = false;
+static volatile bool _bal_asyncpoll_init = false;
 #endif
 
 /* async I/O state container. */
@@ -95,9 +95,9 @@ bool _bal_cleanup(void)
     return true;
 }
 
-int _bal_asyncselect(bal_socket* s, bal_async_cb proc, uint32_t mask)
+int _bal_asyncpoll(bal_socket* s, bal_async_cb proc, uint32_t mask)
 {
-    if (!_bal_get_boolean(&_bal_asyncselect_init)) {
+    if (!_bal_get_boolean(&_bal_asyncpoll_init)) {
         _bal_dbglog("error: async I/O not initialized; ignoring");
         return BAL_FALSE;
     }
@@ -228,7 +228,7 @@ bool _bal_initasyncselect(void)
 #endif
     }
 
-    _bal_set_boolean(&_bal_asyncselect_init, true);
+    _bal_set_boolean(&_bal_asyncpoll_init, true);
     _bal_dbglog("async I/O initialized %s", init ? "successfully" : "with errors");
 
     return init;
@@ -237,7 +237,7 @@ bool _bal_initasyncselect(void)
 bool _bal_cleanupasyncselect(void)
 {
     _bal_set_boolean(&_bal_as_container.die, true);
-    _bal_set_boolean(&_bal_asyncselect_init, false);
+    _bal_set_boolean(&_bal_asyncpoll_init, false);
 
     bal_thread* threads[] = {
         &_bal_as_container.thread
@@ -939,10 +939,10 @@ void _bal_static_once_init_func(void)
 {
 #endif
 #if defined(__HAVE_STDATOMICS__)
-    atomic_init(&_bal_asyncselect_init, false);
+    atomic_init(&_bal_asyncpoll_init, false);
     atomic_init(&_bal_as_container.die, false);
 #else
-    _bal_asyncselect_init = false;
+    _bal_asyncpoll_init = false;
     _bal_as_container.die = false;
 #endif
 #if defined(__WIN__)

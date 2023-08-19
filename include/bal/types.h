@@ -33,7 +33,7 @@ typedef struct sockaddr_storage bal_sockaddr;
 
 struct bal_socket; /* forward declaration. */
 
-/** bal_asyncselect callback. */
+/** bal_asyncpoll callback. */
 typedef void (*bal_async_cb)(struct bal_socket*, uint32_t);
 
 /** List iteration callback. Returns false to stop iteration. */

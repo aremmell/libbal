@@ -51,8 +51,8 @@ int main(int argc, char** argv)
     ret = bal_bindall(s, balcommon::portnum);
     EXIT_IF_FAILED(ret, "bal_bindall");
 
-    ret = bal_asyncselect(s, &balserver::async_events_cb, BAL_EVT_NORMAL);
-    EXIT_IF_FAILED(ret, "bal_asyncselect");
+    ret = bal_asyncpoll(s, &balserver::async_events_cb, BAL_EVT_NORMAL);
+    EXIT_IF_FAILED(ret, "bal_asyncpoll");
 
     ret = bal_listen(s, SOMAXCONN);
     EXIT_IF_FAILED(ret, "bal_listen");
@@ -64,8 +64,8 @@ int main(int argc, char** argv)
         bal_thread_yield();
     } while (balcommon::should_run());
 
-    ret = bal_asyncselect(s, nullptr, 0U);
-    EXIT_IF_FAILED(ret, "bal_asyncselect");
+    ret = bal_asyncpoll(s, nullptr, 0U);
+    EXIT_IF_FAILED(ret, "bal_asyncpoll");
 
     if (BAL_TRUE != bal_close(&s, true)) {
         balcommon::print_last_lib_error("bal_close");
@@ -100,9 +100,9 @@ void balserver::async_events_cb(bal_socket* s, uint32_t events)
             return;
         }
 
-        ret = bal_asyncselect(client_socket, &async_events_cb, BAL_EVT_NORMAL);
+        ret = bal_asyncpoll(client_socket, &async_events_cb, BAL_EVT_NORMAL);
         if (BAL_TRUE != ret) {
-            balcommon::print_last_lib_error("bal_asyncselect");
+            balcommon::print_last_lib_error("bal_asyncpoll");
             bal_close(&client_socket, true);
             return;
         }

@@ -45,9 +45,9 @@ bool bal_cleanup(void)
     return _bal_cleanup();
 }
 
-int bal_asyncselect(bal_socket* s, bal_async_cb proc, uint32_t mask)
+int bal_asyncpoll(bal_socket* s, bal_async_cb proc, uint32_t mask)
 {
-    return _bal_asyncselect(s, proc, mask);
+    return _bal_asyncpoll(s, proc, mask);
 }
 
 int bal_autosocket(bal_socket** s, int addr_fam, int proto, const char* host,

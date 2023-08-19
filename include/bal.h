@@ -43,7 +43,7 @@ extern "C" {
 bool bal_init(void);
 bool bal_cleanup(void);
 
-int bal_asyncselect(bal_socket* s, bal_async_cb proc, uint32_t mask);
+int bal_asyncpoll(bal_socket* s, bal_async_cb proc, uint32_t mask);
 
 int bal_autosocket(bal_socket** s, int addr_fam, int proto, const char* host, const char* srv);
 int bal_sock_create(bal_socket** s, int addr_fam, int type, int proto);
