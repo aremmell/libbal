@@ -125,9 +125,9 @@ int bal_close(bal_socket** s, bool destroy)
 #endif
         else {
             _bal_dbglog("closed socket "BAL_SOCKET_SPEC" (%p)", (*s)->sd, *s);
-            (*s)->state.bits |= BAL_S_CLOSE;
-            (*s)->state.bits &= ~(BAL_S_CONNECT | BAL_S_LISTEN);
-            closed            = BAL_TRUE;
+            bal_setbitshigh(&(*s)->state.bits, BAL_S_CLOSE);
+            bal_setbitslow(&(*s)->state.bits, BAL_S_CONNECT | BAL_S_LISTEN);
+            closed = BAL_TRUE;
         }
 
         destroyed = destroy ? bal_sock_destroy(s) : BAL_FALSE;

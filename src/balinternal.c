@@ -477,8 +477,8 @@ uint32_t _bal_on_pending_conn_event(bal_socket* s)
         r = BAL_E_CONNECT;
     }
 
-    s->state.mask &= ~BAL_E_WRITE;
-    s->state.bits &= ~BAL_S_CONNECT;
+    bal_setbitslow(&s->state.mask, BAL_E_WRITE);
+    bal_setbitslow(&s->state.bits, BAL_S_CONNECT);
     return r;
 }
 
@@ -704,8 +704,7 @@ void _bal_dispatchevents(bal_descriptor sd, bal_socket* s, uint32_t events)
 
     uint32_t _events = 0U;
 
-    if (bal_isbitset(s->state.mask, BAL_E_READ) &&
-        bal_isbitset(events, BAL_E_READ)) {
+    if (bal_isbitset(events, BAL_E_READ) && bal_bitsinmask(s, BAL_E_READ)) {
         if (bal_islistening(s)) {
             _events |= BAL_E_ACCEPT;
         } else if (_bal_haspendingconnect(s)) {
@@ -715,32 +714,24 @@ void _bal_dispatchevents(bal_descriptor sd, bal_socket* s, uint32_t events)
         }
     }
 
-    if (bal_isbitset(s->state.mask, BAL_E_WRITE) &&
-        bal_isbitset(events, BAL_E_WRITE)) {
+    if (bal_isbitset(events, BAL_E_WRITE) && bal_bitsinmask(s, BAL_E_WRITE)) {
         if (_bal_haspendingconnect(s)) {
             _events |= _bal_on_pending_conn_event(s);
-        } else if (bal_isbitset(s->state.mask, BAL_E_CLOSE) &&
-            _bal_isclosedcircuit(s)) {
+        } else if (bal_bitsinmask(s, BAL_E_CLOSE) && _bal_isclosedcircuit(s)) {
             _events |= BAL_E_CLOSE;
         } else {
             _events |= BAL_E_WRITE;
         }
     }
 
-    if (bal_isbitset(s->state.mask, BAL_E_CLOSE) &&
-        bal_isbitset(events, BAL_E_CLOSE)) {
+    if (bal_isbitset(events, BAL_E_CLOSE) && bal_bitsinmask(s, BAL_E_CLOSE))
         _events |= BAL_E_CLOSE;
-    }
 
-    if (bal_isbitset(s->state.mask, BAL_E_EXCEPT) &&
-        bal_isbitset(events, BAL_E_EXCEPT)) {
+    if (bal_isbitset(events, BAL_E_EXCEPT) && bal_bitsinmask(s, BAL_E_EXCEPT))
         _events |= BAL_E_EXCEPT;
-    }
 
-    if (bal_isbitset(s->state.mask, BAL_E_ERROR) &&
-        bal_isbitset(events, BAL_E_ERROR)) {
+    if (bal_isbitset(events, BAL_E_ERROR) && bal_bitsinmask(s, BAL_E_ERROR))
         _events |= BAL_E_ERROR;
-    }
 
     bool close = bal_isbitset(events, BAL_E_CLOSE);
 
@@ -748,11 +739,10 @@ void _bal_dispatchevents(bal_descriptor sd, bal_socket* s, uint32_t events)
         s->state.proc(s, _events);
 
     if (close) {
-        /* if the caller did the right thing, they have called bal_close,
-         * and possibly even bal_sock_destroy. if they did not call the
-         * latter, the socket still resides in the list. presume that
-         * the caller knows what they're doing, and don't destroy the socket,
-         * but remove it from the list. */
+        /* if the callback did the right thing, it has called bal_close and
+         * possibly bal_sock_destroy. if it didn't call the latter, the socket
+         * still resides in the list. presume that the callback is behaving
+         * properly–don't free the socket, but remove it from the list. */
         bal_socket* d = NULL;
         bool removed  = _bal_list_remove(_bal_as_container.lst, sd, &d);
 
