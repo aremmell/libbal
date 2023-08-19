@@ -580,8 +580,8 @@ bool bal_islistening(const bal_socket* s)
     /* prefer using the OS, since technically the socket could have been created
      * elsewhere and assigned to a bal_socket. */
 #if defined(__HAVE_SO_ACCEPTCONN__)
-    int flag      = 0;
-    int get       = bal_getoption(s, SOL_SOCKET, SO_ACCEPTCONN, &flag, sizeof(int));
+    int flag = 0;
+    int get  = bal_getoption(s, SOL_SOCKET, SO_ACCEPTCONN, &flag, sizeof(int));
 
     if (0 != get)
         _bal_handlelasterr();

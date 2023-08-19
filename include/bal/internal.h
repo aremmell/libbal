@@ -47,11 +47,8 @@ bool _bal_cleanupasyncselect(void);
 
 int _bal_sock_destroy(bal_socket** s);
 
-/*bool _bal_defer_add_socket(bal_socket* s);
-bool _bal_defer_remove_socket(bal_descriptor sd, bal_socket* s);*/
-
-int _bal_getaddrinfo(int f, int af, int st, const char* host, const char* port,
-    struct addrinfo** res);
+int _bal_getaddrinfo(int flags, int addr_fam, int type, const char* host,
+    const char* port, struct addrinfo** res);
 int _bal_getnameinfo(int f, const bal_sockaddr* in, char* host, char* port);
 
 bool _bal_haspendingconnect(bal_socket* s);
@@ -62,7 +59,6 @@ uint32_t _bal_pollflags_tomask(short flags);
 short _bal_mask_topollflags(uint32_t mask);
 
 bal_threadret _bal_eventthread(void* ctx);
-/* bal_threadret _bal_syncthread(void* ctx); */
 
 void _bal_dispatchevents(bal_descriptor sd, bal_socket* s, uint32_t events);
 
@@ -110,44 +106,17 @@ bool _bal_list_destroy_node(bal_list_node** node);
 /** Callback for finding nodes by key. */
 bool __bal_list_find_key(bal_descriptor key, bal_socket* val, void* ctx);
 
-/** Callback for removing entries from a list. */
-//bool __bal_list_remove_entries(bal_descriptor key, bal_socket* val, void* ctx);
-
-/** Callback for adding entries to a list. */
-//bool __bal_list_add_entries(bal_descriptor key, bal_socket* val, void* ctx);
-
 /** Creates/initializes a new mutex. */
 bool _bal_mutex_create(bal_mutex* mutex);
 
 /** Attempts to lock a mutex and waits indefinitely. */
 bool _bal_mutex_lock(bal_mutex* mutex);
 
-/** Determines if a mutex is locked without waiting. */
-//bool _bal_mutex_trylock(bal_mutex* mutex);
-
 /** Unlocks a previously locked mutex. */
 bool _bal_mutex_unlock(bal_mutex* mutex);
 
 /** Destroys a mutex. */
 bool _bal_mutex_destroy(bal_mutex* mutex);
-
-/** Creates/initializes a new condition variable. */
-//bool _bal_cond_create(bal_condition* cond);
-
-/** Signals a condition variable. */
-//bool _bal_cond_signal(bal_condition* cond);
-
-/** Broadcast signals a condition variable. */
-//bool _bal_cond_broadcast(bal_condition* cond);
-
-/** Destroys a condition variable. */
-//bool _bal_cond_destroy(bal_condition* cond);
-
-/** Waits indefinitely for a condition variable to become signaled. */
-//bool _bal_cond_wait(bal_condition* cond, bal_mutex* mutex);
-
-/** Waits a given amount of time for a condition variable to become signaled. */
-//bool _bal_condwait_timeout(bal_condition* cond, bal_mutex* mutex, bal_wait* how_long);
 
 # if defined(__HAVE_STDATOMICS__)
 bool _bal_get_boolean(const atomic_bool* boolean);
@@ -156,8 +125,6 @@ void _bal_set_boolean(atomic_bool* boolean, bool value);
 bool _bal_get_boolean(const bool* boolean);
 void _bal_set_boolean(bool* boolean, bool value);
 # endif
-
-/* void _bal_init_socket(bal_socket* s); */
 
 bool _bal_once(bal_once* once, bal_once_fn func);
 

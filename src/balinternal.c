@@ -182,52 +182,24 @@ int _bal_asyncselect(bal_socket* s, bal_async_cb proc, uint32_t mask)
 
 bool _bal_initasyncselect(void)
 {
-    bal_list** lists[] = {
-        &_bal_as_container.lst/* ,
-        &_bal_as_container.lst_add,
-        &_bal_as_container.lst_rem */
-    };
-
     bool init = true;
-    for (size_t n = 0; n < _bal_countof(lists); n++) {
-        init &= _bal_list_create(lists[n]);
-        BAL_ASSERT(init);
 
-        if (!init) {
-            _bal_handlelasterr();
-            _bal_dbglog("error: failed to create list(s)");
-            return false;
-        }
+    init &= _bal_list_create(&_bal_as_container.lst);
+    BAL_ASSERT(init);
+
+    if (!init) {
+        _bal_handlelasterr();
+        _bal_dbglog("error: failed to create list");
+        return false;
     }
 
-    bal_mutex* mutexes[] = {
-        &_bal_as_container.mutex/* ,
-        &_bal_as_container.s_mutex */
-    };
+    init &= _bal_mutex_create(&_bal_as_container.mutex);
+    BAL_ASSERT(init);
 
-    for (size_t n = 0; n < _bal_countof(mutexes); n++) {
-        init &= _bal_mutex_create(mutexes[n]);
-        BAL_ASSERT(init);
-
-        if (!init) {
-            _bal_dbglog("error: failed to create mutex(es)");
-            return false;
-        }
+    if (!init) {
+        _bal_dbglog("error: failed to create mutex(es)");
+        return false;
     }
-
-    /*bal_condition* conditions[] = {
-         &_bal_as_container.s_cond
-    };
-
-    for (size_t n = 0; n < _bal_countof(conditions); n++) {
-        init &= _bal_cond_create(conditions[n]);
-        BAL_ASSERT(init);
-
-        if (!init) {
-            _bal_dbglog("error: failed to create condition variable(s)");
-            return false;
-        }
-    }*/
 
     struct {
         bal_thread* thread;
@@ -236,11 +208,7 @@ bool _bal_initasyncselect(void)
         {
             &_bal_as_container.thread,
             &_bal_eventthread
-        }/* ,
-        {
-            &_bal_as_container.s_thread,
-            &_bal_syncthread
-        } */
+        }
     };
 
     for (size_t n = 0; n < _bal_countof(threads); n++) {
@@ -276,10 +244,10 @@ bool _bal_initasyncselect(void)
 bool _bal_cleanupasyncselect(void)
 {
     _bal_set_boolean(&_bal_as_container.die, true);
+    _bal_set_boolean(&_bal_asyncselect_init, false);
 
     bal_thread* threads[] = {
-        &_bal_as_container.thread/* ,
-        &_bal_as_container.s_thread */
+        &_bal_as_container.thread
     };
 
     _bal_dbglog("joining %zu thread(s)...", _bal_countof(threads));
@@ -295,54 +263,24 @@ bool _bal_cleanupasyncselect(void)
 #endif
     }
 
-    bool cleanup = true;
-    bal_list* lists[] = {
-        _bal_as_container.lst/* ,
-        _bal_as_container.lst_add,
-        _bal_as_container.lst_rem */
-    };
+    bool cleanup       = true;
+    bal_descriptor key = 0;
+    bal_socket* val    = NULL;
 
-    for (size_t n = 0UL; n < _bal_countof(lists); n++) {
-         if (0 == n && !_bal_list_empty(lists[n])) {
-            _bal_dbglog("warning: list is not empty:");
-
-            bal_descriptor key = 0;
-            bal_socket* val    = NULL;
-
-            _bal_list_reset_iterator(lists[n]);
-            while (_bal_list_iterate(lists[n], &key, &val)) {
-                _bal_dbglog("warning: dangling bal_socket "BAL_SOCKET_SPEC" (%p)",
-                    key, val);
-            }
-         }
-
-        bool destroy = _bal_list_destroy(&lists[n]);
-        BAL_ASSERT(destroy);
-        cleanup &= destroy;
+    _bal_list_reset_iterator(_bal_as_container.lst);
+    while (_bal_list_iterate(_bal_as_container.lst, &key, &val)) {
+        _bal_dbglog("warning: dangling bal_socket "BAL_SOCKET_SPEC" (%p)",
+            key, val);
     }
 
-    bal_mutex* mutexes[] = {
-        &_bal_as_container.mutex/* ,
-        &_bal_as_container.s_mutex */
-    };
+    bool destroy = _bal_list_destroy(&_bal_as_container.lst);
+    BAL_ASSERT(destroy);
+    cleanup &= destroy;
 
-    for (size_t n = 0; n < _bal_countof(mutexes); n++) {
-        bool destroy = _bal_mutex_destroy(mutexes[n]);
-        BAL_ASSERT(destroy);
-        cleanup &= destroy;
-    }
+    destroy = _bal_mutex_destroy(&_bal_as_container.mutex);
+    BAL_ASSERT(destroy);
+    cleanup &= destroy;
 
-    /* bal_condition* conditions[] = {
-        &_bal_as_container.s_cond
-    };
-
-    for (size_t n = 0; n < _bal_countof(conditions); n++) {
-        bool destroy = _bal_cond_destroy(conditions[n]);
-        BAL_ASSERT(destroy);
-        cleanup &= destroy;
-    }*/
-
-    _bal_set_boolean(&_bal_asyncselect_init, false);
     _bal_dbglog("async I/O cleaned up %s", cleanup ? "successfully" : "with errors");
 
     return cleanup;
@@ -382,55 +320,17 @@ int _bal_sock_destroy(bal_socket** s)
     return r;
 }
 
-/*bool _bal_defer_add_socket(bal_socket* s)
-{
-    bool retval = false;
-
-    if (_bal_validsock(s)) {
-        bool locked = _bal_mutex_lock(&_bal_as_container.s_mutex);
-        BAL_ASSERT(locked);
-
-        if (locked) {
-            retval = _bal_list_add(_bal_as_container.lst_add, s->sd, s) &&
-                _bal_cond_broadcast(&_bal_as_container.s_cond);
-            bool unlocked = _bal_mutex_unlock(&_bal_as_container.s_mutex);
-            BAL_ASSERT_UNUSED(unlocked, unlocked);
-        }
-    }
-
-    return retval;
-}*/
-
-/*bool _bal_defer_remove_socket(bal_descriptor sd, bal_socket* s)
-{
-    bool retval = false;
-
-    if (_bal_validsock(s)) {
-        bool locked = _bal_mutex_lock(&_bal_as_container.s_mutex);
-        BAL_ASSERT(locked);
-
-        if (locked) {
-            retval = _bal_list_add(_bal_as_container.lst_rem, sd, s) &&
-                _bal_cond_broadcast(&_bal_as_container.s_cond);
-            bool unlocked = _bal_mutex_unlock(&_bal_as_container.s_mutex);
-            BAL_ASSERT_UNUSED(unlocked, unlocked);
-        }
-    }
-
-    return retval;
-}*/
-
-int _bal_getaddrinfo(int f, int af, int st, const char* host, const char* port,
-    struct addrinfo** res)
+int _bal_getaddrinfo(int flags, int addr_fam, int type, const char* host,
+    const char* port, struct addrinfo** res)
 {
     int r = BAL_FALSE;
 
     if (_bal_validstr(host) && _bal_validptrptr(res)) {
         struct addrinfo hints = {0};
 
-        hints.ai_flags    = f;
-        hints.ai_family   = af;
-        hints.ai_socktype = st;
+        hints.ai_flags    = flags;
+        hints.ai_family   = addr_fam;
+        hints.ai_socktype = type;
 
         r = getaddrinfo(host, port, (const struct addrinfo*)&hints, res);
     }
@@ -628,72 +528,6 @@ bal_threadret _bal_eventthread(void* ctx)
     return NULL;
 #endif
 }
-
-/*bal_threadret _bal_syncthread(void* ctx)
-{
-    bal_as_container* asc = (bal_as_container*)ctx;
-    BAL_ASSERT(NULL != asc);
-
-    while (!_bal_get_boolean(&asc->die)) {
-        if (_bal_mutex_lock(&asc->s_mutex)) {
-            while (_bal_list_empty(asc->lst_add) && _bal_list_empty(asc->lst_rem) &&
-                  !_bal_get_boolean(&asc->die)) {
-#if !defined(__WIN__)
-                / * seconds; absolute fixed time. * /
-                bal_wait wait = {time(NULL) + 1, 0};
-#else
-                /    * msec; relative from now. * /
-                bal_wait wait = 1000;
-#endif
-                (void)_bal_condwait_timeout(&asc->s_cond, &asc->s_mutex, &wait);
-            }
-
-            if (_bal_get_boolean(&asc->die)) {
-                bool unlocked = _bal_mutex_unlock(&asc->s_mutex);
-                BAL_ASSERT_UNUSED(unlocked, unlocked);
-                break;
-            }
-
-            if (_bal_mutex_trylock(&asc->mutex)) {
-                if (!_bal_list_empty(asc->lst_add)) {
-                    _bal_dbglog("processing deferred socket adds...");
-
-                    bool add = _bal_list_iterate_func(asc->lst_add, asc->lst,
-                        &__bal_list_add_entries);
-                    BAL_ASSERT_UNUSED(add, add);
-
-                    add = _bal_list_remove_all(asc->lst_add);
-                    BAL_ASSERT_UNUSED(add, add);
-                }
-
-                if (!_bal_list_empty(asc->lst_rem)) {
-                    _bal_dbglog("processing deferred socket removals...");
-
-                    bool rem = _bal_list_iterate_func(asc->lst_rem, asc->lst,
-                        &__bal_list_remove_entries);
-                    BAL_ASSERT_UNUSED(rem, rem);
-
-                    rem = _bal_list_remove_all(asc->lst_rem);
-                    BAL_ASSERT_UNUSED(rem, rem);
-                }
-
-                bool unlocked = _bal_mutex_unlock(&asc->mutex);
-                BAL_ASSERT_UNUSED(unlocked, unlocked);
-            }
-
-            bool unlocked = _bal_mutex_unlock(&asc->s_mutex);
-            BAL_ASSERT_UNUSED(unlocked, unlocked);
-        }
-
-        bal_thread_yield();
-    }
-
-#if defined(__WIN__)
-    return 0U;
-#else
-    return NULL;
-#endif
-}*/
 
 void _bal_dispatchevents(bal_descriptor sd, bal_socket* s, uint32_t events)
 {
@@ -967,33 +801,6 @@ bool __bal_list_find_key(bal_descriptor key, bal_socket* val, void* ctx)
     return true;
 }
 
-/* bool __bal_list_remove_entries(bal_descriptor key, bal_socket* val, void* ctx)
-{
-    bal_list* lst = (bal_list*)ctx;
-    bal_socket* d = NULL;
-    bool removed  = _bal_list_remove(lst, key, &d);
-    BAL_ASSERT_UNUSED(removed, removed);
-
-    BAL_ASSERT(d == val);
-
-    if (removed)
-        _bal_dbglog("removed socket "BAL_SOCKET_SPEC" (%p) from list", key, val);
-
-    return true;
-} */
-
-/* bool __bal_list_add_entries(bal_descriptor key, bal_socket* val, void* ctx)
-{
-    bal_list* lst = (bal_list*)ctx;
-    bool added    = _bal_list_add(lst, key, val);
-    BAL_ASSERT_UNUSED(added, added);
-
-    if (added)
-        _bal_dbglog("added socket "BAL_SOCKET_SPEC" (%p) to list", key, val);
-
-    return true;
-} */
-
 #if !defined(__WIN__) /* pthread mutex implementation. */
 bool _bal_mutex_create(bal_mutex* mutex)
 {
@@ -1019,16 +826,6 @@ bool _bal_mutex_lock(bal_mutex* mutex)
     if (_bal_validptr(mutex)) {
         int op = pthread_mutex_lock(mutex);
         return 0 == op ? true : _bal_handleerr(op);
-    }
-
-    return false;
-}
-
-bool _bal_mutex_trylock(bal_mutex* mutex)
-{
-    if (_bal_validptr(mutex)) {
-        int op = pthread_mutex_trylock(mutex);
-        return 0 == op ? true : EBUSY != op ? _bal_handleerr(op) : false;
     }
 
     return false;
@@ -1103,133 +900,6 @@ bool _bal_mutex_destroy(bal_mutex* mutex)
 }
 #endif /* !__WIN__ */
 
-#if !defined(__WIN__) /* pthread condition variable implementation. */
-bool _bal_cond_create(bal_condition* cond)
-{
-    bool valid = _bal_validptr(cond);
-
-    if (valid) {
-        int op = pthread_cond_init(cond, NULL);
-        valid = 0 == op ? true : _bal_handleerr(op);
-    }
-
-    return valid;
-}
-
-bool _bal_cond_signal(bal_condition* cond)
-{
-    bool valid = _bal_validptr(cond);
-
-    if (valid) {
-        int op = pthread_cond_signal(cond);
-        valid = 0 == op ? true : _bal_handleerr(op);
-    }
-
-    return valid;
-}
-
-bool _bal_cond_broadcast(bal_condition* cond)
-{
-    bool valid = _bal_validptr(cond);
-
-    if (valid) {
-        int op = pthread_cond_broadcast(cond);
-        valid = 0 == op ? true : _bal_handleerr(op);
-    }
-
-    return valid;
-}
-
-bool _bal_cond_destroy(bal_condition* cond)
-{
-    bool valid = _bal_validptr(cond);
-
-    if (valid) {
-        int op = pthread_cond_destroy(cond);
-        valid = 0 == op ? true : _bal_handleerr(op);
-    }
-
-    return valid;
-}
-
-bool _bal_cond_wait(bal_condition* cond, bal_mutex* mutex)
-{
-    bool valid = _bal_validptr(cond) && _bal_validptr(mutex);
-
-    if (valid) {
-        int op = pthread_cond_wait(cond, mutex);
-        valid = 0 == op ? true : _bal_handleerr(op);
-    }
-
-    return valid;
-}
-
-bool _bal_condwait_timeout(bal_condition* cond, bal_mutex* mutex, bal_wait* howlong)
-{
-    bool valid = _bal_validptr(cond) && _bal_validptr(mutex) && _bal_validptr(howlong);
-
-    if (valid) {
-        int op = pthread_cond_timedwait(cond, mutex, howlong);
-        valid = 0 == op ? true : ETIMEDOUT == op ? false : _bal_handleerr(op);
-    }
-
-    return valid;
-}
-#else /* __WIN__ */
-bool _bal_cond_create(bal_condition* cond)
-{
-    bool valid = _bal_validptr(cond);
-
-    if (valid)
-        InitializeConditionVariable(cond);
-
-    return valid;
-}
-
-bool _bal_cond_signal(bal_condition* cond)
-{
-    bool valid = _bal_validptr(cond);
-
-    if (valid)
-        WakeConditionVariable(cond);
-
-    return valid;
-}
-
-bool _bal_cond_broadcast(bal_condition* cond)
-{
-    bool valid = _bal_validptr(cond);
-
-    if (valid)
-        WakeAllConditionVariable(cond);
-
-    return valid;
-}
-
-bool _bal_cond_destroy(bal_condition* cond)
-{
-    BAL_UNUSED(cond);
-    return true;
-}
-
-bool _bal_cond_wait(bal_condition* cond, bal_mutex* mutex)
-{
-    DWORD how_long = INFINITE;
-    return _bal_condwait_timeout(cond, mutex, &how_long);
-}
-
-bool _bal_condwait_timeout(bal_condition* cond, bal_mutex* mutex, bal_wait* how_long)
-{
-    bool valid = _bal_validptr(cond) && _bal_validptr(mutex) && _bal_validptr(how_long);
-
-    if (valid)
-        valid = (FALSE != SleepConditionVariableCS(cond, mutex, *how_long))
-            ? true : (ERROR_TIMEOUT == GetLastError() ? false : _bal_handleerr(GetLastError()));
-
-    return valid;
-}
-#endif
-
 #if defined(__HAVE_STDATOMICS__)
 bool _bal_get_boolean(const atomic_bool* boolean)
 {
@@ -1263,12 +933,6 @@ void _bal_set_boolean(bool* boolean, bool value)
         *boolean = value;
 }
 #endif
-
-/* void _bal_init_socket(bal_socket* s)
-{
-    bool created = _bal_mutex_create(&s->m);
-    BAL_ASSERT_UNUSED(created, created);
-} */
 
 bool _bal_once(bal_once* once, bal_once_fn func)
 {
