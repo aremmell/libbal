@@ -26,17 +26,13 @@
 #ifndef _BAL_HELPERS_H_INCLUDED
 # define _BAL_HELPERS_H_INCLUDED
 
-# include "platform.h"
 # include "types.h"
+# include "errors.h"
 
 int _bal_aitoal(struct addrinfo* ai, bal_addrlist* out);
 
 /** Prints a bal_socket to stdout. */
 void _bal_socket_print(const bal_socket* s);
-
-# define _BAL_SASIZE(sa) \
-    ((PF_INET6 == ((struct sockaddr* )&(sa))->sa_family) \
-        ? sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in))
 
 static inline
 void __bal_safefree(void** pp)
@@ -49,17 +45,20 @@ void __bal_safefree(void** pp)
 
 # define _bal_safefree(pp) __bal_safefree((void**)(pp))
 
-# define _bal_validptr(p) (NULL != (p))
+# define _bal_validptr(p) \
+    (NULL != (p) ? true : _bal_handleerr(EINVAL))
 
-# define _bal_validptrptr(pp) (NULL != (pp))
+# define _bal_validptrptr(pp) \
+    (NULL != (pp) ? true : _bal_handleerr(EINVAL))
 
-# define _bal_countof(arr) (sizeof((arr)) / sizeof((arr)[0]))
+# define _bal_validstr(str) \
+    ((NULL != (str) && '\0' != *(str)) ? true : _bal_handleerr(EINVAL))
 
-# define _bal_validstr(str) ((str) && (*str))
+# define _bal_validsock(s) \
+    ((NULL != (s) && BAL_BADSOCKET != (s)->sd) ? true : _bal_handleerr(EINVAL))
 
-# define _bal_validsock(s) (NULL != (s) && BAL_BADSOCKET != (s)->sd)
-
-# define _bal_validlen(len) ((len) > 0)
+# define _bal_validlen(len) \
+    ((len) > 0 ? true : _bal_handleerr(EINVAL))
 
 # define bal_isbitset(bitmask, bit) (((bitmask) & (bit)) == (bit))
 
@@ -72,6 +71,12 @@ void __bal_safefree(void** pp)
     if ((pbitmask)) { \
         (*(pbitmask)) &= ~(bits); \
     }
+
+# define _BAL_SASIZE(sa) \
+    ((PF_INET6 == ((struct sockaddr* )&(sa))->sa_family) \
+        ? sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in))
+
+# define _bal_countof(arr) (sizeof((arr)) / sizeof((arr)[0]))
 
 # define BAL_UNUSED(var) (void)(var)
 
