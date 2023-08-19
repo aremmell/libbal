@@ -143,12 +143,15 @@ int bal_shutdown(bal_socket* s, int how)
     if (_bal_validsock(s)) {
         r = shutdown(s->sd, how);
         if (0 == r) {
-            if (how == BAL_SHUT_RDWR)
-                s->state.bits &= ~(BAL_S_CONNECT | BAL_S_LISTEN);
-            else if (how == BAL_SHUT_RD) {
-                s->state.bits &= ~BAL_S_LISTEN;
+            if (how == BAL_SHUT_RDWR) {
+                bal_setbitslow(&s->state.mask, BAL_E_READ | BAL_E_WRITE);
+                bal_setbitslow(&s->state.bits, BAL_S_CONNECT | BAL_S_LISTEN);
+            } else if (how == BAL_SHUT_RD) {
+                bal_setbitslow(&s->state.mask, BAL_E_READ);
+                bal_setbitslow(&s->state.bits, BAL_S_LISTEN);
             } else if (how == BAL_SHUT_WR) {
-                s->state.bits &= ~BAL_S_CONNECT;
+                bal_setbitslow(&s->state.mask, BAL_E_WRITE);
+                bal_setbitslow(&s->state.bits, BAL_S_CONNECT);
             }
         } else {
             _bal_handlelasterr();
