@@ -60,6 +60,7 @@ void __bal_safefree(void** pp)
 # define _bal_validsock(s) (NULL != (s) && BAL_BADSOCKET != (s)->sd)
 
 # define bal_isbitset(bitmask, bit) (((bitmask) & (bit)) == (bit))
+
 # define bal_setbitshigh(pbitmask, bits) \
     if ((pbitmask)) { \
         (*(pbitmask)) |= (bits); \
