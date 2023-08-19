@@ -51,7 +51,7 @@ int main(int argc, char** argv)
     ret = bal_bindall(s, balcommon::portnum);
     EXIT_IF_FAILED(ret, "bal_bindall");
 
-    ret = bal_asyncselect(s, &balserver::async_events_cb, BAL_E_NORMAL);
+    ret = bal_asyncselect(s, &balserver::async_events_cb, BAL_EVT_NORMAL);
     EXIT_IF_FAILED(ret, "bal_asyncselect");
 
     ret = bal_listen(s, SOMAXCONN);
@@ -82,7 +82,7 @@ void balserver::async_events_cb(bal_socket* s, uint32_t events)
 {
     static bool already_replied = false;
 
-    if (bal_isbitset(events, BAL_E_ACCEPT)) {
+    if (bal_isbitset(events, BAL_EVT_ACCEPT)) {
         bal_socket* client_socket = nullptr;
         bal_sockaddr client_addr {};
 
@@ -100,7 +100,7 @@ void balserver::async_events_cb(bal_socket* s, uint32_t events)
             return;
         }
 
-        ret = bal_asyncselect(client_socket, &async_events_cb, BAL_E_NORMAL);
+        ret = bal_asyncselect(client_socket, &async_events_cb, BAL_EVT_NORMAL);
         if (BAL_TRUE != ret) {
             balcommon::print_last_lib_error("bal_asyncselect");
             bal_close(&client_socket, true);
@@ -113,7 +113,7 @@ void balserver::async_events_cb(bal_socket* s, uint32_t events)
             reinterpret_cast<uintptr_t>(client_socket));
     }
 
-    if (bal_isbitset(events, BAL_E_READ)) {
+    if (bal_isbitset(events, BAL_EVT_READ)) {
         constexpr const size_t buf_size = 2048;
         std::array<char, buf_size> buf {};
 
@@ -121,7 +121,7 @@ void balserver::async_events_cb(bal_socket* s, uint32_t events)
         if (read > 0) {
             printf("[" BAL_SOCKET_SPEC "] read %d bytes: '%s'\n", s->sd, read,
                 buf.data());
-           bal_addtomask(s, BAL_E_WRITE);
+           bal_addtomask(s, BAL_EVT_WRITE);
         } else if (-1 == read) {
             bal_error err {};
             printf("[" BAL_SOCKET_SPEC "] read error %d (%s)!\n", s->sd,
@@ -131,7 +131,7 @@ void balserver::async_events_cb(bal_socket* s, uint32_t events)
         }
     }
 
-    if (bal_isbitset(events, BAL_E_WRITE)) {
+    if (bal_isbitset(events, BAL_EVT_WRITE)) {
         if (!already_replied) {
             static const char* reply = "O, HELO 2 U";
             constexpr const size_t reply_size = 11;
@@ -147,22 +147,22 @@ void balserver::async_events_cb(bal_socket* s, uint32_t events)
                 printf("[" BAL_SOCKET_SPEC "] write error %d (%s)!\n", s->sd,
                     bal_getlasterror(s, &err), err.desc);
             }
-            bal_remfrommask(s, BAL_E_WRITE);
+            bal_remfrommask(s, BAL_EVT_WRITE);
         }
     }
 
-    if (bal_isbitset(events, BAL_E_CLOSE)) {
+    if (bal_isbitset(events, BAL_EVT_CLOSE)) {
         printf("[" BAL_SOCKET_SPEC "] connection closed.\n", s->sd);
         bal_close(&s, true);
         already_replied = false;
         return;
     }
 
-    if (bal_isbitset(events, BAL_E_PRIORITY)) {
+    if (bal_isbitset(events, BAL_EVT_PRIORITY)) {
         printf("[" BAL_SOCKET_SPEC "] priority exceptional condition!\n", s->sd);
     }
 
-    if (bal_isbitset(events, BAL_E_ERROR)) {
+    if (bal_isbitset(events, BAL_EVT_ERROR)) {
         printf("[" BAL_SOCKET_SPEC "] ERROR %d!\n", s->sd, bal_geterror(s));
         bal_close(&s, true);
     }

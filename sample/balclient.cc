@@ -46,7 +46,7 @@ int main(int argc, char** argv)
     int ret = bal_sock_create(&s, AF_INET, SOCK_STREAM, IPPROTO_TCP);
     EXIT_IF_FAILED(ret, "bal_sock_create");
 
-    ret = bal_asyncselect(s, &balclient::async_events_cb, BAL_E_NORMAL);
+    ret = bal_asyncselect(s, &balclient::async_events_cb, BAL_EVT_NORMAL);
     EXIT_IF_FAILED(ret, "bal_asyncselect");
 
     ret = bal_connect(s, balcommon::localaddr, balcommon::portnum);
@@ -72,13 +72,13 @@ int main(int argc, char** argv)
 
 void balclient::async_events_cb(bal_socket* s, uint32_t events)
 {
-    if (bal_isbitset(events, BAL_E_CONNECT)) {
+    if (bal_isbitset(events, BAL_EVT_CONNECT)) {
         printf("[" BAL_SOCKET_SPEC "] connected to %s:%s\n", s->sd,
             balcommon::localaddr, balcommon::portnum);
-        bal_addtomask(s, BAL_E_WRITE);
+        bal_addtomask(s, BAL_EVT_WRITE);
     }
 
-    if (bal_isbitset(events, BAL_E_CONNFAIL)) {
+    if (bal_isbitset(events, BAL_EVT_CONNFAIL)) {
         bal_error err {};
         printf("[" BAL_SOCKET_SPEC "] failed to connect to %s:%s %d (%s)\n",
             s->sd, balcommon::localaddr, balcommon::portnum,
@@ -86,7 +86,7 @@ void balclient::async_events_cb(bal_socket* s, uint32_t events)
         balcommon::quit();
     }
 
-    if (bal_isbitset(events, BAL_E_READ)) {
+    if (bal_isbitset(events, BAL_EVT_READ)) {
         constexpr const size_t buf_size = 2048;
         std::array<char, buf_size> buf;
         int read = bal_recv(s, buf.data(), buf.size() - 1, 0);
@@ -102,7 +102,7 @@ void balclient::async_events_cb(bal_socket* s, uint32_t events)
         }
     }
 
-    if (bal_isbitset(events, BAL_E_WRITE)) {
+    if (bal_isbitset(events, BAL_EVT_WRITE)) {
         static bool wrote_helo = false;
         if (!wrote_helo) {
             const char* req = "HELO";
@@ -116,21 +116,21 @@ void balclient::async_events_cb(bal_socket* s, uint32_t events)
             } else {
                 printf("[" BAL_SOCKET_SPEC "] wrote %d bytes\n", s->sd, ret);
                 wrote_helo = true;
-                bal_remfrommask(s, BAL_E_WRITE);
+                bal_remfrommask(s, BAL_EVT_WRITE);
             }
         }
     }
 
-    if (bal_isbitset(events, BAL_E_CLOSE)) {
+    if (bal_isbitset(events, BAL_EVT_CLOSE)) {
         printf("[" BAL_SOCKET_SPEC "] connection closed.\n", s->sd);
         balcommon::quit();
     }
 
-    if (bal_isbitset(events, BAL_E_PRIORITY)) {
+    if (bal_isbitset(events, BAL_EVT_PRIORITY)) {
         printf("[" BAL_SOCKET_SPEC "] priority exceptional condition!\n", s->sd);
     }
 
-    if (bal_isbitset(events, BAL_E_ERROR)) {
+    if (bal_isbitset(events, BAL_EVT_ERROR)) {
         printf("[" BAL_SOCKET_SPEC "] ERROR %d!\n", s->sd, bal_geterror(s));
     }
 }

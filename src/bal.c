@@ -143,13 +143,13 @@ int bal_shutdown(bal_socket* s, int how)
         r = shutdown(s->sd, how);
         if (0 == r) {
             if (how == BAL_SHUT_RDWR) {
-                bal_setbitslow(&s->state.mask, BAL_E_READ | BAL_E_WRITE);
+                bal_setbitslow(&s->state.mask, BAL_EVT_READ | BAL_EVT_WRITE);
                 bal_setbitslow(&s->state.bits, BAL_S_CONNECT | BAL_S_LISTEN);
             } else if (how == BAL_SHUT_RD) {
-                bal_setbitslow(&s->state.mask, BAL_E_READ);
+                bal_setbitslow(&s->state.mask, BAL_EVT_READ);
                 bal_setbitslow(&s->state.bits, BAL_S_LISTEN);
             } else if (how == BAL_SHUT_WR) {
-                bal_setbitslow(&s->state.mask, BAL_E_WRITE);
+                bal_setbitslow(&s->state.mask, BAL_EVT_WRITE);
                 bal_setbitslow(&s->state.bits, BAL_S_CONNECT);
             }
         } else {
@@ -197,7 +197,7 @@ int bal_connectaddrlist(bal_socket* s, bal_addrlist* al)
 #else
                 if (!r || EAGAIN == errno || EINPROGRESS == errno) {
 #endif
-                    bal_setbitshigh(&s->state.mask, BAL_E_WRITE);
+                    bal_setbitshigh(&s->state.mask, BAL_EVT_WRITE);
                     bal_setbitshigh(&s->state.bits, BAL_S_CONNECT);
                     r = BAL_TRUE;
                     break;
@@ -344,7 +344,7 @@ int bal_listen(bal_socket* s, int backlog)
     if (_bal_validsock(s)) {
         r = listen(s->sd, backlog);
         if (0 == r) {
-            bal_setbitshigh(&s->state.mask, BAL_E_READ);
+            bal_setbitshigh(&s->state.mask, BAL_EVT_READ);
             bal_setbitshigh(&s->state.bits, BAL_S_LISTEN);
         } else {
             _bal_handlelasterr();
@@ -447,10 +447,7 @@ int bal_getdebug(const bal_socket* s)
 
 int bal_setlinger(const bal_socket* s, bal_linger sec)
 {
-    struct linger l;
-    l.l_onoff  = (0 != sec) ? 1 : 0;
-    l.l_linger = sec;
-
+    struct linger l = { (0 != sec) ? 1 : 0, sec };
     return bal_setoption(s, SOL_SOCKET, SO_LINGER, &l, sizeof(struct linger));
 }
 

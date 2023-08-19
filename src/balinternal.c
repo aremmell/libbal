@@ -396,30 +396,30 @@ uint32_t _bal_pollflags_tomask(short flags)
     uint32_t retval = 0U;
 
     if (bal_isbitset(flags, POLLRDNORM))
-        bal_setbitshigh(&retval, BAL_E_READ);
+        bal_setbitshigh(&retval, BAL_EVT_READ);
 
     if (bal_isbitset(flags, POLLWRNORM))
-        bal_setbitshigh(&retval, BAL_E_WRITE);
+        bal_setbitshigh(&retval, BAL_EVT_WRITE);
 
     if (bal_isbitset(flags, POLLRDBAND))
-        bal_setbitshigh(&retval, BAL_E_OOBREAD);
+        bal_setbitshigh(&retval, BAL_EVT_OOBREAD);
 
 #if !defined(__WIN__)
     if (bal_isbitset(flags, POLLWRBAND))
-        bal_setbitshigh(&retval, BAL_E_OOBWRITE);
+        bal_setbitshigh(&retval, BAL_EVT_OOBWRITE);
 
     if (bal_isbitset(flags, POLLPRI))
-        bal_setbitshigh(&retval, BAL_E_PRIORITY);
+        bal_setbitshigh(&retval, BAL_EVT_PRIORITY);
 #endif
 
     if (bal_isbitset(flags, POLLHUP))
-        bal_setbitshigh(&retval, BAL_E_CLOSE);
+        bal_setbitshigh(&retval, BAL_EVT_CLOSE);
 
     if (bal_isbitset(flags, POLLERR))
-        bal_setbitshigh(&retval, BAL_E_ERROR);
+        bal_setbitshigh(&retval, BAL_EVT_ERROR);
 
     if (bal_isbitset(flags, POLLNVAL))
-        bal_setbitshigh(&retval, BAL_E_INVALID);
+        bal_setbitshigh(&retval, BAL_EVT_INVALID);
 
     return retval;
 }
@@ -428,20 +428,20 @@ short _bal_mask_topollflags(uint32_t mask)
 {
     short retval = 0;
 
-    if (bal_isbitset(mask, BAL_E_READ))
+    if (bal_isbitset(mask, BAL_EVT_READ))
         bal_setbitshigh(&retval, POLLRDNORM);
 
-    if (bal_isbitset(mask, BAL_E_WRITE))
+    if (bal_isbitset(mask, BAL_EVT_WRITE))
         bal_setbitshigh(&retval, POLLWRNORM);
 
-    if (bal_isbitset(mask, BAL_E_OOBREAD))
+    if (bal_isbitset(mask, BAL_EVT_OOBREAD))
         bal_setbitshigh(&retval, POLLRDBAND);
 
 #if !defined(__WIN__)
-    if (bal_isbitset(mask, BAL_E_OOBWRITE))
+    if (bal_isbitset(mask, BAL_EVT_OOBWRITE))
         bal_setbitshigh(&retval, POLLWRBAND);
 
-    if (bal_isbitset(mask, BAL_E_PRIORITY))
+    if (bal_isbitset(mask, BAL_EVT_PRIORITY))
         bal_setbitshigh(&retval, POLLPRI);
 #endif
 
@@ -533,40 +533,40 @@ void _bal_dispatchevents(bal_descriptor sd, bal_socket* s, uint32_t events)
 
     _bal_dbglog("events %"PRIx32" for socket "BAL_SOCKET_SPEC, events, sd);
 
-    if (bal_isbitset(events, BAL_E_READ) && bal_bitsinmask(s, BAL_E_READ)) {
+    if (bal_isbitset(events, BAL_EVT_READ) && bal_bitsinmask(s, BAL_EVT_READ)) {
         if (bal_islistening(s)) {
-            bal_setbitshigh(&_events, BAL_E_ACCEPT);
+            bal_setbitshigh(&_events, BAL_EVT_ACCEPT);
         } else {
-            bal_setbitshigh(&_events, BAL_E_READ);
+            bal_setbitshigh(&_events, BAL_EVT_READ);
         }
     }
 
-    if (bal_isbitset(events, BAL_E_WRITE) && bal_bitsinmask(s, BAL_E_WRITE)) {
+    if (bal_isbitset(events, BAL_EVT_WRITE) && bal_bitsinmask(s, BAL_EVT_WRITE)) {
         if (_bal_ispendingconn(s)) {
-            if (bal_isbitset(events, BAL_E_CLOSE) || bal_isbitset(events, BAL_E_ERROR)) {
-                bal_setbitshigh(&_events, BAL_E_CONNFAIL);
-                bal_setbitslow(&events, BAL_E_ERROR);
+            if (bal_isbitset(events, BAL_EVT_CLOSE) || bal_isbitset(events, BAL_EVT_ERROR)) {
+                bal_setbitshigh(&_events, BAL_EVT_CONNFAIL);
+                bal_setbitslow(&events, BAL_EVT_ERROR);
             } else {
-                bal_setbitshigh(&_events, BAL_E_CONNECT);
+                bal_setbitshigh(&_events, BAL_EVT_CONNECT);
             }
 
-            bal_setbitslow(&s->state.mask, BAL_E_WRITE);
+            bal_setbitslow(&s->state.mask, BAL_EVT_WRITE);
             bal_setbitslow(&s->state.bits, BAL_S_CONNECT);
         } else {
-            bal_setbitshigh(&_events, BAL_E_WRITE);
+            bal_setbitshigh(&_events, BAL_EVT_WRITE);
         }
     }
 
-    if (bal_isbitset(events, BAL_E_CLOSE) && bal_bitsinmask(s, BAL_E_CLOSE))
-        bal_setbitshigh(&_events, BAL_E_CLOSE);
+    if (bal_isbitset(events, BAL_EVT_CLOSE) && bal_bitsinmask(s, BAL_EVT_CLOSE))
+        bal_setbitshigh(&_events, BAL_EVT_CLOSE);
 
-    if (bal_isbitset(events, BAL_E_PRIORITY) && bal_bitsinmask(s, BAL_E_PRIORITY))
-        bal_setbitshigh(&_events, BAL_E_PRIORITY);
+    if (bal_isbitset(events, BAL_EVT_PRIORITY) && bal_bitsinmask(s, BAL_EVT_PRIORITY))
+        bal_setbitshigh(&_events, BAL_EVT_PRIORITY);
 
-    if (bal_isbitset(events, BAL_E_ERROR) && bal_bitsinmask(s, BAL_E_ERROR))
-        bal_setbitshigh(&_events, BAL_E_ERROR);
+    if (bal_isbitset(events, BAL_EVT_ERROR) && bal_bitsinmask(s, BAL_EVT_ERROR))
+        bal_setbitshigh(&_events, BAL_EVT_ERROR);
 
-    bool close = bal_isbitset(events, BAL_E_CLOSE);
+    bool close = bal_isbitset(events, BAL_EVT_CLOSE);
 
     if (0U != _events && _bal_validptr(s->state.proc))
         s->state.proc(s, _events);
