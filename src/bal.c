@@ -35,6 +35,21 @@
  *                             Exported Functions                             *
 \******************************************************************************/
 
+bool bal_init(void)
+{
+    return _bal_init();
+}
+
+bool bal_cleanup(void)
+{
+    return _bal_cleanup();
+}
+
+int bal_asyncselect(bal_socket* s, bal_async_cb proc, uint32_t mask)
+{
+    return _bal_asyncselect(s, proc, mask);
+}
+
 int bal_autosocket(bal_socket** s, int addr_fam, int proto, const char* host,
     const char* port)
 {
@@ -85,6 +100,11 @@ int bal_sock_create(bal_socket** s, int addr_fam, int type, int proto)
     }
 
     return r;
+}
+
+int bal_sock_destroy(bal_socket** s)
+{
+    return _bal_sock_destroy(s);
 }
 
 int bal_close(bal_socket** s, bool destroy)

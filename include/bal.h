@@ -40,14 +40,15 @@
 extern "C" {
 # endif
 
-# define bal_init _bal_init
-# define bal_cleanup _bal_cleanup
+bool bal_init(void);
+bool bal_cleanup(void);
 
-# define bal_asyncselect(s, proc, mask) _bal_asyncselect(s, proc, mask)
+int bal_asyncselect(bal_socket* s, bal_async_cb proc, uint32_t mask);
 
-int bal_autosocket(bal_socket** s, int addr_fam, int proto, const char* host, const char* port);
+int bal_autosocket(bal_socket** s, int addr_fam, int proto, const char* host,
+    const char* port);
 int bal_sock_create(bal_socket** s, int addr_fam, int type, int proto);
-# define bal_sock_destroy(s) _bal_sock_destroy(s)
+int bal_sock_destroy(bal_socket** s);
 int bal_close(bal_socket** s, bool destroy);
 int bal_shutdown(bal_socket* s, int how);
 
