@@ -3,7 +3,7 @@
 ########################################################################
 
 # SPDX-License-Identifier: MIT
-# SPDX-FileCopyrightText: Copyright (c) 2018-current Ryan M. Lederman
+# SPDX-FileCopyrightText: Copyright (c) 2004-current Ryan M. Lederman
 
 ########################################################################
 # Sanity checks
