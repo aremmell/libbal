@@ -115,7 +115,7 @@ int bal_close(bal_socket** s, bool destroy)
     if (_bal_validptrptr(s) && _bal_validsock(*s)) {
 #if defined(__WIN__)
         if (SOCKET_ERROR == closesocket((*s)->sd)) {
-            _bal_handlelasterr()
+            _bal_handlelasterr();
         }
 #else
         if (-1 == close((*s)->sd)) {
@@ -211,7 +211,7 @@ int bal_connectaddrlist(bal_socket* s, bal_addrlist* al)
     return r;
 }
 
-int bal_send(const bal_socket* s, const void* data, size_t len, int flags)
+int bal_send(const bal_socket* s, const void* data, bal_iolen len, int flags)
 {
     int r = BAL_FALSE;
 
@@ -224,7 +224,7 @@ int bal_send(const bal_socket* s, const void* data, size_t len, int flags)
     return r;
 }
 
-int bal_recv(const bal_socket* s, void* data, size_t len, int flags)
+int bal_recv(const bal_socket* s, void* data, bal_iolen len, int flags)
 {
     int r = BAL_FALSE;
 
@@ -238,7 +238,7 @@ int bal_recv(const bal_socket* s, void* data, size_t len, int flags)
 }
 
 int bal_sendto(const bal_socket* s, const char* host, const char* port, const void* data,
-    size_t len, int flags)
+    bal_iolen len, int flags)
 {
     int r = BAL_FALSE;
 
@@ -257,7 +257,7 @@ int bal_sendto(const bal_socket* s, const char* host, const char* port, const vo
 }
 
 int bal_sendtoaddr(const bal_socket* s, const bal_sockaddr* sa, const void* data,
-    size_t len, int flags)
+    bal_iolen len, int flags)
 {
     int r = BAL_FALSE;
 
@@ -272,7 +272,7 @@ int bal_sendtoaddr(const bal_socket* s, const bal_sockaddr* sa, const void* data
    return r;
 }
 
-int bal_recvfrom(const bal_socket* s, void* data, size_t len, int flags,
+int bal_recvfrom(const bal_socket* s, void* data, bal_iolen len, int flags,
     bal_sockaddr* res)
 {
     int r = BAL_FALSE;
@@ -299,7 +299,7 @@ int bal_bind(const bal_socket* s, const char* addr, const char* srv)
             struct addrinfo* cur = ai;
             do {
                 if (0 == bind(s->sd, (const struct sockaddr*)cur->ai_addr,
-                    cur->ai_addrlen)) {
+                    (bal_iolen)cur->ai_addrlen)) {
                     r = BAL_TRUE;
                     break;
                 } else {
@@ -325,7 +325,7 @@ int bal_bindall(const bal_socket* s, const char* srv)
         int get = _bal_getaddrinfo(flags, s->addr_fam, s->type, NULL, srv, &ai);
         if (BAL_TRUE == get && NULL != ai) {
             int ret = bind(s->sd, (const struct sockaddr*)ai->ai_addr,
-                ai->ai_addrlen);
+                (bal_iolen)ai->ai_addrlen);
             if (0 == ret) {
                 r = BAL_TRUE;
             } else {
@@ -341,9 +341,10 @@ int bal_listen(bal_socket* s, int backlog)
 {
     int r = BAL_FALSE;
 
-    if (s) {
+    if (_bal_validsock(s)) {
         r = listen(s->sd, backlog);
         if (0 == r) {
+            bal_setbitshigh(&s->state.mask, BAL_E_READ);
             bal_setbitshigh(&s->state.bits, BAL_S_LISTEN);
         } else {
             _bal_handlelasterr();
@@ -444,7 +445,7 @@ int bal_getdebug(const bal_socket* s)
     return r;
 }
 
-int bal_setlinger(const bal_socket* s, int sec)
+int bal_setlinger(const bal_socket* s, bal_linger sec)
 {
     struct linger l;
     l.l_onoff  = (0 != sec) ? 1 : 0;
@@ -453,7 +454,7 @@ int bal_setlinger(const bal_socket* s, int sec)
     return bal_setoption(s, SOL_SOCKET, SO_LINGER, &l, sizeof(struct linger));
 }
 
-int bal_getlinger(const bal_socket* s, int* sec)
+int bal_getlinger(const bal_socket* s, bal_linger* sec)
 {
     int r = BAL_FALSE;
 
@@ -607,11 +608,16 @@ bool bal_isreadable(const bal_socket* s)
     if (_bal_validsock(s)) {
         fd_set fd        = {0};
         struct timeval t = {0};
+#if defined(__WIN__)
+        int high_sd = (int)s->sd + 1;
+#else
+        int high_sd = s->sd + 1;
+#endif
 
         FD_ZERO(&fd);
         FD_SET(s->sd, &fd);
 
-        if (0 == select(s->sd + 1, &fd, NULL, NULL, &t) &&
+        if (0 == select(high_sd, &fd, NULL, NULL, &t) &&
             FD_ISSET(s->sd, &fd)) {
             r = true;
         }
@@ -627,11 +633,16 @@ bool bal_iswritable(const bal_socket* s)
     if (_bal_validsock(s)) {
         fd_set fd        = {0};
         struct timeval t = {0};
+#if defined(__WIN__)
+        int high_sd = (int)s->sd + 1;
+#else
+        int high_sd = s->sd + 1;
+#endif
 
         FD_ZERO(&fd);
         FD_SET(s->sd, &fd);
 
-        if (0 == select(s->sd + 1, NULL, &fd, NULL, &t) &&
+        if (0 == select(high_sd, NULL, &fd, NULL, &t) &&
             FD_ISSET(s->sd, &fd)) {
             r = true;
         }
@@ -704,9 +715,9 @@ size_t bal_recvqueuesize(const bal_socket* s)
     return r;
 }
 
-int bal_getlasterror(bal_error* err)
+int bal_getlasterror(const bal_socket* s, bal_error* err)
 {
-    return _bal_getlasterror(err);
+    return _bal_getlasterror(s, err);
 }
 
 int bal_resolvehost(const char* host, bal_addrlist* out)

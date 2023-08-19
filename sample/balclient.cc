@@ -46,7 +46,7 @@ int main(int argc, char** argv)
     int ret = bal_sock_create(&s, AF_INET, SOCK_STREAM, IPPROTO_TCP);
     EXIT_IF_FAILED(ret, "bal_sock_create");
 
-    ret = bal_asyncselect(s, &balclient::async_events_cb, BAL_E_STANDARD);
+    ret = bal_asyncselect(s, &balclient::async_events_cb, BAL_E_NORMAL);
     EXIT_IF_FAILED(ret, "bal_asyncselect");
 
     ret = bal_connect(s, balcommon::localaddr, balcommon::portnum);
@@ -82,7 +82,7 @@ void balclient::async_events_cb(bal_socket* s, uint32_t events)
         bal_error err {};
         printf("[" BAL_SOCKET_SPEC "] failed to connect to %s:%s %d (%s)\n",
             s->sd, balcommon::localaddr, balcommon::portnum,
-            bal_getlasterror(&err), err.desc);
+            bal_getlasterror(s, &err), err.desc);
         balcommon::quit();
     }
 
@@ -96,7 +96,7 @@ void balclient::async_events_cb(bal_socket* s, uint32_t events)
         } else if (-1 == read) {
             bal_error err {};
             printf("[" BAL_SOCKET_SPEC "] read error %d (%s)!\n", s->sd,
-                bal_getlasterror(&err), err.desc);
+                bal_getlasterror(s, &err), err.desc);
         } else {
             printf("[" BAL_SOCKET_SPEC "] read EOF\n", s->sd);
         }
@@ -112,7 +112,7 @@ void balclient::async_events_cb(bal_socket* s, uint32_t events)
             if (ret <= 0) {
                 bal_error err {};
                 printf("[" BAL_SOCKET_SPEC "] write error %d (%s)!\n", s->sd,
-                    bal_getlasterror(&err), err.desc);
+                    bal_getlasterror(s, &err), err.desc);
             } else {
                 printf("[" BAL_SOCKET_SPEC "] wrote %d bytes\n", s->sd, ret);
                 wrote_helo = true;
@@ -126,8 +126,8 @@ void balclient::async_events_cb(bal_socket* s, uint32_t events)
         balcommon::quit();
     }
 
-    if (bal_isbitset(events, BAL_E_EXCEPT)) {
-        printf("[" BAL_SOCKET_SPEC "] exceptional condition!\n", s->sd);
+    if (bal_isbitset(events, BAL_E_PRIORITY)) {
+        printf("[" BAL_SOCKET_SPEC "] priority exceptional condition!\n", s->sd);
     }
 
     if (bal_isbitset(events, BAL_E_ERROR)) {

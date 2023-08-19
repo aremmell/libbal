@@ -45,8 +45,7 @@ bool bal_cleanup(void);
 
 int bal_asyncselect(bal_socket* s, bal_async_cb proc, uint32_t mask);
 
-int bal_autosocket(bal_socket** s, int addr_fam, int proto, const char* host,
-    const char* srv);
+int bal_autosocket(bal_socket** s, int addr_fam, int proto, const char* host, const char* srv);
 int bal_sock_create(bal_socket** s, int addr_fam, int type, int proto);
 int bal_sock_destroy(bal_socket** s);
 int bal_close(bal_socket** s, bool destroy);
@@ -55,16 +54,15 @@ int bal_shutdown(bal_socket* s, int how);
 int bal_connect(const bal_socket* s, const char* host, const char* port);
 int bal_connectaddrlist(bal_socket* s, bal_addrlist* al);
 
-int bal_send(const bal_socket* s, const void* data, size_t len, int flags);
-int bal_recv(const bal_socket* s, void* data, size_t len, int flags);
+int bal_send(const bal_socket* s, const void* data, bal_iolen len, int flags);
+int bal_recv(const bal_socket* s, void* data, bal_iolen len, int flags);
 
-int bal_sendto(const bal_socket* s, const char* host, const char* port,
-    const void* data, size_t len, int flags);
+int bal_sendto(const bal_socket* s, const char* host, const char* port, const void* data,
+    bal_iolen len, int flags);
 int bal_sendtoaddr(const bal_socket* s, const bal_sockaddr* sa, const void* data,
-    size_t len, int flags);
+    bal_iolen len, int flags);
 
-int bal_recvfrom(const bal_socket* s, void* data, size_t len, int flags,
-    bal_sockaddr* res);
+int bal_recvfrom(const bal_socket* s, void* data, bal_iolen len, int flags, bal_sockaddr* res);
 
 int bal_bind(const bal_socket* s, const char* addr, const char* srv);
 int bal_bindall(const bal_socket* s, const char* srv);
@@ -72,10 +70,8 @@ int bal_bindall(const bal_socket* s, const char* srv);
 int bal_listen(bal_socket* s, int backlog);
 int bal_accept(const bal_socket* s, bal_socket** res, bal_sockaddr* resaddr);
 
-int bal_getoption(const bal_socket* s, int level, int name, void* optval,
-    socklen_t len);
-int bal_setoption(const bal_socket* s, int level, int name, const void* optval,
-    socklen_t len);
+int bal_getoption(const bal_socket* s, int level, int name, void* optval, socklen_t len);
+int bal_setoption(const bal_socket* s, int level, int name, const void* optval, socklen_t len);
 
 int bal_setbroadcast(const bal_socket* s, int flag);
 int bal_getbroadcast(const bal_socket* s);
@@ -83,8 +79,8 @@ int bal_getbroadcast(const bal_socket* s);
 int bal_setdebug(const bal_socket* s, int flag);
 int bal_getdebug(const bal_socket* s);
 
-int bal_setlinger(const bal_socket* s, int sec);
-int bal_getlinger(const bal_socket* s, int* sec);
+int bal_setlinger(const bal_socket* s, bal_linger sec);
+int bal_getlinger(const bal_socket* s, bal_linger* sec);
 
 int bal_setkeepalive(const bal_socket* s, int flag);
 int bal_getkeepalive(const bal_socket* s);
@@ -136,7 +132,7 @@ bool bal_bitsinmask(bal_socket* s, uint32_t bits)
 int bal_setiomode(const bal_socket* s, bool async);
 size_t bal_recvqueuesize(const bal_socket* s);
 
-int bal_getlasterror(bal_error* err);
+int bal_getlasterror(const bal_socket* s, bal_error* err);
 
 int bal_resolvehost(const char* host, bal_addrlist* out);
 int bal_getremotehostaddr(const bal_socket* s, bal_sockaddr* out);

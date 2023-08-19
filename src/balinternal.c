@@ -356,25 +356,9 @@ int _bal_getnameinfo(int f, const bal_sockaddr* in, char* host, char* port)
     return r;
 }
 
-bool _bal_haspendingconnect(bal_socket* s)
+bool _bal_ispendingconn(bal_socket* s)
 {
     return _bal_validsock(s) && bal_isbitset(s->state.bits, BAL_S_CONNECT);
-}
-
-uint32_t _bal_on_pending_conn_event(bal_socket* s)
-{
-    uint32_t r  = 0U;
-    bool closed = _bal_isclosedcircuit(s);
-
-    if (0 != bal_geterror(s) || closed) {
-        r = BAL_E_CONNFAIL;
-    } else {
-        r = BAL_E_CONNECT;
-    }
-
-    bal_setbitslow(&s->state.mask, BAL_E_WRITE);
-    bal_setbitslow(&s->state.bits, BAL_S_CONNECT);
-    return r;
 }
 
 bool _bal_isclosedcircuit(const bal_socket* s)
@@ -383,7 +367,7 @@ bool _bal_isclosedcircuit(const bal_socket* s)
         return true;
 
     int buf = 0;
-    int rcv = recv(s->sd, &buf, sizeof(int), MSG_PEEK | MSG_DONTWAIT);
+    int rcv = bal_recv(s, &buf, sizeof(int), MSG_PEEK | MSG_DONTWAIT);
     if (0 == rcv) {
         return true;
     } else if (-1 == rcv) {
@@ -411,14 +395,22 @@ uint32_t _bal_pollflags_tomask(short flags)
 {
     uint32_t retval = 0U;
 
-    if (bal_isbitset(flags, POLLIN))
+    if (bal_isbitset(flags, POLLRDNORM))
         bal_setbitshigh(&retval, BAL_E_READ);
 
-    if (bal_isbitset(flags, POLLOUT))
+    if (bal_isbitset(flags, POLLWRNORM))
         bal_setbitshigh(&retval, BAL_E_WRITE);
 
+    if (bal_isbitset(flags, POLLRDBAND))
+        bal_setbitshigh(&retval, BAL_E_OOBREAD);
+
+#if !defined(__WIN__)
+    if (bal_isbitset(flags, POLLWRBAND))
+        bal_setbitshigh(&retval, BAL_E_OOBWRITE);
+
     if (bal_isbitset(flags, POLLPRI))
-        bal_setbitshigh(&retval, BAL_E_EXCEPT);
+        bal_setbitshigh(&retval, BAL_E_PRIORITY);
+#endif
 
     if (bal_isbitset(flags, POLLHUP))
         bal_setbitshigh(&retval, BAL_E_CLOSE);
@@ -437,22 +429,21 @@ short _bal_mask_topollflags(uint32_t mask)
     short retval = 0;
 
     if (bal_isbitset(mask, BAL_E_READ))
-        bal_setbitshigh(&retval, POLLIN);
+        bal_setbitshigh(&retval, POLLRDNORM);
 
     if (bal_isbitset(mask, BAL_E_WRITE))
-        bal_setbitshigh(&retval, POLLOUT);
+        bal_setbitshigh(&retval, POLLWRNORM);
 
-    if (bal_isbitset(mask, BAL_E_EXCEPT))
+    if (bal_isbitset(mask, BAL_E_OOBREAD))
+        bal_setbitshigh(&retval, POLLRDBAND);
+
+#if !defined(__WIN__)
+    if (bal_isbitset(mask, BAL_E_OOBWRITE))
+        bal_setbitshigh(&retval, POLLWRBAND);
+
+    if (bal_isbitset(mask, BAL_E_PRIORITY))
         bal_setbitshigh(&retval, POLLPRI);
-
-    if (bal_isbitset(mask, BAL_E_CLOSE))
-        bal_setbitshigh(&retval, POLLHUP);
-
-    if (bal_isbitset(mask, BAL_E_ERROR))
-        bal_setbitshigh(&retval, POLLERR);
-
-    if (bal_isbitset(mask, BAL_E_INVALID))
-        bal_setbitshigh(&retval, POLLNVAL);
+#endif
 
     return retval;
 }
@@ -465,8 +456,11 @@ bal_threadret _bal_eventthread(void* ctx)
 
     while (!_bal_get_boolean(&asc->die)) {
         size_t count       = 0UL;
+#if defined(__WIN__)
+        WSAPOLLFD* fds     = NULL;
+#else
         struct pollfd* fds = NULL;
-
+#endif
         _BAL_ENTER_MUTEX(&asc->mutex, dispatch)
 
         count = _bal_list_count(asc->lst);
@@ -485,8 +479,11 @@ bal_threadret _bal_eventthread(void* ctx)
                     fds[offset].events = _bal_mask_topollflags(val->state.mask);
                     offset++;
                 }
-
+#if defined(__WIN__)
+                int res = WSAPoll(fds, (ULONG)count, poll_timeout);
+#else
                 int res = poll(fds, count, poll_timeout);
+#endif
                 if (-1 == res) {
                     _bal_handlelasterr();
                 } else if (res > 0) {
@@ -534,34 +531,40 @@ void _bal_dispatchevents(bal_descriptor sd, bal_socket* s, uint32_t events)
 
     uint32_t _events = 0U;
 
+    _bal_dbglog("events %"PRIx32" for socket "BAL_SOCKET_SPEC, events, sd);
+
     if (bal_isbitset(events, BAL_E_READ) && bal_bitsinmask(s, BAL_E_READ)) {
         if (bal_islistening(s)) {
-            _events |= BAL_E_ACCEPT;
-        } else if (_bal_haspendingconnect(s)) {
-            _events |= _bal_on_pending_conn_event(s);
+            bal_setbitshigh(&_events, BAL_E_ACCEPT);
         } else {
-            _events |= BAL_E_READ;
+            bal_setbitshigh(&_events, BAL_E_READ);
         }
     }
 
     if (bal_isbitset(events, BAL_E_WRITE) && bal_bitsinmask(s, BAL_E_WRITE)) {
-        if (_bal_haspendingconnect(s)) {
-            _events |= _bal_on_pending_conn_event(s);
-        } else if (bal_bitsinmask(s, BAL_E_CLOSE) && _bal_isclosedcircuit(s)) {
-            _events |= BAL_E_CLOSE;
+        if (_bal_ispendingconn(s)) {
+            if (bal_isbitset(events, BAL_E_CLOSE) || bal_isbitset(events, BAL_E_ERROR)) {
+                bal_setbitshigh(&_events, BAL_E_CONNFAIL);
+                bal_setbitslow(&events, BAL_E_ERROR);
+            } else {
+                bal_setbitshigh(&_events, BAL_E_CONNECT);
+            }
+
+            bal_setbitslow(&s->state.mask, BAL_E_WRITE);
+            bal_setbitslow(&s->state.bits, BAL_S_CONNECT);
         } else {
-            _events |= BAL_E_WRITE;
+            bal_setbitshigh(&_events, BAL_E_WRITE);
         }
     }
 
     if (bal_isbitset(events, BAL_E_CLOSE) && bal_bitsinmask(s, BAL_E_CLOSE))
-        _events |= BAL_E_CLOSE;
+        bal_setbitshigh(&_events, BAL_E_CLOSE);
 
-    if (bal_isbitset(events, BAL_E_EXCEPT) && bal_bitsinmask(s, BAL_E_EXCEPT))
-        _events |= BAL_E_EXCEPT;
+    if (bal_isbitset(events, BAL_E_PRIORITY) && bal_bitsinmask(s, BAL_E_PRIORITY))
+        bal_setbitshigh(&_events, BAL_E_PRIORITY);
 
     if (bal_isbitset(events, BAL_E_ERROR) && bal_bitsinmask(s, BAL_E_ERROR))
-        _events |= BAL_E_ERROR;
+        bal_setbitshigh(&_events, BAL_E_ERROR);
 
     bool close = bal_isbitset(events, BAL_E_CLOSE);
 

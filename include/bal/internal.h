@@ -51,8 +51,7 @@ int _bal_getaddrinfo(int flags, int addr_fam, int type, const char* host,
     const char* port, struct addrinfo** res);
 int _bal_getnameinfo(int f, const bal_sockaddr* in, char* host, char* port);
 
-bool _bal_haspendingconnect(bal_socket* s);
-uint32_t _bal_on_pending_conn_event(bal_socket* s);
+bool _bal_ispendingconn(bal_socket* s);
 bool _bal_isclosedcircuit(const bal_socket* s);
 
 uint32_t _bal_pollflags_tomask(short flags);

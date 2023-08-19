@@ -65,7 +65,7 @@
 
 #  include <sys/types.h>
 #  include <sys/socket.h>
-#  include <sys/select.h> // TODO: get rid of select and exchange for poll
+#  include <sys/select.h>
 #  include <sys/time.h>
 #  include <sys/ioctl.h>
 #  include <netinet/in.h>
@@ -91,6 +91,12 @@
 
 /** The socket descriptor type. */
 typedef int bal_descriptor;
+
+/** The type send/recv/sendto/recvfrom take for length. */
+typedef size_t bal_iolen;
+
+/** The type used in the linger struct. */
+typedef int bal_linger;
 
 /** The mutex type. */
 typedef pthread_mutex_t bal_mutex;
@@ -149,6 +155,12 @@ typedef void* bal_threadret;
 /** The socket descriptor type. */
 typedef SOCKET bal_descriptor;
 
+/** The type send/recv/sendto/recvfrom take for length. */
+typedef int bal_iolen;
+
+/** The type used in the linger struct. */
+typedef u_short bal_linger;
+
 /** The mutex type. */
 typedef CRITICAL_SECTION bal_mutex;
 
@@ -186,6 +198,9 @@ typedef unsigned bal_threadret;
 #  define BAL_SHUT_RD   SD_RECEIVE
 #  define BAL_SHUT_WR   SD_SEND
 
+#  define MSG_NOSIGNAL 0
+#  define MSG_DONTWAIT 0
+
 # endif /* !_WIN32 */
 
 # include <stdio.h>
@@ -211,11 +226,13 @@ typedef unsigned bal_threadret;
 # define BAL_E_ACCEPT    0x00000008U
 # define BAL_E_CLOSE     0x00000010U
 # define BAL_E_CONNFAIL  0x00000020U
-# define BAL_E_EXCEPT    0x00000040U
+# define BAL_E_PRIORITY  0x00000040U
 # define BAL_E_ERROR     0x00000080U
 # define BAL_E_INVALID   0x00000100U
-# define BAL_E_ALL       0x000001ffU
-# define BAL_E_STANDARD  (BAL_E_ALL & ~BAL_E_WRITE)
+# define BAL_E_OOBREAD   0x00000200U
+# define BAL_E_OOBWRITE  0x00000400U
+# define BAL_E_ALL       0x000007ffU
+# define BAL_E_NORMAL    (BAL_E_ALL & ~BAL_E_WRITE)
 
 # define BAL_S_CONNECT   0x00000001U
 # define BAL_S_LISTEN    0x00000002U

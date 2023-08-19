@@ -51,7 +51,7 @@ int main(int argc, char** argv)
     ret = bal_bindall(s, balcommon::portnum);
     EXIT_IF_FAILED(ret, "bal_bindall");
 
-    ret = bal_asyncselect(s, &balserver::async_events_cb, BAL_E_STANDARD);
+    ret = bal_asyncselect(s, &balserver::async_events_cb, BAL_E_NORMAL);
     EXIT_IF_FAILED(ret, "bal_asyncselect");
 
     ret = bal_listen(s, SOMAXCONN);
@@ -100,7 +100,7 @@ void balserver::async_events_cb(bal_socket* s, uint32_t events)
             return;
         }
 
-        ret = bal_asyncselect(client_socket, &async_events_cb, BAL_E_STANDARD);
+        ret = bal_asyncselect(client_socket, &async_events_cb, BAL_E_NORMAL);
         if (BAL_TRUE != ret) {
             balcommon::print_last_lib_error("bal_asyncselect");
             bal_close(&client_socket, true);
@@ -125,7 +125,7 @@ void balserver::async_events_cb(bal_socket* s, uint32_t events)
         } else if (-1 == read) {
             bal_error err {};
             printf("[" BAL_SOCKET_SPEC "] read error %d (%s)!\n", s->sd,
-                bal_getlasterror(&err), err.desc);
+                bal_getlasterror(s, &err), err.desc);
         } else {
             printf("[" BAL_SOCKET_SPEC "] read EOF\n", s->sd);
         }
@@ -145,7 +145,7 @@ void balserver::async_events_cb(bal_socket* s, uint32_t events)
             } else {
                 bal_error err {};
                 printf("[" BAL_SOCKET_SPEC "] write error %d (%s)!\n", s->sd,
-                    bal_getlasterror(&err), err.desc);
+                    bal_getlasterror(s, &err), err.desc);
             }
             bal_remfrommask(s, BAL_E_WRITE);
         }
@@ -158,8 +158,8 @@ void balserver::async_events_cb(bal_socket* s, uint32_t events)
         return;
     }
 
-    if (bal_isbitset(events, BAL_E_EXCEPT)) {
-        printf("[" BAL_SOCKET_SPEC "] exceptional condition!\n", s->sd);
+    if (bal_isbitset(events, BAL_E_PRIORITY)) {
+        printf("[" BAL_SOCKET_SPEC "] priority exceptional condition!\n", s->sd);
     }
 
     if (bal_isbitset(events, BAL_E_ERROR)) {

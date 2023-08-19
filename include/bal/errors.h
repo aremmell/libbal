@@ -32,9 +32,10 @@
 extern "C" {
 # endif
 
-int _bal_getlasterror(bal_error* err);
+int _bal_getlasterror(const bal_socket* s, bal_error* err);
 bool __bal_setlasterror(int code, const char* func, const char* file,
     uint32_t line, bool gai);
+void _bal_formaterrormsg(int err, char buf[BAL_MAXERROR], bool gai);
 
 # define _bal_handleerr(err)  \
     __bal_setlasterror(err, __func__, __file__, __LINE__, false)
