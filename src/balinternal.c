@@ -536,12 +536,16 @@ void _bal_dispatchevents(bal_descriptor sd, bal_socket* s, uint32_t events)
     if (bal_isbitset(events, BAL_EVT_ERROR) && bal_bitsinmask(s, BAL_EVT_ERROR))
         bal_setbitshigh(&_events, BAL_EVT_ERROR);
 
+    if (bal_isbitset(events, BAL_EVT_INVALID) && bal_bitsinmask(s, BAL_EVT_INVALID))
+        bal_setbitshigh(&_events, BAL_EVT_INVALID);
+
     bool close = bal_isbitset(events, BAL_EVT_CLOSE);
+    bool invalid = bal_isbitset(events, BAL_EVT_INVALID);
 
     if (0U != _events && _bal_validptr(s->state.proc))
         s->state.proc(s, _events);
 
-    if (close) {
+    if (close || invalid) {
         /* if the callback did the right thing, it has called bal_close and
          * possibly bal_sock_destroy. if it didn't call the latter, the socket
          * still resides in the list. presume that the callback is behaving
@@ -551,10 +555,10 @@ void _bal_dispatchevents(bal_descriptor sd, bal_socket* s, uint32_t events)
 
         if (removed) {
             _bal_dbglog("removed socket "BAL_SOCKET_SPEC" (%p) from list"
-                        " (close event)", sd, s);
+                        " (closed/invalid)", sd, s);
         } else {
             _bal_dbglog("socket "BAL_SOCKET_SPEC" destroyed by event"
-                        " handler (close event)", sd);
+                        " handler (closed/invalid)", sd);
         }
     }
 }
