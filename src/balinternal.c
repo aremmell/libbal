@@ -361,7 +361,7 @@ bool _bal_ispendingconn(bal_socket* s)
     return _bal_validsock(s) && bal_isbitset(s->state.bits, BAL_S_CONNECT);
 }
 
-bool _bal_isclosedcircuit(const bal_socket* s)
+bool _bal_isclosedconn(const bal_socket* s)
 {
 #if defined(__WIN__)
     /* Windows doesn't have MSG_DONTWAIT, so this method is unacceptable for that
@@ -447,6 +447,7 @@ short _bal_mask_topollflags(uint32_t mask)
 
     if (bal_isbitset(mask, BAL_EVT_PRIORITY))
         bal_setbitshigh(&retval, POLLPRI);
+
 #elif defined(__linux__)
     if (bal_isbitset(mask, BAL_EVT_CLOSE))
         bal_setbitshigh(&retval, POLLRDHUP);
