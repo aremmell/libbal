@@ -361,7 +361,7 @@ bool _bal_ispendingconn(bal_socket* s)
     return _bal_validsock(s) && bal_isbitset(s->state.bits, BAL_S_CONNECT);
 }
 
-uint32_t _bal_pollflags_tomask(short flags)
+uint32_t _bal_pollflags_toevents(short flags)
 {
     uint32_t retval = 0U;
 
@@ -384,6 +384,11 @@ uint32_t _bal_pollflags_tomask(short flags)
 
     if (bal_isbitset(flags, POLLHUP))
         bal_setbitshigh(&retval, BAL_EVT_CLOSE);
+
+#if defined(__linux__)
+    if (bal_isbitset(flags, POLLRDHUP))
+        bal_setbitshigh(&retval, BAL_EVT_CLOSE);
+#endif
 
     if (bal_isbitset(flags, POLLERR))
         bal_setbitshigh(&retval, BAL_EVT_ERROR);
@@ -463,7 +468,7 @@ bal_threadret _bal_eventthread(void* ctx)
                         BAL_ASSERT(found && _bal_validsock(s));
 
                         if (found && _bal_validsock(s)) {
-                            uint32_t events = _bal_pollflags_tomask(fds[n].revents);
+                            uint32_t events = _bal_pollflags_toevents(fds[n].revents);
                             if (0U != events)
                                 _bal_dispatchevents(fds[n].fd, s, events);
                         }
@@ -539,13 +544,13 @@ void _bal_dispatchevents(bal_descriptor sd, bal_socket* s, uint32_t events)
     if (bal_isbitset(events, BAL_EVT_INVALID) && bal_bitsinmask(s, BAL_EVT_INVALID))
         bal_setbitshigh(&_events, BAL_EVT_INVALID);
 
-    bool close = bal_isbitset(events, BAL_EVT_CLOSE);
+    bool closed  = bal_isbitset(events, BAL_EVT_CLOSE);
     bool invalid = bal_isbitset(events, BAL_EVT_INVALID);
 
     if (0U != _events && _bal_validptr(s->state.proc))
         s->state.proc(s, _events);
 
-    if (close || invalid) {
+    if (closed || invalid) {
         /* if the callback did the right thing, it has called bal_close and
          * possibly bal_sock_destroy. if it didn't call the latter, the socket
          * still resides in the list. presume that the callback is behaving

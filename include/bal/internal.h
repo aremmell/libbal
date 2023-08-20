@@ -53,7 +53,7 @@ int _bal_getnameinfo(int f, const bal_sockaddr* in, char* host, char* port);
 
 bool _bal_ispendingconn(bal_socket* s);
 
-uint32_t _bal_pollflags_tomask(short flags);
+uint32_t _bal_pollflags_toevents(short flags);
 short _bal_mask_topollflags(uint32_t mask);
 
 bal_threadret _bal_eventthread(void* ctx);
