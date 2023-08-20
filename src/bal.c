@@ -803,7 +803,7 @@ int bal_getaddrstrings(const bal_sockaddr* in, bool dns, bal_addrstrings* out)
             if (dns) {
                 get = _bal_getnameinfo(_BAL_NI_DNS, in, out->host, out->port);
                 if (BAL_FALSE == get)
-                    (void)strncpy(out->host, BAL_UNKNOWN, NI_MAXHOST);
+                    _bal_strcpy(out->host, NI_MAXHOST, BAL_UNKNOWN, sizeof(BAL_UNKNOWN));
             }
             if (PF_INET == ((struct sockaddr*)in)->sa_family)
                 out->type = BAL_AS_IPV4;

@@ -68,12 +68,12 @@ bool _bal_init(void)
         return false;
     }
 
-    init = _bal_initasyncpoll();
+    init = _bal_init_asyncpoll();
     BAL_ASSERT(init);
 
     if (!init) {
-        _bal_dbglog("error: _bal_initasyncpoll failed");
-        bool cleanup = _bal_cleanupasyncpoll();
+        _bal_dbglog("error: _bal_init_asyncpoll failed");
+        bool cleanup = _bal_cleanup_asyncpoll();
         BAL_ASSERT_UNUSED(cleanup, cleanup);
         return false;
     }
@@ -87,8 +87,8 @@ bool _bal_cleanup(void)
     (void)WSACleanup();
 #endif
 
-    if (!_bal_cleanupasyncpoll()) {
-        _bal_dbglog("error: _bal_cleanupasyncpoll failed");
+    if (!_bal_cleanup_asyncpoll()) {
+        _bal_dbglog("error: _bal_cleanup_asyncpoll failed");
         return false;
     }
 
@@ -177,7 +177,7 @@ int _bal_asyncpoll(bal_socket* s, bal_async_cb proc, uint32_t mask)
     return r;
 }
 
-bool _bal_initasyncpoll(void)
+bool _bal_init_asyncpoll(void)
 {
     bool init = _bal_list_create(&_bal_as_container.lst);
     BAL_ASSERT(init);
@@ -234,7 +234,7 @@ bool _bal_initasyncpoll(void)
     return init;
 }
 
-bool _bal_cleanupasyncpoll(void)
+bool _bal_cleanup_asyncpoll(void)
 {
     _bal_set_boolean(&_bal_as_container.die, true);
     _bal_set_boolean(&_bal_asyncpoll_init, false);
@@ -356,12 +356,12 @@ int _bal_getnameinfo(int f, const bal_sockaddr* in, char* host, char* port)
     return r;
 }
 
-bool _bal_ispendingconn(const bal_socket* s)
+bool _bal_is_pending_conn(const bal_socket* s)
 {
     return _bal_validsock(s) && bal_isbitset(s->state.bits, BAL_S_CONNECT);
 }
 
-bool _bal_isclosedconn(const bal_socket* s)
+bool _bal_is_closed_conn(const bal_socket* s)
 {
 #if defined(__WIN__)
     /* Windows doesn't have MSG_DONTWAIT, so this method is unacceptable for that
@@ -390,7 +390,7 @@ bool _bal_isclosedconn(const bal_socket* s)
     return false;
 }
 
-uint32_t _bal_pollflags_toevents(short flags)
+uint32_t _bal_pollflags_to_events(short flags)
 {
     uint32_t retval = 0U;
 
@@ -428,7 +428,7 @@ uint32_t _bal_pollflags_toevents(short flags)
     return retval;
 }
 
-short _bal_mask_topollflags(uint32_t mask)
+short _bal_mask_to_pollflags(uint32_t mask)
 {
     short retval = 0;
 
@@ -484,7 +484,7 @@ bal_threadret _bal_eventthread(void* ctx)
                 _bal_list_reset_iterator(asc->lst);
                 while (_bal_list_iterate(asc->lst, &key, &val)) {
                     fds[offset].fd     = key;
-                    fds[offset].events = _bal_mask_topollflags(val->state.mask);
+                    fds[offset].events = _bal_mask_to_pollflags(val->state.mask);
                     offset++;
                 }
 #if defined(__WIN__)
@@ -501,9 +501,9 @@ bal_threadret _bal_eventthread(void* ctx)
                         BAL_ASSERT(found && _bal_validsock(s));
 
                         if (found && _bal_validsock(s)) {
-                            uint32_t events = _bal_pollflags_toevents(fds[n].revents);
+                            uint32_t events = _bal_pollflags_to_events(fds[n].revents);
                             if (0U != events)
-                                _bal_dispatchevents(fds[n].fd, s, events);
+                                _bal_dispatch_events(fds[n].fd, s, events);
                         }
                     }
                 }
@@ -530,7 +530,7 @@ bal_threadret _bal_eventthread(void* ctx)
 #endif
 }
 
-void _bal_dispatchevents(bal_descriptor sd, bal_socket* s, uint32_t events)
+void _bal_dispatch_events(bal_descriptor sd, bal_socket* s, uint32_t events)
 {
     BAL_ASSERT(NULL != s);
     if (!_bal_validptr(s)) {
@@ -550,7 +550,7 @@ void _bal_dispatchevents(bal_descriptor sd, bal_socket* s, uint32_t events)
     }
 
     if (bal_isbitset(events, BAL_EVT_WRITE) && bal_bitsinmask(s, BAL_EVT_WRITE)) {
-        if (_bal_ispendingconn(s)) {
+        if (_bal_is_pending_conn(s)) {
             if (bal_isbitset(events, BAL_EVT_CLOSE) || bal_isbitset(events, BAL_EVT_ERROR)) {
                 bal_setbitshigh(&_events, BAL_EVT_CONNFAIL);
                 bal_setbitslow(&events, BAL_EVT_ERROR);
@@ -972,6 +972,33 @@ int _bal_aitoal(struct addrinfo* ai, bal_addrlist* out)
     }
 
     return r;
+}
+
+void _bal_strcpy(char* dest, size_t destsz, const char* src, size_t srcsz)
+{
+    if (_bal_validptr(dest) && _bal_validlen(destsz) && _bal_validstr(src) &&
+        _bal_validlen(srcsz)) {
+        /* Use strncpy_s if it's available (will likely only ever be on Windows. */
+#if defined(__HAVE_STDC_SECURE_OR_EXT1__)
+        errno_t copy = strncpy_s(dest, destsz, src, srcsz);
+        BAL_ASSERT_UNUSED(copy, 0 == copy);
+#elif defined(__HAVE_LIBC_STRLCPY__)
+        /* Use strlcpy if it's available (it is on at least BSD-derivatives. */
+        size_t copy = strlcpy(dest, src, destsz);
+        BAL_ASSERT_UNUSED(copy, copy <= destsz);
+        BAL_UNUSED(srcsz);
+#else
+        /* We'll do it live. It's better than using strncpy and hearing about
+         * 'unsafe' code from certain static analyzers. */
+        const char* src_cursor = src;
+        char* dest_cursor = dest;
+
+        while (*src_cursor != '\0' && (src_cursor - src) < destsz - 1 &&
+               (src_cursor - src) < srcsz)
+            *(dest_cursor++) = *(src_cursor++);
+        *dest_cursor = '\0';
+#endif
+    }
 }
 
 void _bal_socket_print(const bal_socket* s)
