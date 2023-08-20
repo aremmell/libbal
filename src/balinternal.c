@@ -163,7 +163,7 @@ int _bal_asyncpoll(bal_socket* s, bal_async_cb proc, uint32_t mask)
                 }
                 if (success) {
                     _bal_dbglog("added socket "BAL_SOCKET_SPEC" to list (%p"
-                                ", mask = %08x)", s->sd, s, s->state.mask);
+                                ", mask = %08"PRIx32")", s->sd, s, s->state.mask);
                 } else {
                     _bal_dbglog("error: failed to add socket "BAL_SOCKET_SPEC
                                 " to list!", s->sd);
