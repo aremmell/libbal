@@ -21,14 +21,39 @@ set(PROJECT_IS_DEV_BUILD true)
 # create compile commands for static analysis
 set(CMAKE_EXPORT_COMPILE_COMMANDS true)
 
+# select the C/C++ standard we can use based on the CMake version
+if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.21")
+    set(CMAKE_C_STANDARD, 17)
+else()
+    set(CMAKE_C_STANDARD, 11)
+endif()
+
 # policy settings, so CMake doesn't whine.
 cmake_policy(SET CMP0025 NEW) # AppleClang
 cmake_policy(SET CMP0048 NEW) # project VERSION
 cmake_policy(SET CMP0065 NEW) # ENABLE_EXPORTS
-cmake_policy(SET CMP0126 NEW) # cache
 cmake_policy(SET CMP0056 NEW) # CMAKE_EXE_LINKER_FLAGS
 cmake_policy(SET CMP0066 NEW) # CMAKE_<LANG>_FLAGS_<BUILDTYPE>
-cmake_policy(SET CMP0102 NEW) # mark_as_advanced
+
+if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.13")
+    cmake_policy(SET CMP0077 NEW) # option
+endif()
+
+if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.17")
+    cmake_policy(SET CMP0102 NEW) # mark_as_advanced
+endif()
+
+if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.21")
+    cmake_policy(SET CMP0126 NEW) # cache
+endif()
+
+# define the project
+project(
+    ${PROJECT_NAME}
+    VERSION 0.2.0
+    LANGUAGES C CXX
+    DESCRIPTION "Berkeley Abstraction Layer"
+)
 
 # toolchain-related
 if (WIN32)
@@ -47,23 +72,16 @@ else()
     set(CMAKE_CXX_FLAGS_DEBUG "${C_FLAGS_BASE} -g3 -O0 -DDEBUG -DBAL_DBGLOG")
     set(CMAKE_CXX_FLAGS_RELEASE "${C_FLAGS_BASE} -O3 -D_FORTIFY_SOURCE=2 -DNDEBUG")
 
-    set(CMAKE_EXE_LINKER_FLAGS, "${CMAKE_EXE_LINKER_FLAGS} -pthread")
+    set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
+    set(THREADS_PREFER_PTHREAD_FLAG TRUE)
+    find_package(Threads REQUIRED)
 endif()
-
-# define the project
-project(
-    ${PROJECT_NAME}
-    VERSION 0.2.0
-    LANGUAGES C CXX
-    DESCRIPTION "Berkeley Abstraction Layer"
-)
 
 execute_process(
     COMMAND git rev-parse --short --verify HEAD
     OUTPUT_VARIABLE GIT_COMMIT_HASH
     OUTPUT_STRIP_TRAILING_WHITESPACE
     ECHO_OUTPUT_VARIABLE
-    COMMAND_ERROR_IS_FATAL ANY
 )
 
 configure_file(
@@ -133,6 +151,16 @@ target_link_libraries(
     ${STATIC_LIBRARY_NAME}
 )
 
+target_link_libraries(
+    ${SERVER_EXECUTABLE_NAME}
+    Threads::Threads
+)
+
+target_link_libraries(
+    ${CLIENT_EXECUTABLE_NAME}
+    Threads::Threads
+)
+
 target_compile_features(
     ${CLIENT_EXECUTABLE_NAME}
     PUBLIC
@@ -148,13 +176,13 @@ target_compile_features(
 target_compile_features(
     ${STATIC_LIBRARY_NAME}
     PUBLIC
-    c_std_17
+    ${CMAKE_C_STANDARD}
 )
 
 target_compile_features(
     ${SHARED_LIBRARY_NAME}
     PUBLIC
-    c_std_17
+    ${CMAKE_C_STANDARD}
 )
 
 install(
