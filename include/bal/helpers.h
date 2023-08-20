@@ -58,12 +58,12 @@ void __bal_safefree(void** pp)
 # define bal_isbitset(bitmask, bit) (((bitmask) & (bit)) == (bit))
 
 # define bal_setbitshigh(pbitmask, bits) \
-    if ((pbitmask)) { \
+    if (NULL != (pbitmask)) { \
         (*(pbitmask)) |= (bits); \
     }
 
 # define bal_setbitslow(pbitmask, bits) \
-    if ((pbitmask)) { \
+    if (NULL != (pbitmask)) { \
         (*(pbitmask)) &= ~(bits); \
     }
 
