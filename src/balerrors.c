@@ -93,25 +93,25 @@ void _bal_formaterrormsg(int err, char buf[BAL_MAXERROR], bool gai)
         _bal_strcpy(buf, BAL_MAXERROR, tmp, strnlen(tmp, BAL_MAXERROR));
     } else {
      int finderr = -1;
-#if defined(__HAVE_XSI_STRERROR_R__)
+# if defined(__HAVE_XSI_STRERROR_R__)
         finderr = strerror_r(err, buf, BAL_MAXERROR);
-# if defined(__HAVE_XSI_STRERROR_R_ERRNO__)
+#  if defined(__HAVE_XSI_STRERROR_R_ERRNO__)
         if (finderr == -1)
             finderr = errno;
-# endif
-#elif defined(__HAVE_GNU_STRERROR_R__)
+#  endif
+# elif defined(__HAVE_GNU_STRERROR_R__)
         char* tmp = strerror_r(err, buf, BAL_MAXERROR);
         if (tmp != buf)
             _bal_strcpy(buf, BAL_MAXERROR, tmp, strnlen(tmp, BAL_MAXERROR));
-#elif defined(__HAVE_STRERROR_S__)
+# elif defined(__HAVE_STRERROR_S__)
         finderr = (int)strerror_s(buf, BAL_MAXERROR, err);
-#else
+# else
         char* tmp = strerror(err);
         _bal_strcpy(buf, BAL_MAXERROR, tmp, strnlen(tmp, BAL_MAXERROR));
-#endif
-#if defined(__HAVE_XSI_STRERROR_R__) || defined(__HAVE_STRERROR_S__)
+# endif
+# if defined(__HAVE_XSI_STRERROR_R__) || defined(__HAVE_STRERROR_S__)
         assert(0 == finderr);
-#endif
+# endif
         BAL_UNUSED(finderr);
     }
 #endif

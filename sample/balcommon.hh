@@ -51,7 +51,7 @@ namespace balcommon
         const std::string& def);
 
 # define EXIT_IF_FAILED(retval, func) \
-    if (BAL_TRUE != retval) { \
+    if (!retval) { \
         balcommon::print_last_lib_error(func); \
         return EXIT_FAILURE; \
     }

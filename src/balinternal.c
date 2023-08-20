@@ -95,34 +95,34 @@ bool _bal_cleanup(void)
     return true;
 }
 
-int _bal_asyncpoll(bal_socket* s, bal_async_cb proc, uint32_t mask)
+bool _bal_asyncpoll(bal_socket* s, bal_async_cb proc, uint32_t mask)
 {
     if (!_bal_get_boolean(&_bal_asyncpoll_init)) {
         _bal_dbglog("error: async I/O not initialized; ignoring");
-        return BAL_FALSE;
+        return false;
     }
 
     if (_bal_get_boolean(&_bal_as_container.die)) {
         _bal_dbglog("error: async I/O shutting down; ignoring");
-        return BAL_FALSE;
+        return false;
     }
 
     BAL_ASSERT(NULL != s);
     if (!_bal_validptr(s)) {
-        return BAL_FALSE;
+        return false;
     }
 
-    BAL_ASSERT(BAL_BADSOCKET != s->sd && 0 != s->sd);
+    BAL_ASSERT(-1 != s->sd && 0 != s->sd);
     if (0 >= s->sd) {
-        return BAL_FALSE;
+        return false;
     }
 
     BAL_ASSERT(NULL != proc || 0U == mask);
     if (!_bal_validptr(proc) && 0U != mask) {
-        return BAL_FALSE;
+        return false;
     }
 
-    int r = BAL_FALSE;
+    bool retval = false;
     _BAL_ENTER_MUTEX(&_bal_as_container.mutex, asio) {
         if (0U == mask) {
             /* this thread holds the mutex that guards the list, so in theory,
@@ -140,7 +140,7 @@ int _bal_asyncpoll(bal_socket* s, bal_async_cb proc, uint32_t mask)
                  * have to call bal_sock_destroy later on. */
                 _bal_dbglog("removed socket "BAL_SOCKET_SPEC" (%p) from list",
                             s->sd, d);
-                r = BAL_TRUE;
+                retval = true;
             } else {
                 _bal_dbglog("warning: socket "BAL_SOCKET_SPEC" not found;"
                             " ignoring removal request", s->sd);
@@ -151,15 +151,15 @@ int _bal_asyncpoll(bal_socket* s, bal_async_cb proc, uint32_t mask)
                 BAL_ASSERT(NULL != d && s == d);
                 s->state.mask = mask;
                 s->state.proc = proc;
-                r             = BAL_TRUE;
+                retval        = true;
                 _bal_dbglog("updated socket "BAL_SOCKET_SPEC" (%p)", s->sd, s);
             } else {
                 bool success = false;
-                if (BAL_TRUE == bal_setiomode(s, true)) {
+                if (bal_set_io_mode(s, true)) {
                     s->state.mask = mask;
                     s->state.proc = proc;
                     success = _bal_list_add(_bal_as_container.lst, s->sd, s);
-                    r       = success ? BAL_TRUE : BAL_FALSE;
+                    retval  = success;
                 }
                 if (success) {
                     _bal_dbglog("added socket "BAL_SOCKET_SPEC" to list (%p"
@@ -174,7 +174,7 @@ int _bal_asyncpoll(bal_socket* s, bal_async_cb proc, uint32_t mask)
         _BAL_LEAVE_MUTEX(&_bal_as_container.mutex, asio);
     }
 
-    return r;
+    return retval;
 }
 
 bool _bal_init_asyncpoll(void)
@@ -279,10 +279,8 @@ bool _bal_cleanup_asyncpoll(void)
     return cleanup;
 }
 
-int _bal_sock_destroy(bal_socket** s)
+void _bal_sock_destroy(bal_socket** s)
 {
-    int r = BAL_FALSE;
-
     if (_bal_validptrptr(s) && _bal_validptr(*s)) {
         _BAL_ENTER_MUTEX(&_bal_as_container.mutex, sock_destroy);
 
@@ -307,16 +305,13 @@ int _bal_sock_destroy(bal_socket** s)
         memset(*s, 0, sizeof(bal_socket));
         _bal_safefree(s);
         _BAL_LEAVE_MUTEX(&_bal_as_container.mutex, sock_destroy);
-        r = BAL_TRUE;
     }
-
-    return r;
 }
 
-int _bal_getaddrinfo(int flags, int addr_fam, int type, const char* host,
+bool _bal_get_addrinfo(int flags, int addr_fam, int type, const char* host,
     const char* port, struct addrinfo** res)
 {
-    int r = BAL_FALSE;
+    bool retval = false;
 
     if ((_bal_validstr(host) || _bal_validstr(port)) && _bal_validptrptr(res)) {
         struct addrinfo hints = {0};
@@ -325,35 +320,28 @@ int _bal_getaddrinfo(int flags, int addr_fam, int type, const char* host,
         hints.ai_family   = addr_fam;
         hints.ai_socktype = type;
 
-        r = getaddrinfo(host, port, (const struct addrinfo*)&hints, res);
-        if (0 == r) {
-            r = BAL_TRUE;
-        } else {
-            _bal_handlegaierr(r);
-            r = BAL_FALSE;
-        }
+        int get = getaddrinfo(host, port, (const struct addrinfo*)&hints, res);
+        if (0 != get)
+            _bal_handlegaierr(get);
+        retval = 0 == get;
     }
 
-    return r;
+    return retval;
 }
 
-int _bal_getnameinfo(int f, const bal_sockaddr* in, char* host, char* port)
+bool _bal_getnameinfo(int flags, const bal_sockaddr* in, char* host, char* port)
 {
-    int r = BAL_FALSE;
+    bool retval = false;
 
     if (_bal_validptr(in) && _bal_validptr(host)) {
-        socklen_t inlen = _BAL_SASIZE(*in);
-        r = getnameinfo((const struct sockaddr*)in, inlen, host, NI_MAXHOST, port,
-            NI_MAXSERV, f);
-        if (0 == r) {
-            r = BAL_TRUE;
-        } else {
-            _bal_handlegaierr(r);
-            r = BAL_FALSE;
-        }
+        int get = getnameinfo((const struct sockaddr*)in, _BAL_SASIZE(*in), host,
+            NI_MAXHOST, port, NI_MAXSERV, flags);
+        if (0 != get)
+            _bal_handlegaierr(get);
+        retval = 0 == get;
     }
 
-    return r;
+    return retval;
 }
 
 bool _bal_is_pending_conn(const bal_socket* s)
@@ -447,11 +435,11 @@ short _bal_mask_to_pollflags(uint32_t mask)
 
     if (bal_isbitset(mask, BAL_EVT_PRIORITY))
         bal_setbitshigh(&retval, POLLPRI);
+#endif
 
-# if defined(__HAVE_POLLRDHUP__)
+#if defined(__HAVE_POLLRDHUP__)
     if (bal_isbitset(mask, BAL_EVT_CLOSE))
         bal_setbitshigh(&retval, POLLRDHUP);
-# endif
 #endif
 
     return retval;
@@ -954,22 +942,16 @@ bool _bal_once(bal_once* once, bal_once_fn func)
 #endif
 }
 
-int _bal_aitoal(struct addrinfo* ai, bal_addrlist* out)
+bool _bal_addrinfo_to_addrlist(struct addrinfo* ai, bal_addrlist* out)
 {
-    int r = BAL_FALSE;
-
     if (_bal_validptr(ai) && _bal_validptr(out)) {
         struct addrinfo* cur = ai;
         bal_addr** a         = &out->addr;
-        r                    = BAL_TRUE;
 
         do {
             *a = calloc(1UL, sizeof(bal_addr));
-            if (!_bal_validptr(*a)) {
-                _bal_handlelasterr();
-                r = BAL_FALSE;
-                break;
-            }
+            if (!_bal_validptr(*a))
+                return _bal_handlelasterr();
 
             memcpy(&(*a)->addr, cur->ai_addr, cur->ai_addrlen);
 
@@ -977,10 +959,11 @@ int _bal_aitoal(struct addrinfo* ai, bal_addrlist* out)
             cur = cur->ai_next;
         } while (NULL != cur);
 
-        bal_resetaddrlist(out);
+        bal_reset_addrlist(out);
+        return true;
     }
 
-    return r;
+    return false;
 }
 
 void _bal_strcpy(char* dest, size_t destsz, const char* src, size_t srcsz)

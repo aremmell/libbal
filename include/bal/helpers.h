@@ -59,7 +59,7 @@ void __bal_safefree(void** pp)
 /** Whether the specified socket is non-null, and has a valid descriptor
  * value. Sets last error to EINVAL if not. */
 # define _bal_validsock(s) \
-    ((NULL != (s) && BAL_BADSOCKET != (s)->sd) ? true : _bal_handleerr(EINVAL))
+    ((NULL != (s) && -1 != (s)->sd) ? true : _bal_handleerr(EINVAL))
 
 /** Whether or not the specified length is > 0. Sets last error to EINVAL if not. */
 # define _bal_validlen(len) \

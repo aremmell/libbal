@@ -42,7 +42,7 @@ int main(int argc, char** argv)
     }
 
     bal_socket* s = nullptr;
-    int ret = bal_sock_create(&s, AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    bool ret = bal_sock_create(&s, AF_INET, SOCK_STREAM, IPPROTO_TCP);
     EXIT_IF_FAILED(ret, "bal_sock_create");
 
     ret = bal_setreuseaddr(s, 1);
@@ -67,7 +67,7 @@ int main(int argc, char** argv)
     ret = bal_asyncpoll(s, nullptr, 0U);
     EXIT_IF_FAILED(ret, "bal_asyncpoll");
 
-    if (BAL_TRUE != bal_close(&s, true)) {
+    if (!bal_close(&s, true)) {
         balcommon::print_last_lib_error("bal_close");
     }
 
@@ -86,22 +86,22 @@ void balserver::async_events_cb(bal_socket* s, uint32_t events)
         bal_socket* client_socket = nullptr;
         bal_sockaddr client_addr {};
 
-        int ret = bal_accept(s, &client_socket, &client_addr);
-        if (BAL_TRUE != ret) {
+        bool ret = bal_accept(s, &client_socket, &client_addr);
+        if (!ret) {
             balcommon::print_last_lib_error("bal_accept");
             return;
         }
 
         bal_addrstrings client_strings {};
-        ret = bal_getaddrstrings(&client_addr, false, &client_strings);
-        if (BAL_TRUE != ret) {
-            balcommon::print_last_lib_error("bal_getaddrstrings");
+        ret = bal_get_addrstrings(&client_addr, false, &client_strings);
+        if (!ret) {
+            balcommon::print_last_lib_error("bal_get_addrstrings");
             bal_close(&client_socket, true);
             return;
         }
 
         ret = bal_asyncpoll(client_socket, &async_events_cb, BAL_EVT_NORMAL);
-        if (BAL_TRUE != ret) {
+        if (!ret) {
             balcommon::print_last_lib_error("bal_asyncpoll");
             bal_close(&client_socket, true);
             return;

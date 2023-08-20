@@ -42,17 +42,18 @@ extern "C" {
 
 bool bal_init(void);
 bool bal_cleanup(void);
+#pragma message("TODO: continue renaming")
+bool bal_asyncpoll(bal_socket* s, bal_async_cb proc, uint32_t mask);
 
-int bal_asyncpoll(bal_socket* s, bal_async_cb proc, uint32_t mask);
+bool bal_autosocket(bal_socket** s, int addr_fam, int proto, const char* host,
+    const char* srv);
+bool bal_sock_create(bal_socket** s, int addr_fam, int type, int proto);
+void bal_sock_destroy(bal_socket** s);
+bool bal_close(bal_socket** s, bool destroy);
+bool bal_shutdown(bal_socket* s, int how);
 
-int bal_autosocket(bal_socket** s, int addr_fam, int proto, const char* host, const char* srv);
-int bal_sock_create(bal_socket** s, int addr_fam, int type, int proto);
-int bal_sock_destroy(bal_socket** s);
-int bal_close(bal_socket** s, bool destroy);
-int bal_shutdown(bal_socket* s, int how);
-
-int bal_connect(bal_socket* s, const char* host, const char* port);
-int bal_connectaddrlist(bal_socket* s, bal_addrlist* al);
+bool bal_connect(bal_socket* s, const char* host, const char* port);
+bool bal_connect_addrlist(bal_socket* s, bal_addrlist* al);
 
 int bal_send(const bal_socket* s, const void* data, bal_iolen len, int flags);
 int bal_recv(const bal_socket* s, void* data, bal_iolen len, int flags);
@@ -64,44 +65,44 @@ int bal_sendtoaddr(const bal_socket* s, const bal_sockaddr* sa, const void* data
 
 int bal_recvfrom(const bal_socket* s, void* data, bal_iolen len, int flags, bal_sockaddr* res);
 
-int bal_bind(const bal_socket* s, const char* addr, const char* srv);
-int bal_bindall(const bal_socket* s, const char* srv);
+bool bal_bind(const bal_socket* s, const char* addr, const char* srv);
+bool bal_bindall(const bal_socket* s, const char* srv);
 
-int bal_listen(bal_socket* s, int backlog);
-int bal_accept(const bal_socket* s, bal_socket** res, bal_sockaddr* resaddr);
+bool bal_listen(bal_socket* s, int backlog);
+bool bal_accept(const bal_socket* s, bal_socket** res, bal_sockaddr* resaddr);
 
-int bal_getoption(const bal_socket* s, int level, int name, void* optval, socklen_t len);
-int bal_setoption(const bal_socket* s, int level, int name, const void* optval, socklen_t len);
+bool bal_getoption(const bal_socket* s, int level, int name, void* optval, socklen_t len);
+bool bal_setoption(const bal_socket* s, int level, int name, const void* optval, socklen_t len);
 
-int bal_setbroadcast(const bal_socket* s, int flag);
-int bal_getbroadcast(const bal_socket* s);
+bool bal_setbroadcast(const bal_socket* s, int value);
+bool bal_getbroadcast(const bal_socket* s, int* value);
 
-int bal_setdebug(const bal_socket* s, int flag);
-int bal_getdebug(const bal_socket* s);
+bool bal_setdebug(const bal_socket* s, int value);
+bool bal_getdebug(const bal_socket* s, int* value);
 
-int bal_setlinger(const bal_socket* s, bal_linger sec);
-int bal_getlinger(const bal_socket* s, bal_linger* sec);
+bool bal_setlinger(const bal_socket* s, bal_linger sec);
+bool bal_getlinger(const bal_socket* s, bal_linger* sec);
 
-int bal_setkeepalive(const bal_socket* s, int flag);
-int bal_getkeepalive(const bal_socket* s);
+bool bal_setkeepalive(const bal_socket* s, int value);
+bool bal_getkeepalive(const bal_socket* s, int* value);
 
-int bal_setoobinline(const bal_socket* s, int flag);
-int bal_getoobinline(const bal_socket* s);
+bool bal_setoobinline(const bal_socket* s, int value);
+bool bal_getoobinline(const bal_socket* s, int* value);
 
-int bal_setreuseaddr(const bal_socket* s, int flag);
-int bal_getreuseaddr(const bal_socket* s);
+bool bal_setreuseaddr(const bal_socket* s, int value);
+bool bal_getreuseaddr(const bal_socket* s, int* value);
 
-int bal_setsendbufsize(const bal_socket* s, int size);
-int bal_getsendbufsize(const bal_socket* s);
+bool bal_setsendbufsize(const bal_socket* s, int size);
+bool bal_getsendbufsize(const bal_socket* s, int* size);
 
-int bal_setrecvbufsize(const bal_socket* s, int size);
-int bal_getrecvbufsize(const bal_socket* s);
+bool bal_setrecvbufsize(const bal_socket* s, int size);
+bool bal_getrecvbufsize(const bal_socket* s, int* size);
 
-int bal_setsendtimeout(const bal_socket* s, long sec, long usec);
-int bal_getsendtimeout(const bal_socket* s, long* sec, long* usec);
+bool bal_setsendtimeout(const bal_socket* s, long sec, long usec);
+bool bal_getsendtimeout(const bal_socket* s, long* sec, long* usec);
 
-int bal_setrecvtimeout(const bal_socket* s, long sec, long usec);
-int bal_getrecvtimeout(const bal_socket* s, long* sec, long* usec);
+bool bal_set_recv_timeout(const bal_socket* s, long sec, long usec);
+bool bal_get_recv_timeout(const bal_socket* s, long* sec, long* usec);
 
 int bal_geterror(const bal_socket* s);
 
@@ -124,26 +125,26 @@ void bal_remfrommask(bal_socket* s, uint32_t bits)
 }
 
 static inline
-bool bal_bitsinmask(bal_socket* s, uint32_t bits)
+bool bal_bitsinmask(const bal_socket* s, uint32_t bits)
 {
     return _bal_validptr(s) ? bal_isbitset(s->state.mask, bits) : false;
 }
 
-int bal_setiomode(const bal_socket* s, bool async);
-size_t bal_recvqueuesize(const bal_socket* s);
+bool bal_set_io_mode(const bal_socket* s, bool async);
+size_t bal_get_recvqueue_size(const bal_socket* s);
 
 int bal_getlasterror(const bal_socket* s, bal_error* err);
 
-int bal_resolvehost(const char* host, bal_addrlist* out);
-int bal_getremotehostaddr(const bal_socket* s, bal_sockaddr* out);
-int bal_getremotehoststrings(const bal_socket* s, int dns, bal_addrstrings* out);
-int bal_getlocalhostaddr(const bal_socket* s, bal_sockaddr* out);
-int bal_getlocalhoststrings(const bal_socket* s, int dns, bal_addrstrings* out);
-int bal_getaddrstrings(const bal_sockaddr* in, bool dns, bal_addrstrings* out);
+bool bal_resolve_host(const char* host, bal_addrlist* out);
+bool bal_get_peer_addr(const bal_socket* s, bal_sockaddr* out);
+bool bal_get_peer_host_strings(const bal_socket* s, int dns, bal_addrstrings* out);
+bool bal_get_localhost_addr(const bal_socket* s, bal_sockaddr* out);
+bool bal_get_localhost_strings(const bal_socket* s, int dns, bal_addrstrings* out);
+bool bal_get_addrstrings(const bal_sockaddr* in, bool dns, bal_addrstrings* out);
 
-int bal_resetaddrlist(bal_addrlist* al);
-const bal_sockaddr* bal_enumaddrlist(bal_addrlist* al);
-int bal_freeaddrlist(bal_addrlist* al);
+bool bal_reset_addrlist(bal_addrlist* al);
+const bal_sockaddr* bal_enum_addrlist(bal_addrlist* al);
+bool bal_free_addrlist(bal_addrlist* al);
 
 void bal_thread_yield(void);
 void bal_sleep_msec(uint32_t msec);

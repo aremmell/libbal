@@ -40,16 +40,16 @@ extern "C" {
 bool _bal_init(void);
 bool _bal_cleanup(void);
 
-int _bal_asyncpoll(bal_socket* s, bal_async_cb proc, uint32_t mask);
+bool _bal_asyncpoll(bal_socket* s, bal_async_cb proc, uint32_t mask);
 
 bool _bal_init_asyncpoll(void);
 bool _bal_cleanup_asyncpoll(void);
 
-int _bal_sock_destroy(bal_socket** s);
+void _bal_sock_destroy(bal_socket** s);
 
-int _bal_getaddrinfo(int flags, int addr_fam, int type, const char* host,
+bool _bal_get_addrinfo(int flags, int addr_fam, int type, const char* host,
     const char* port, struct addrinfo** res);
-int _bal_getnameinfo(int f, const bal_sockaddr* in, char* host, char* port);
+bool _bal_getnameinfo(int flags, const bal_sockaddr* in, char* host, char* port);
 
 bool _bal_is_pending_conn(const bal_socket* s);
 bool _bal_is_closed_conn(const bal_socket* s);
@@ -65,8 +65,7 @@ void _bal_dispatch_events(bal_descriptor sd, bal_socket* s, uint32_t events);
 bool _bal_list_create(bal_list** lst);
 
 /** Creates a node and assigns key and value to it. */
-bool _bal_list_create_node(bal_list_node** node, bal_descriptor key,
-    bal_socket* val);
+bool _bal_list_create_node(bal_list_node** node, bal_descriptor key, bal_socket* val);
 
 /** Appends a node with the supplied key and value to the end of the list. */
 bool _bal_list_add(bal_list* lst, bal_descriptor key, bal_socket* val);
@@ -129,7 +128,7 @@ void _bal_set_boolean(bool* boolean, bool value);
 bool _bal_once(bal_once* once, bal_once_fn func);
 
 /** Converts an addrinfo linked-list into a bal_addrlist. */
-int _bal_aitoal(struct addrinfo* ai, bal_addrlist* out);
+bool _bal_addrinfo_to_addrlist(struct addrinfo* ai, bal_addrlist* out);
 
 /** Uses the best-avaiable string copying routine. */
 void _bal_strcpy(char* dest, size_t destsz, const char* src, size_t srcsz);

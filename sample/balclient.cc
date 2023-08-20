@@ -43,7 +43,7 @@ int main(int argc, char** argv)
     }
 
     bal_socket* s = nullptr;
-    int ret = bal_sock_create(&s, AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    bool ret = bal_sock_create(&s, AF_INET, SOCK_STREAM, IPPROTO_TCP);
     EXIT_IF_FAILED(ret, "bal_sock_create");
 
     string remote_host = balcommon::get_input_line("Enter server hostname",
@@ -64,7 +64,7 @@ int main(int argc, char** argv)
         bal_thread_yield();
     } while (balcommon::should_run());
 
-    if (BAL_TRUE != bal_close(&s, true)) {
+    if (!bal_close(&s, true)) {
         balcommon::print_last_lib_error("bal_close");
     }
 

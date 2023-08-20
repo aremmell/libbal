@@ -78,7 +78,7 @@
 #   endif
 #  endif
 
-# define __STDC_WANT_LIB_EXT1__ 1
+#  define __STDC_WANT_LIB_EXT1__ 1
 
 #  if defined(__linux__)
 #   include <sys/syscall.h>
@@ -241,11 +241,7 @@ typedef unsigned bal_threadret;
 # include <inttypes.h>
 # include <assert.h>
 
-# define BAL_TRUE        0
-# define BAL_FALSE      -1
-# define BAL_BADSOCKET  -1
 # define BAL_MAXERROR 1024
-
 # define BAL_UNKNOWN "<unknown>"
 
 # define BAL_AS_IPV6 "IPv6"
