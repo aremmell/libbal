@@ -93,7 +93,7 @@ void balclient::async_events_cb(bal_socket* s, uint32_t events)
 
     if (bal_isbitset(events, BAL_EVT_READ)) {
         constexpr const size_t buf_size = 2048;
-        std::array<char, buf_size> buf;
+        std::array<char, buf_size> buf {};
         int read = bal_recv(s, buf.data(), buf.size() - 1, 0);
         if (read > 0) {
             printf("[" BAL_SOCKET_SPEC "] read %d bytes: '%s'\n", s->sd, read,
