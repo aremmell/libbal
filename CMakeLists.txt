@@ -21,12 +21,21 @@ set(PROJECT_IS_DEV_BUILD true)
 # create compile commands for static analysis
 set(CMAKE_EXPORT_COMPILE_COMMANDS true)
 
-# select the C/C++ standard we can use based on the CMake version
+# select the C/C++ standards we can use based on the CMake version
 if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.21")
-    set(CMAKE_C_STANDARD, 17)
+    set(CMAKE_C_STANDARD 17)
 else()
-    set(CMAKE_C_STANDARD, 11)
+    set(CMAKE_C_STANDARD 11)
 endif()
+
+if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.12")
+    set(CMAKE_CXX_STANDARD 20)
+else()
+    set(CMAKE_CXX_STANDARD 17)
+endif()
+
+set(CMAKE_C_STANDARD_REQUIRED TRUE)
+set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 
 # policy settings, so CMake doesn't whine.
 cmake_policy(SET CMP0025 NEW) # AppleClang
@@ -52,7 +61,7 @@ project(
     ${PROJECT_NAME}
     VERSION 0.2.0
     LANGUAGES C CXX
-    DESCRIPTION "Berkeley Abstraction Layer"
+    DESCRIPTION "Berkeley Abstraction Layer Library"
 )
 
 # toolchain-related
@@ -61,8 +70,9 @@ if (WIN32)
     set(CMAKE_C_FLAGS_DEBUG "${C_FLAGS_BASE} ${CMAKE_C_FLAGS} /MP /W4 /DDEBUG /DBAL_DBGLOG")
     set(CMAKE_C_FLAGS_RELEASE "${C_FLAGS_BASE} ${CMAKE_C_FLAGS} /MP /W4 /DNDEBUG")
 
-    set(CMAKE_CXX_FLAGS_DEBUG "${C_FLAGS_BASE} /DDEBUG /DBAL_DBGLOG")
-    set(CMAKE_CXX_FLAGS_RELEASE "${C_FLAGS_BASE} /DNDEBUG")
+    set(CXX_FLAGS_BASE "")
+    set(CMAKE_CXX_FLAGS_DEBUG "${CXX_FLAGS_BASE} /DDEBUG /DBAL_DBGLOG")
+    set(CMAKE_CXX_FLAGS_RELEASE "${CXX_FLAGS_BASE} /DNDEBUG")
 else()
     set(C_FLAGS_BASE "-Wall -Wextra -Wpedantic -Werror")
     set(CMAKE_C_FLAGS_DEBUG "${C_FLAGS_BASE} -g3 -O0 -DDEBUG -DBAL_DBGLOG")
@@ -151,6 +161,7 @@ target_link_libraries(
     ${STATIC_LIBRARY_NAME}
 )
 
+if(!WIN32)
 target_link_libraries(
     ${SERVER_EXECUTABLE_NAME}
     Threads::Threads
@@ -160,29 +171,30 @@ target_link_libraries(
     ${CLIENT_EXECUTABLE_NAME}
     Threads::Threads
 )
+endif()
 
 target_compile_features(
     ${CLIENT_EXECUTABLE_NAME}
     PUBLIC
-    cxx_std_20
+    ${CXX_STANDARD}
 )
 
 target_compile_features(
     ${SERVER_EXECUTABLE_NAME}
     PUBLIC
-    cxx_std_20
+    ${CXX_STANDARD}
 )
 
 target_compile_features(
     ${STATIC_LIBRARY_NAME}
     PUBLIC
-    ${CMAKE_C_STANDARD}
+    ${C_STANDARD}
 )
 
 target_compile_features(
     ${SHARED_LIBRARY_NAME}
     PUBLIC
-    ${CMAKE_C_STANDARD}
+    ${C_STANDARD}
 )
 
 install(
