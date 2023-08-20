@@ -1,7 +1,21 @@
 {
     "configurations": [
         {
-            "name": "(lldb) Launch balserver",
+            "name": "lldb: Attach (client)",
+            "type": "cppdbg",
+            "request": "attach",
+            "program": "${workspaceFolder}/build/balclient",
+            "MIMode": "lldb"
+        },
+        {
+            "name": "lldb: Attach (server)",
+            "type": "cppdbg",
+            "request": "attach",
+            "program": "${workspaceFolder}/build/balserver",
+            "MIMode": "lldb"
+        },
+        {
+            "name": "lldb: Launch (server)",
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/build/balserver",
@@ -13,7 +27,7 @@
             "MIMode": "lldb"
         },
         {
-            "name": "(lldb) Launch balclient",
+            "name": "lldb: Launch (client)",
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/build/balclient",
