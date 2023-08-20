@@ -35,6 +35,7 @@
 #  elif defined(__linux__)
 #   undef _GNU_SOURCE
 #   define _GNU_SOURCE
+#   define __HAVE_POLLRDHUP__
 #  elif defined(__OpenBSD__)
 #   define __BSD__
 #   define __FreeBSD_PTHREAD_NP_11_3__
@@ -49,6 +50,9 @@
 #   define _BSD_SOURCE
 #   if !defined(_DEFAULT_SOURCE)
 #    define _DEFAULT_SOURCE
+#   endif
+#   if !defined(__DragonFly__)
+#    define __HAVE_POLLRDHUP__
 #   endif
 #   include <sys/param.h>
 #   if __FreeBSD_version >= 1202500

@@ -375,15 +375,15 @@ bool _bal_is_closed_conn(const bal_socket* s)
 
     int buf = 0;
     int rcv = bal_recv(s, &buf, sizeof(int), MSG_PEEK | MSG_DONTWAIT);
-    if (0 == rcv) {
+    if (0 == rcv)
         return true;
-    } else if (-1 == rcv) {
+    if (-1 == rcv) {
         int error = errno;
-        if (ENETDOWN == error     || ENOTCONN == error     ||
-            ECONNREFUSED == error || ESHUTDOWN == error    ||
-            ECONNABORTED == error || ECONNRESET == error   ||
-            ENETUNREACH == error  || ENETRESET == error    ||
-            EHOSTDOWN   == error  || EHOSTUNREACH == error)
+        if (ENETDOWN     == error || ENOTCONN     == error ||
+            ECONNREFUSED == error || ESHUTDOWN    == error ||
+            ECONNABORTED == error || ECONNRESET   == error ||
+            ENETUNREACH  == error || ENETRESET    == error ||
+            EHOSTDOWN    == error || EHOSTUNREACH == error)
             return true;
     }
 
@@ -414,7 +414,7 @@ uint32_t _bal_pollflags_to_events(short flags)
     if (bal_isbitset(flags, POLLHUP))
         bal_setbitshigh(&retval, BAL_EVT_CLOSE);
 
-#if defined(__linux__)
+#if defined(__HAVE_POLLRDHUP__)
     if (bal_isbitset(flags, POLLRDHUP))
         bal_setbitshigh(&retval, BAL_EVT_CLOSE);
 #endif
@@ -447,7 +447,8 @@ short _bal_mask_to_pollflags(uint32_t mask)
 
     if (bal_isbitset(mask, BAL_EVT_PRIORITY))
         bal_setbitshigh(&retval, POLLPRI);
-# if defined(__linux__)
+
+# if defined(__HAVE_POLLRDHUP__)
     if (bal_isbitset(mask, BAL_EVT_CLOSE))
         bal_setbitshigh(&retval, POLLRDHUP);
 # endif
@@ -544,6 +545,14 @@ void _bal_dispatch_events(bal_descriptor sd, bal_socket* s, uint32_t events)
     if (bal_isbitset(events, BAL_EVT_READ) && bal_bitsinmask(s, BAL_EVT_READ)) {
         if (bal_islistening(s)) {
             bal_setbitshigh(&_events, BAL_EVT_ACCEPT);
+#if !defined(__HAVE_POLLRDHUP__)
+        } else if (_bal_is_closed_conn(s)) {
+            /* Some platforms insist upon spamming read events if the peer
+             * shuts down their end of the connection, presumably prodding you
+             * to do a read, get a zero return value, and then close the socket.
+             * Just do that here, and translate it to a close event instead. */
+            bal_setbitshigh(&_events, BAL_EVT_CLOSE);
+#endif
         } else {
             bal_setbitshigh(&_events, BAL_EVT_READ);
         }
