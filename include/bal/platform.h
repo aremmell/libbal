@@ -35,7 +35,7 @@
 #  elif defined(__linux__)
 #   undef _GNU_SOURCE
 #   define _GNU_SOURCE
-#  elif defined (__FreeBSD__) || defined (__OpenBSD__) || defined (__NetBSD__) ||
+#  elif defined (__FreeBSD__) || defined (__OpenBSD__) || defined (__NetBSD__) || \
         defined (__DragonFly__)
 #   define __BSD__
 #   undef _BSD_SOURCE
