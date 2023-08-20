@@ -356,7 +356,7 @@ int _bal_getnameinfo(int f, const bal_sockaddr* in, char* host, char* port)
     return r;
 }
 
-bool _bal_ispendingconn(bal_socket* s)
+bool _bal_ispendingconn(const bal_socket* s)
 {
     return _bal_validsock(s) && bal_isbitset(s->state.bits, BAL_S_CONNECT);
 }
@@ -544,8 +544,6 @@ void _bal_dispatchevents(bal_descriptor sd, bal_socket* s, uint32_t events)
     if (bal_isbitset(events, BAL_EVT_READ) && bal_bitsinmask(s, BAL_EVT_READ)) {
         if (bal_islistening(s)) {
             bal_setbitshigh(&_events, BAL_EVT_ACCEPT);
-        } else if (_bal_isclosedconn(s)) {
-            bal_setsbitshigh(&_events, BAL_EVT_CLOSE);
         } else {
             bal_setbitshigh(&_events, BAL_EVT_READ);
         }
