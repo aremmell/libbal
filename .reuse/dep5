@@ -13,6 +13,11 @@ Files: bal.code-workspace
 Copyright: 2004-current Ryan M. Lederman <lederman@gmail.com>
 License: MIT
 
+# CMake files
+Files: CMakePresets.json
+Copyright: 2004-current Ryan M. Lederman <lederman@gmail.com>
+License: MIT
+
 # C++ sample applications
 Files: sample/*.cc sample/*.hh
 Copyright: 2004-current Ryan M. Lederman <lederman@gmail.com>
