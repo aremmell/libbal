@@ -52,6 +52,7 @@ int _bal_getaddrinfo(int flags, int addr_fam, int type, const char* host,
 int _bal_getnameinfo(int f, const bal_sockaddr* in, char* host, char* port);
 
 bool _bal_ispendingconn(bal_socket* s);
+bool _bal_isclosedconn(bal_socket* s);
 
 uint32_t _bal_pollflags_toevents(short flags);
 short _bal_mask_topollflags(uint32_t mask);
