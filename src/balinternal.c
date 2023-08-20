@@ -1002,8 +1002,8 @@ void _bal_strcpy(char* dest, size_t destsz, const char* src, size_t srcsz)
         const char* src_cursor = src;
         char* dest_cursor = dest;
 
-        while (*src_cursor != '\0' && (src_cursor - src) < destsz - 1 &&
-               (src_cursor - src) < srcsz)
+        while (*src_cursor != '\0' && (uintptr_t)(src_cursor - src) < destsz - 1 &&
+               (uintptr_t)(src_cursor - src) < srcsz)
             *(dest_cursor++) = *(src_cursor++);
         *dest_cursor = '\0';
 #endif
