@@ -936,9 +936,9 @@ void _bal_socket_print(const bal_socket* s)
 {
     if (_bal_validptr(s)) {
         printf("%p:\n{\n  sd = "BAL_SOCKET_SPEC"\n  addr_fam = %d\n  type = %d\n"
-               "  proto = %d\nstate =\n  {\n  mask = %"PRIx32"\n  proc = %p\n  }"
-               "\n}\n", (void*)s, s->sd, s->addr_fam, s->type, s->proto,
-               s->state.mask, (void*)s->state.proc);
+               "  proto = %d\nstate =\n  {\n  mask = %"PRIx32"\n  proc = %"
+               PRIxPTR"\n  }\n}\n", (void*)s, s->sd, s->addr_fam, s->type, s->proto,
+               s->state.mask, (uintptr_t)s->state.proc);
     } else {
         printf("<null>\n");
     }
