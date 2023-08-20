@@ -117,13 +117,6 @@ typedef struct {
     bal_list* lst;        /** List of active socket descriptors and their states. */
     bal_mutex mutex;      /** Mutex for access to `lst`. */
     bal_thread thread;    /** Asynchronous I/O events thread. */
-
-    bal_list* lst_add;    /** List of socket descriptors to add to `lst`. */
-    bal_list* lst_rem;    /** List of socket descriptors to remove from `lst`. */
-    bal_condition s_cond; /** Condition variable for `lst_add` and `lst_rem`. */
-    bal_mutex s_mutex;    /** Mutex for access to `lst_add` and `lst_rem`. */
-    bal_thread s_thread;  /** Data synchronization thread. */
-
 # if defined(__HAVE_STDATOMICS__) && !defined(__cplusplus)
     atomic_bool die;
 # else
