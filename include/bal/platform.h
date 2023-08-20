@@ -83,6 +83,12 @@
 #   include <stropts.h>
 #  endif
 
+#  if defined(__BSD__)
+#   if !defined(__NetBSD__)
+#    include <pthread_np.h>
+#   endif
+#  endif
+
 #  include <sys/types.h>
 #  include <sys/socket.h>
 #  include <sys/select.h>
