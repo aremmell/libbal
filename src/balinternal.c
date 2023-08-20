@@ -123,7 +123,7 @@ bool _bal_cleanup(void)
     uint_fast32_t magic = _bal_state.magic;
 #endif
 
-    ASSERT(0U == magic || BAL_MAGIC == magic);
+    BAL_ASSERT(0U == magic || BAL_MAGIC == magic);
     if (BAL_MAGIC != magic) {
 #pragma message("TODO: set error")
         _bal_dbglog("error: libbal is not initialized");
