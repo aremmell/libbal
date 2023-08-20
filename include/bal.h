@@ -51,7 +51,7 @@ int bal_sock_destroy(bal_socket** s);
 int bal_close(bal_socket** s, bool destroy);
 int bal_shutdown(bal_socket* s, int how);
 
-int bal_connect(const bal_socket* s, const char* host, const char* port);
+int bal_connect(bal_socket* s, const char* host, const char* port);
 int bal_connectaddrlist(bal_socket* s, bal_addrlist* al);
 
 int bal_send(const bal_socket* s, const void* data, bal_iolen len, int flags);

@@ -123,7 +123,8 @@ int bal_close(bal_socket** s, bool destroy)
         }
 #endif
         else {
-            _bal_dbglog("closed socket "BAL_SOCKET_SPEC" (%p)", (*s)->sd, *s);
+            _bal_dbglog("closed socket "BAL_SOCKET_SPEC" (%p, mask = %08"PRIx32")",
+                (*s)->sd, *s, (*s)->state.mask);
             bal_setbitshigh(&(*s)->state.bits, BAL_S_CLOSE);
             bal_setbitslow(&(*s)->state.bits, BAL_S_CONNECT | BAL_S_LISTEN);
             closed = BAL_TRUE;
@@ -160,18 +161,18 @@ int bal_shutdown(bal_socket* s, int how)
     return r;
 }
 
-int bal_connect(const bal_socket* s, const char* host, const char* port)
+int bal_connect(bal_socket* s, const char* host, const char* port)
 {
     int r = BAL_FALSE;
 
-    if (s && _bal_validstr(host) && _bal_validstr(port)) {
+    if (_bal_validsock(s) && _bal_validstr(host) && _bal_validstr(port)) {
         struct addrinfo* ai = NULL;
 
         if (BAL_TRUE == _bal_getaddrinfo(0, s->addr_fam, s->type, host, port, &ai)) {
             bal_addrlist al = {NULL, NULL};
 
             if (BAL_TRUE == _bal_aitoal(ai, &al)) {
-                r = bal_connectaddrlist((bal_socket*)s, &al);
+                r = bal_connectaddrlist(s, &al);
                 bal_freeaddrlist(&al);
             }
 
@@ -802,7 +803,7 @@ int bal_getaddrstrings(const bal_sockaddr* in, bool dns, bal_addrstrings* out)
             if (dns) {
                 get = _bal_getnameinfo(_BAL_NI_DNS, in, out->host, out->port);
                 if (BAL_FALSE == get)
-                    (void)strncpy(out->host, BAL_UNKNOWN, NI_MAXHOST);
+                    _bal_strcpy(out->host, NI_MAXHOST, BAL_UNKNOWN, sizeof(BAL_UNKNOWN));
             }
             if (PF_INET == ((struct sockaddr*)in)->sa_family)
                 out->type = BAL_AS_IPV4;

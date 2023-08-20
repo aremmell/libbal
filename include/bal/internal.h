@@ -42,8 +42,8 @@ bool _bal_cleanup(void);
 
 int _bal_asyncpoll(bal_socket* s, bal_async_cb proc, uint32_t mask);
 
-bool _bal_initasyncpoll(void);
-bool _bal_cleanupasyncpoll(void);
+bool _bal_init_asyncpoll(void);
+bool _bal_cleanup_asyncpoll(void);
 
 int _bal_sock_destroy(bal_socket** s);
 
@@ -51,14 +51,15 @@ int _bal_getaddrinfo(int flags, int addr_fam, int type, const char* host,
     const char* port, struct addrinfo** res);
 int _bal_getnameinfo(int f, const bal_sockaddr* in, char* host, char* port);
 
-bool _bal_ispendingconn(bal_socket* s);
+bool _bal_is_pending_conn(const bal_socket* s);
+bool _bal_is_closed_conn(const bal_socket* s);
 
-uint32_t _bal_pollflags_tomask(short flags);
-short _bal_mask_topollflags(uint32_t mask);
+uint32_t _bal_pollflags_to_events(short flags);
+short _bal_mask_to_pollflags(uint32_t mask);
 
 bal_threadret _bal_eventthread(void* ctx);
 
-void _bal_dispatchevents(bal_descriptor sd, bal_socket* s, uint32_t events);
+void _bal_dispatch_events(bal_descriptor sd, bal_socket* s, uint32_t events);
 
 /** Creates a new list. */
 bool _bal_list_create(bal_list** lst);
@@ -124,9 +125,14 @@ bool _bal_get_boolean(const bool* boolean);
 void _bal_set_boolean(bool* boolean, bool value);
 # endif
 
+/** Runs the specified function exactly once. */
 bool _bal_once(bal_once* once, bal_once_fn func);
 
+/** Converts an addrinfo linked-list into a bal_addrlist. */
 int _bal_aitoal(struct addrinfo* ai, bal_addrlist* out);
+
+/** Uses the best-avaiable string copying routine. */
+void _bal_strcpy(char* dest, size_t destsz, const char* src, size_t srcsz);
 
 /** Prints a bal_socket to stdout. */
 void _bal_socket_print(const bal_socket* s);
@@ -137,13 +143,12 @@ pid_t _bal_gettid(void);
 # endif
 
 # if defined(__WIN__)
+/** Initializes static data at initialization time. */
 BOOL CALLBACK _bal_static_once_init_func(PINIT_ONCE ponce, PVOID param, PVOID* ctx);
 # else
+/** Initializes static data at initialization time. */
 void _bal_static_once_init_func(void);
 # endif
-
-# define _BAL_NI_NODNS (NI_NUMERICHOST | NI_NUMERICSERV)
-# define _BAL_NI_DNS   (NI_NAMEREQD | NI_NUMERICSERV)
 
 # if defined(__cplusplus)
 }

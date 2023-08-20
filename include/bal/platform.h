@@ -31,23 +31,54 @@
 #   define __MACOS__
 #   undef _DARWIN_C_SOURCE
 #   define _DARWIN_C_SOURCE
+#   define __HAVE_LIBC_STRLCPY__
 #  elif defined(__linux__)
 #   undef _GNU_SOURCE
 #   define _GNU_SOURCE
-#  elif defined (__FreeBSD__)
+#   define __HAVE_POLLRDHUP__
+#  elif defined(__OpenBSD__)
 #   define __BSD__
-#   undef _BSD_SOURCE
+#   define __FreeBSD_PTHREAD_NP_11_3__
+#  elif defined(__NetBSD__)
+#   define __BSD__
+#   if !defined(_NETBSD_SOURCE)
+#    define _NETBSD_SOURCE 1
+#   endif
+#   define USE_PTHREAD_GETNAME_NP
+#  elif defined (__FreeBSD__) || defined (__DragonFly__)
+#   define __BSD__
 #   define _BSD_SOURCE
+#   if !defined(_DEFAULT_SOURCE)
+#    define _DEFAULT_SOURCE
+#   endif
+#   if !defined(__DragonFly__)
+#    define __HAVE_POLLRDHUP__
+#   endif
+#   include <sys/param.h>
+#   if __FreeBSD_version >= 1202500
+#    define __FreeBSD_PTHREAD_NP_12_2__
+#   elif __FreeBSD_version >= 1103500
+#    define __FreeBSD_PTHREAD_NP_11_3__
+#   elif __DragonFly_version >= 400907
+#    define __DragonFly_getthreadid__
+#   endif
+#   if defined(__DragonFly__)
+#    define USE_PTHREAD_GETNAME_NP
+#   endif
+#   define __HAVE_LIBC_STRLCPY__
+#  else
+#   if !defined(_POSIX_C_SOURCE)
+#    define _POSIX_C_SOURCE 200809L
+#   endif
+#   if !defined(_DEFAULT_SOURCE)
+#    define _DEFAULT_SOURCE
+#   endif
+#   if !defined(_XOPEN_SOURCE)
+#    define _XOPEN_SOURCE 700
+#   endif
 #  endif
-#  if !defined(_POSIX_C_SOURCE)
-#   define _POSIX_C_SOURCE 200809L
-#  endif
-#  if !defined(_DEFAULT_SOURCE)
-#   define _DEFAULT_SOURCE
-#  endif
-#  if !defined(_XOPEN_SOURCE)
-#   define _XOPEN_SOURCE 700
-#  endif
+
+# define __STDC_WANT_LIB_EXT1__ 1
 
 #  if defined(__linux__)
 #   include <sys/syscall.h>
@@ -56,11 +87,10 @@
 #   include <stropts.h>
 #  endif
 
-#  if defined(__linux__)
-#   include <sys/syscall.h>
-#  elif defined(__sun)
-#   include <sys/filio.h>
-#   include <stropts.h>
+#  if defined(__BSD__)
+#   if !defined(__NetBSD__)
+#    include <pthread_np.h>
+#   endif
 #  endif
 
 #  include <sys/types.h>
@@ -136,6 +166,7 @@ typedef void* bal_threadret;
 
 #  define __WIN__
 #  define _CRT_SECURE_NO_WARNINGS
+#  define __WANT_STDC_SECURE_LIB__ 1
 #  include <winsock2.h>
 #  include <ws2tcpip.h>
 #  include <shlwapi.h>
@@ -234,9 +265,9 @@ typedef unsigned bal_threadret;
 # define BAL_EVT_ALL      0x000007ffU /**< Includes all available event types. */
 # define BAL_EVT_NORMAL   0x00000bbdU /**< Excludes write, oob-write, priority. */
 
-# define BAL_S_CONNECT 0x00000001U
-# define BAL_S_LISTEN  0x00000002U
-# define BAL_S_CLOSE   0x00000004U
+# define BAL_S_CONNECT    0x00000001U
+# define BAL_S_LISTEN     0x00000002U
+# define BAL_S_CLOSE      0x00000004U
 
 # if defined(__MACOS__)
 #  undef __HAVE_SO_ACCEPTCONN__

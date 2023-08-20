@@ -81,7 +81,7 @@ void balcommon::ctrl_c_handler_impl()
     quit();
 }
 
-void balcommon::print_last_lib_error(const std::string& func /* = std::string() */)
+void balcommon::print_last_lib_error(const string& func /* = std::string() */)
 {
     bal_error err {};
     bal_getlasterror(NULL, &err);
@@ -90,9 +90,23 @@ void balcommon::print_last_lib_error(const std::string& func /* = std::string() 
          << " (" << err.desc << ")" << endl;
 }
 
-void balcommon::print_startup_banner(const std::string& name)
+void balcommon::print_startup_banner(const string& name)
 {
     cout << name << " (libbal " << bal_get_versionstring() << ")" << endl;
+}
+
+string balcommon::get_input_line(const string& prompt,
+    const string& def)
+{
+    string input;
+
+    cout << prompt << " [" << def << "]: ";
+    getline(cin, input);
+
+    if (input.empty())
+        input = def;
+
+    return input;
 }
 
 #if defined(__WIN__)

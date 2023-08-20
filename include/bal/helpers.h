@@ -29,6 +29,7 @@
 # include "types.h"
 # include "errors.h"
 
+/** Sets the specified pointer-to-pointer's value to NULL after free(). */
 static inline
 void __bal_safefree(void** pp)
 {
@@ -38,48 +39,71 @@ void __bal_safefree(void** pp)
     }
 }
 
+/** Coalesces types into void** for use by __bal_safefree. */
 # define _bal_safefree(pp) __bal_safefree((void**)(pp))
 
+/** Whether the specified pointeris non-null. Sets last error to EINVAL if not. */
 # define _bal_validptr(p) \
     (NULL != (p) ? true : _bal_handleerr(EINVAL))
 
+/** Whether the specified pointer-to-pointer is non-null. Sets last error to
+ * EINVAL if not. */
 # define _bal_validptrptr(pp) \
     (NULL != (pp) ? true : _bal_handleerr(EINVAL))
 
+/** Whether the specified pointer to string is non-null, and contains a non-zero
+ * value at index 0. Sets last error to EINVAL if not. */
 # define _bal_validstr(str) \
     ((NULL != (str) && '\0' != *(str)) ? true : _bal_handleerr(EINVAL))
 
+/** Whether the specified socket is non-null, and has a valid descriptor
+ * value. Sets last error to EINVAL if not. */
 # define _bal_validsock(s) \
     ((NULL != (s) && BAL_BADSOCKET != (s)->sd) ? true : _bal_handleerr(EINVAL))
 
+/** Whether or not the specified length is > 0. Sets last error to EINVAL if not. */
 # define _bal_validlen(len) \
     ((len) > 0 ? true : _bal_handleerr(EINVAL))
 
+/** Whether or not a particular bit or set of bits are set in a bitmask. */
 # define bal_isbitset(bitmask, bit) (((bitmask) & (bit)) == (bit))
 
+/** Sets the specified bits to one in the target bitmask. */
 # define bal_setbitshigh(pbitmask, bits) \
-    if ((pbitmask)) { \
+    if (NULL != (pbitmask)) { \
         (*(pbitmask)) |= (bits); \
     }
 
+/** Sets the specified bits to zero in the target bitmask. */
 # define bal_setbitslow(pbitmask, bits) \
-    if ((pbitmask)) { \
+    if (NULL != (pbitmask)) { \
         (*(pbitmask)) &= ~(bits); \
     }
 
+/** Returns the size of a sockaddr (IPv4/IPv6). */
 # define _BAL_SASIZE(sa) \
     ((PF_INET6 == ((struct sockaddr* )&(sa))->sa_family) \
         ? sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in))
 
+/** Returns the number of entries in an array. */
 # define _bal_countof(arr) (sizeof((arr)) / sizeof((arr)[0]))
 
+/** Allows a parameter to be unreferenced without compiler warnings. */
 # define BAL_UNUSED(var) (void)(var)
 
+/** Used with getnameinfo: do not perform DNS queries. */
+# define _BAL_NI_NODNS (NI_NUMERICHOST | NI_NUMERICSERV)
+
+/** Used with getnameinfo: perform DNS queries. */
+# define _BAL_NI_DNS   (NI_NAMEREQD | NI_NUMERICSERV)
+
+/** Locks the specified mutex, asserts that it was locked and enters an if-block. */
 # define _BAL_ENTER_MUTEX(m, name) \
     bool name##_locked = _bal_mutex_lock(m); \
     BAL_ASSERT(name##_locked); \
     if (name##_locked) {
 
+/** Unlocks a mutex, asserts that it was unlocked and ends an if-block. */
 # define _BAL_LEAVE_MUTEX(m, name) \
     bool name##_unlocked = _bal_mutex_unlock(m); \
     BAL_ASSERT_UNUSED(name##_unlocked, name##_unlocked); \
