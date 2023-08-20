@@ -46,10 +46,15 @@ int main(int argc, char** argv)
     int ret = bal_sock_create(&s, AF_INET, SOCK_STREAM, IPPROTO_TCP);
     EXIT_IF_FAILED(ret, "bal_sock_create");
 
+    string remote_host = balcommon::get_input_line("Enter server hostname",
+        balcommon::localaddr);
+
     ret = bal_asyncpoll(s, &balclient::async_events_cb, BAL_EVT_NORMAL);
     EXIT_IF_FAILED(ret, "bal_asyncpoll");
 
-    ret = bal_connect(s, balcommon::localaddr, balcommon::portnum);
+    printf("connecting to %s:%s...\n", remote_host.c_str(), balcommon::portnum);
+
+    ret = bal_connect(s, remote_host.c_str(), balcommon::portnum);
     EXIT_IF_FAILED(ret, "bal_connect");
 
     printf("running; ctrl+c to exit...\n");
