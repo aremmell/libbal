@@ -1025,6 +1025,11 @@ pid_t _bal_gettid(void)
     if (0 != gettid)
         (void)_bal_handleerr(gettid);
     tid = (pid_t)tid64;
+# elif (defined(__BSD__) && !defined(__NetBSD__) && !defined(__OpenBSD__)) || \
+        defined(__DragonFly_getthreadid__)
+    tid = (pid_t)pthread_getthreadid_np();
+# elif defined(__OpenBSD__)
+    tid = (pid_t)getthrid();
 # elif defined(__linux__)
 #  if (defined(__GLIBC__) && (__GLIBC__ >= 2 && __GLIBC_MINOR__ >= 30))
     tid = gettid();

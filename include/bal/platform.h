@@ -35,31 +35,46 @@
 #  elif defined(__linux__)
 #   undef _GNU_SOURCE
 #   define _GNU_SOURCE
-#  elif defined (__FreeBSD__) || defined (__OpenBSD__) || defined (__NetBSD__) || \
-        defined (__DragonFly__)
+#  elif defined(__OpenBSD__)
 #   define __BSD__
-#   undef _BSD_SOURCE
+#   define __FreeBSD_PTHREAD_NP_11_3__
+#  elif defined(__NetBSD__)
+#   define __BSD__
+#   if !defined(_NETBSD_SOURCE)
+#    define _NETBSD_SOURCE 1
+#   endif
+#   define USE_PTHREAD_GETNAME_NP
+#  elif defined (__FreeBSD__) || defined (__DragonFly__)
+#   define __BSD__
 #   define _BSD_SOURCE
+#   if !defined(_DEFAULT_SOURCE)
+#    define _DEFAULT_SOURCE
+#   endif
+#   include <sys/param.h>
+#   if __FreeBSD_version >= 1202500
+#    define __FreeBSD_PTHREAD_NP_12_2__
+#   elif __FreeBSD_version >= 1103500
+#    define __FreeBSD_PTHREAD_NP_11_3__
+#   elif __DragonFly_version >= 400907
+#    define __DragonFly_getthreadid__
+#   endif
+#   if defined(__DragonFly__)
+#    define USE_PTHREAD_GETNAME_NP
+#   endif
 #   define __HAVE_LIBC_STRLCPY__
-#  endif
-#  if !defined(_POSIX_C_SOURCE)
-#   define _POSIX_C_SOURCE 200809L
-#  endif
-#  if !defined(_DEFAULT_SOURCE)
-#   define _DEFAULT_SOURCE
-#  endif
-#  if !defined(_XOPEN_SOURCE)
-#   define _XOPEN_SOURCE 700
+#  else
+#   if !defined(_POSIX_C_SOURCE)
+#    define _POSIX_C_SOURCE 200809L
+#   endif
+#   if !defined(_DEFAULT_SOURCE)
+#    define _DEFAULT_SOURCE
+#   endif
+#   if !defined(_XOPEN_SOURCE)
+#    define _XOPEN_SOURCE 700
+#   endif
 #  endif
 
 # define __STDC_WANT_LIB_EXT1__ 1
-
-#  if defined(__linux__)
-#   include <sys/syscall.h>
-#  elif defined(__sun)
-#   include <sys/filio.h>
-#   include <stropts.h>
-#  endif
 
 #  if defined(__linux__)
 #   include <sys/syscall.h>
