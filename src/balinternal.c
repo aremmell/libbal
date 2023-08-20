@@ -368,8 +368,7 @@ bool _bal_is_closed_conn(const bal_socket* s)
      * platform. If the socket were not asynchronous, this could cause an
      * indefinite hang. */
     return false;
-#endif
-
+#else
     if (!_bal_validsock(s))
         return true;
 
@@ -388,6 +387,7 @@ bool _bal_is_closed_conn(const bal_socket* s)
     }
 
     return false;
+#endif
 }
 
 uint32_t _bal_pollflags_to_events(short flags)
