@@ -447,10 +447,10 @@ short _bal_mask_topollflags(uint32_t mask)
 
     if (bal_isbitset(mask, BAL_EVT_PRIORITY))
         bal_setbitshigh(&retval, POLLPRI);
-
-#elif defined(__linux__)
+# if defined(__linux__)
     if (bal_isbitset(mask, BAL_EVT_CLOSE))
         bal_setbitshigh(&retval, POLLRDHUP);
+# endif
 #endif
 
     return retval;
