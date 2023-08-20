@@ -36,13 +36,16 @@ static bal_once _bal_static_once_init = BAL_ONCE_INIT;
 
 /* whether or not the async select handler is initialized. */
 #if defined(__HAVE_STDATOMICS__)
-static atomic_bool _bal_asyncpoll_init;
+static atomic_bool _bal_async_poll_init;
 #else
-static volatile bool _bal_asyncpoll_init = false;
+static volatile bool _bal_async_poll_init = false;
 #endif
 
 /* async I/O state container. */
 static bal_as_container _bal_as_container = {0};
+
+/* global library state. */
+static bal_state _bal_state = {0};
 
 /******************************************************************************\
  *                             Internal Functions                             *
@@ -50,54 +53,107 @@ static bal_as_container _bal_as_container = {0};
 
 bool _bal_init(void)
 {
-#if defined(__WIN__)
-    WORD wVer = MAKEWORD(2, 2);
-    WSADATA wd = {0};
-
-    if (0 != WSAStartup(wVer, &wd)) {
-        _bal_handlelasterr();
-        return false;
-    }
-#endif
-
     bool init = _bal_once(&_bal_static_once_init, &_bal_static_once_init_func);
     BAL_ASSERT(init);
 
-    if (!init) {
+    if (!init)
         _bal_dbglog("error: _bal_static_once_init_func failed");
-        return false;
+
+    _BAL_LOCK_MUTEX(&_bal_state.mutex, init);
+
+#if defined(__HAVE_STDATOMICS__)
+    uint_fast32_t magic = atomic_load(&_bal_state.magic);
+#else
+    uint_fast32_t magic = _bal_state.magic;
+#endif
+
+    if (init) {
+        BAL_ASSERT(0U == magic || BAL_MAGIC == magic);
+        if (BAL_MAGIC == magic) {
+            /* already initialized. */
+#pragma message("TODO: set error")
+            _bal_dbglog("error: libbal is already initialized");
+            init = false;
+        }
     }
 
-    init = _bal_init_asyncpoll();
-    BAL_ASSERT(init);
+#if defined(__WIN__)
+    if (init) {
+        WORD wVer  = MAKEWORD(2, 2);
+        WSADATA wd = {0};
 
-    if (!init) {
-        _bal_dbglog("error: _bal_init_asyncpoll failed");
-        bool cleanup = _bal_cleanup_asyncpoll();
-        BAL_ASSERT_UNUSED(cleanup, cleanup);
-        return false;
+        if (0 != WSAStartup(wVer, &wd)) {
+            _bal_handlelasterr();
+            init = false;
+        }
+    }
+#endif
+
+    if (init) {
+        init = _bal_init_asyncpoll();
+        if (!init) {
+            _bal_dbglog("error: _bal_init_asyncpoll failed");
+            bool cleanup = _bal_cleanup_asyncpoll();
+            BAL_ASSERT_UNUSED(cleanup, cleanup);
+        }
     }
 
-    return true;
+    if (init) {
+#if defined(__HAVE_STDATOMICS__)
+        atomic_store(&_bal_state.magic, BAL_MAGIC);
+#else
+         _bal_state.magic = BAL_MAGIC;
+#endif
+    }
+
+    _BAL_UNLOCK_MUTEX(&_bal_state.mutex, init);
+    _bal_dbglog("libbal initialized successfully");
+
+    return init;
 }
 
 bool _bal_cleanup(void)
 {
+    bool cleanup = true;
+    _BAL_LOCK_MUTEX(&_bal_state.mutex, cleanup);
+
+#if defined(__HAVE_STDATOMICS__)
+    uint_fast32_t magic = atomic_load(&_bal_state.magic);
+#else
+    uint_fast32_t magic = _bal_state.magic;
+#endif
+
+    ASSERT(0U == magic || BAL_MAGIC == magic);
+    if (BAL_MAGIC != magic) {
+#pragma message("TODO: set error")
+        _bal_dbglog("error: libbal is not initialized");
+        cleanup = false;
+    }
+
 #if defined(__WIN__)
-    (void)WSACleanup();
+        (void)WSACleanup();
 #endif
 
     if (!_bal_cleanup_asyncpoll()) {
         _bal_dbglog("error: _bal_cleanup_asyncpoll failed");
-        return false;
+        cleanup = false;
     }
+
+#if defined(__HAVE_STDATOMICS__)
+    atomic_store(&_bal_state.magic, 0U);
+#else
+    _bal_state.magic = 0U;
+#endif
+
+    _BAL_UNLOCK_MUTEX(&_bal_state.mutex, cleanup);
+    _bal_dbglog("libbal cleaned up %s", cleanup ? "successfully" : "with errors");
 
     return true;
 }
 
-bool _bal_asyncpoll(bal_socket* s, bal_async_cb proc, uint32_t mask)
+bool _bal_async_poll(bal_socket* s, bal_async_cb proc, uint32_t mask)
 {
-    if (!_bal_get_boolean(&_bal_asyncpoll_init)) {
+    if (!_bal_get_boolean(&_bal_async_poll_init)) {
         _bal_dbglog("error: async I/O not initialized; ignoring");
         return false;
     }
@@ -107,13 +163,8 @@ bool _bal_asyncpoll(bal_socket* s, bal_async_cb proc, uint32_t mask)
         return false;
     }
 
-    BAL_ASSERT(NULL != s);
-    if (!_bal_validptr(s)) {
-        return false;
-    }
-
-    BAL_ASSERT(-1 != s->sd && 0 != s->sd);
-    if (0 >= s->sd) {
+    BAL_ASSERT(_bal_validsock(s));
+    if (!_bal_validsock(s)) {
         return false;
     }
 
@@ -123,7 +174,8 @@ bool _bal_asyncpoll(bal_socket* s, bal_async_cb proc, uint32_t mask)
     }
 
     bool retval = false;
-    _BAL_ENTER_MUTEX(&_bal_as_container.mutex, asio) {
+    _BAL_LOCK_MUTEX(&_bal_as_container.mutex, asio)
+    {
         if (0U == mask) {
             /* this thread holds the mutex that guards the list, so in theory,
              * a remove operation should be possible (even if it's the current
@@ -131,8 +183,8 @@ bool _bal_asyncpoll(bal_socket* s, bal_async_cb proc, uint32_t mask)
              * iterator is attempted. */
             bal_socket* d = NULL;
             bool success  = _bal_list_remove(_bal_as_container.lst, s->sd, &d);
-
             BAL_ASSERT(NULL != d && s == d);
+
             if (success) {
                 /* The iterator is kaput, but d and s are still allocated.
                  * Since this is just a removal request, (mask = 0), don't close
@@ -170,9 +222,8 @@ bool _bal_asyncpoll(bal_socket* s, bal_async_cb proc, uint32_t mask)
                 }
             }
         }
-
-        _BAL_LEAVE_MUTEX(&_bal_as_container.mutex, asio);
     }
+    _BAL_UNLOCK_MUTEX(&_bal_as_container.mutex, asio);
 
     return retval;
 }
@@ -180,8 +231,6 @@ bool _bal_asyncpoll(bal_socket* s, bal_async_cb proc, uint32_t mask)
 bool _bal_init_asyncpoll(void)
 {
     bool init = _bal_list_create(&_bal_as_container.lst);
-    BAL_ASSERT(init);
-
     if (!init) {
         _bal_handlelasterr();
         _bal_dbglog("error: failed to create list");
@@ -189,8 +238,6 @@ bool _bal_init_asyncpoll(void)
     }
 
     init &= _bal_mutex_create(&_bal_as_container.mutex);
-    BAL_ASSERT(init);
-
     if (!init) {
         _bal_dbglog("error: failed to create mutex(es)");
         return false;
@@ -211,7 +258,6 @@ bool _bal_init_asyncpoll(void)
         *threads[n].thread = _beginthreadex(NULL, 0U, threads[n].proc,
             &_bal_as_container, 0U, NULL);
         BAL_ASSERT(0ULL != *threads[n].thread);
-
         init &= 0ULL != *threads[n].thread;
 
         if (0ULL == *threads[n].thread)
@@ -220,7 +266,6 @@ bool _bal_init_asyncpoll(void)
         int op = pthread_create(threads[n].thread, NULL, threads[n].proc,
             &_bal_as_container);
         BAL_ASSERT(0 == op);
-
         init &= 0 == op;
 
         if (0 != op)
@@ -228,7 +273,7 @@ bool _bal_init_asyncpoll(void)
 #endif
     }
 
-    _bal_set_boolean(&_bal_asyncpoll_init, true);
+    _bal_set_boolean(&_bal_async_poll_init, true);
     _bal_dbglog("async I/O initialized %s", init ? "successfully" : "with errors");
 
     return init;
@@ -237,7 +282,7 @@ bool _bal_init_asyncpoll(void)
 bool _bal_cleanup_asyncpoll(void)
 {
     _bal_set_boolean(&_bal_as_container.die, true);
-    _bal_set_boolean(&_bal_asyncpoll_init, false);
+    _bal_set_boolean(&_bal_async_poll_init, false);
 
     bal_thread* threads[] = {
         &_bal_as_container.thread
@@ -282,10 +327,10 @@ bool _bal_cleanup_asyncpoll(void)
 void _bal_sock_destroy(bal_socket** s)
 {
     if (_bal_validptrptr(s) && _bal_validptr(*s)) {
-        _BAL_ENTER_MUTEX(&_bal_as_container.mutex, sock_destroy);
+        _BAL_LOCK_MUTEX(&_bal_as_container.mutex, destroy)
 
         /* just to be safe, ensure that the socket is not currently in the
-         * async I/O list. */
+        * async I/O list. */
         bal_socket* d = NULL;
         bool removed  = _bal_list_remove(_bal_as_container.lst, (*s)->sd, &d);
 
@@ -304,7 +349,8 @@ void _bal_sock_destroy(bal_socket** s)
 
         memset(*s, 0, sizeof(bal_socket));
         _bal_safefree(s);
-        _BAL_LEAVE_MUTEX(&_bal_as_container.mutex, sock_destroy);
+
+        _BAL_UNLOCK_MUTEX(&_bal_as_container.mutex, destroy);
     }
 }
 
@@ -458,7 +504,7 @@ bal_threadret _bal_eventthread(void* ctx)
 #else
         struct pollfd* fds = NULL;
 #endif
-        _BAL_ENTER_MUTEX(&asc->mutex, dispatch)
+        _BAL_LOCK_MUTEX(&asc->mutex, dispatch);
 
         count = _bal_list_count(asc->lst);
         if (count > 0UL) {
@@ -481,9 +527,7 @@ bal_threadret _bal_eventthread(void* ctx)
 #else
                 int res = poll(fds, count, poll_timeout);
 #endif
-                if (-1 == res) {
-                    _bal_handlelasterr();
-                } else if (res > 0) {
+                if (res > 0) {
                     for (size_t n = 0UL; n < count; n++) {
                         bal_socket* s = NULL;
                         bool found    = _bal_list_find(asc->lst, fds[n].fd, &s);
@@ -495,20 +539,18 @@ bal_threadret _bal_eventthread(void* ctx)
                                 _bal_dispatch_events(fds[n].fd, s, events);
                         }
                     }
+                } else if (-1 == res) {
+                    _bal_handlelasterr();
                 }
+
                 _bal_safefree(&fds);
             }
-        }
+         } else {
+            // TODO: better alternative than sleeping here?
+            bal_sleep_msec(100);
+         }
 
-        _BAL_LEAVE_MUTEX(&asc->mutex, dispatch)
-
-        if (0 == count) {
-            // TODO: figure out how to wait in an alertable state
-            // when there's nothing to poll
-            static const uint32_t empty_sleep = 100;
-            bal_sleep_msec(empty_sleep);
-        }
-
+        _BAL_UNLOCK_MUTEX(&asc->mutex, dispatch);
         bal_thread_yield();
     }
 
@@ -531,7 +573,7 @@ void _bal_dispatch_events(bal_descriptor sd, bal_socket* s, uint32_t events)
     //_bal_dbglog("events %"PRIx32" for socket "BAL_SOCKET_SPEC, events, sd);
 
     if (bal_isbitset(events, BAL_EVT_READ) && bal_bitsinmask(s, BAL_EVT_READ)) {
-        if (bal_islistening(s)) {
+        if (bal_is_listening(s)) {
             bal_setbitshigh(&_events, BAL_EVT_ACCEPT);
 #if !defined(__HAVE_POLLRDHUP__)
         } else if (_bal_is_closed_conn(s)) {
@@ -1045,11 +1087,15 @@ BOOL CALLBACK _bal_static_once_init_func(PINIT_ONCE ponce, PVOID param, PVOID* c
 void _bal_static_once_init_func(void)
 {
 #endif
+    bool create = _bal_mutex_create(&_bal_state.mutex);
+    BAL_ASSERT_UNUSED(create, create);
 #if defined(__HAVE_STDATOMICS__)
-    atomic_init(&_bal_asyncpoll_init, false);
+    atomic_init(&_bal_state.magic, 0U);
+    atomic_init(&_bal_async_poll_init, false);
     atomic_init(&_bal_as_container.die, false);
 #else
-    _bal_asyncpoll_init = false;
+    _bal_state.magic      = 0U;
+    _bal_async_poll_init  = false;
     _bal_as_container.die = false;
 #endif
 #if defined(__WIN__)

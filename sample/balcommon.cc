@@ -84,7 +84,7 @@ void balcommon::ctrl_c_handler_impl()
 void balcommon::print_last_lib_error(const string& func /* = std::string() */)
 {
     bal_error err {};
-    bal_getlasterror(NULL, &err);
+    bal_get_last_error(NULL, &err);
 
     cerr << "libbal error: " << (func.empty() ? func + " " : "") << err.code
          << " (" << err.desc << ")" << endl;

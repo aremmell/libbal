@@ -49,8 +49,8 @@ int main(int argc, char** argv)
     string remote_host = balcommon::get_input_line("Enter server hostname",
         balcommon::localaddr);
 
-    ret = bal_asyncpoll(s, &balclient::async_events_cb, BAL_EVT_NORMAL);
-    EXIT_IF_FAILED(ret, "bal_asyncpoll");
+    ret = bal_async_poll(s, &balclient::async_events_cb, BAL_EVT_NORMAL);
+    EXIT_IF_FAILED(ret, "bal_async_poll");
 
     printf("connecting to %s:%s...\n", remote_host.c_str(), balcommon::portnum);
 
@@ -87,7 +87,7 @@ void balclient::async_events_cb(bal_socket* s, uint32_t events)
         bal_error err {};
         printf("[" BAL_SOCKET_SPEC "] failed to connect to %s:%s %d (%s)\n",
             s->sd, balcommon::localaddr, balcommon::portnum,
-            bal_getlasterror(s, &err), err.desc);
+            bal_get_last_error(s, &err), err.desc);
         balcommon::quit();
     }
 
@@ -101,7 +101,7 @@ void balclient::async_events_cb(bal_socket* s, uint32_t events)
         } else if (-1 == read) {
             bal_error err {};
             printf("[" BAL_SOCKET_SPEC "] read error %d (%s)!\n", s->sd,
-                bal_getlasterror(s, &err), err.desc);
+                bal_get_last_error(s, &err), err.desc);
         } else {
             printf("[" BAL_SOCKET_SPEC "] read EOF\n", s->sd);
         }
@@ -117,7 +117,7 @@ void balclient::async_events_cb(bal_socket* s, uint32_t events)
             if (ret <= 0) {
                 bal_error err {};
                 printf("[" BAL_SOCKET_SPEC "] write error %d (%s)!\n", s->sd,
-                    bal_getlasterror(s, &err), err.desc);
+                    bal_get_last_error(s, &err), err.desc);
             } else {
                 printf("[" BAL_SOCKET_SPEC "] wrote %d bytes\n", s->sd, ret);
                 wrote_helo = true;
@@ -136,6 +136,6 @@ void balclient::async_events_cb(bal_socket* s, uint32_t events)
     }
 
     if (bal_isbitset(events, BAL_EVT_ERROR)) {
-        printf("[" BAL_SOCKET_SPEC "] ERROR %d!\n", s->sd, bal_geterror(s));
+        printf("[" BAL_SOCKET_SPEC "] ERROR %d!\n", s->sd, bal_get_error(s));
     }
 }

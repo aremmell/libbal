@@ -35,7 +35,7 @@ static _bal_thread_local bal_error_info _error_info = {
 # pragma comment(lib, "shlwapi.lib")
 #endif
 
-int _bal_getlasterror(const bal_socket* s, bal_error* err)
+int _bal_get_last_error(const bal_socket* s, bal_error* err)
 {
     int retval = 0;
 
@@ -44,8 +44,8 @@ int _bal_getlasterror(const bal_socket* s, bal_error* err)
         bool resolved = false;
 
         if (NULL != s) {
-            err->code = bal_geterror(s);
-            if (0 != err->code)
+            err->code = bal_get_error(s);
+            if (0 != err->code && -1 != err->code)
                 resolved = true;
         }
 

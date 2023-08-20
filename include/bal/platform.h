@@ -265,6 +265,8 @@ typedef unsigned bal_threadret;
 # define BAL_S_LISTEN     0x00000002U
 # define BAL_S_CLOSE      0x00000004U
 
+# define BAL_MAGIC        0x45004500U
+
 # if defined(__MACOS__)
 #  undef __HAVE_SO_ACCEPTCONN__
 # else

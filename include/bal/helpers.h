@@ -55,7 +55,7 @@ void __bal_safefree(void** pp)
  * value at index 0. Sets last error to EINVAL if not. */
 # define _bal_validstr(str) \
     ((NULL != (str) && '\0' != *(str)) ? true : _bal_handleerr(EINVAL))
-
+#pragma message("TODO: can't just use EINVAL here. need to implement bal-level errors")
 /** Whether the specified socket is non-null, and has a valid descriptor
  * value. Sets last error to EINVAL if not. */
 # define _bal_validsock(s) \
@@ -97,16 +97,14 @@ void __bal_safefree(void** pp)
 /** Used with getnameinfo: perform DNS queries. */
 # define _BAL_NI_DNS   (NI_NAMEREQD | NI_NUMERICSERV)
 
-/** Locks the specified mutex, asserts that it was locked and enters an if-block. */
-# define _BAL_ENTER_MUTEX(m, name) \
+/** Locks the specified mutex  and asserts that it was locked. */
+# define _BAL_LOCK_MUTEX(m, name) \
     bool name##_locked = _bal_mutex_lock(m); \
-    BAL_ASSERT(name##_locked); \
-    if (name##_locked) {
+    BAL_ASSERT(name##_locked)
 
-/** Unlocks a mutex, asserts that it was unlocked and ends an if-block. */
-# define _BAL_LEAVE_MUTEX(m, name) \
+/** Unlocks a mutex and asserts that it was unlocked. */
+# define _BAL_UNLOCK_MUTEX(m, name) \
     bool name##_unlocked = _bal_mutex_unlock(m); \
-    BAL_ASSERT_UNUSED(name##_unlocked, name##_unlocked); \
-    }
+    BAL_ASSERT_UNUSED(name##_unlocked, name##_unlocked)
 
 #endif /* !_BAL_HELPERS_H_INCLUDED */
