@@ -40,21 +40,36 @@ int main(int argc, char** argv)
     size_t tests_run    = 0UL;
     size_t tests_passed = 0UL;
 
-    printf("running %zu " ULINE("libbal") " tests...\n", tests_total);
+    printf("\nrunning %zu " ULINE("libbal") " tests...\n", tests_total);
 
     for (size_t n = 0UL; n < tests_total; n++) {
-        printf("\n- %s ...\n\n", bal_tests[n].name);
+        _bal_start_test(tests_total, tests_run, bal_tests[n].name);
         bool pass = bal_tests[n].func();
-        if (pass) {
-            printf("\n- %s: PASS\n\n", bal_tests[n].name);
+        _bal_end_test(tests_total, tests_run, bal_tests[n].name, pass);
+        if (pass)
             tests_passed++;
-        } else {
-            printf("\n- %s: FAIL!\n\n", bal_tests[n].name);
-        }
         tests_run++;
     }
 
-    printf("(%zu/%zu) tests passed\n", tests_passed, tests_run);
+    _bal_end_all_tests(tests_total, tests_run, tests_passed);
+
+/*     printf(BLACK("BLACK") "\n");
+    printf(RED("RED") "\n");
+    printf(BRED("BRED") "\n");
+    printf(GREEN("GREEN") "\n");
+    printf(BGREEN("BGREEN") "\n");
+    printf(YELLOW("YELLOW") "\n");
+    printf(BYELLOW("BYELLOW") "\n");
+    printf(BLUE("BLUE") "\n");
+    printf(BBLUE("BBLUE") "\n");
+    printf(MAGENTA("MAGENTA") "\n");
+    printf(BMAGENTA("BMAGENTA") "\n");
+    printf(CYAN("CYAN") "\n");
+    printf(BCYAN("BCYAN") "\n");
+    printf(BGRAY("BGRAY") "\n");
+    printf(DGRAY("DGRAY") "\n");
+    printf(WHITE("WHITE") "\n"); */
+
 
     return tests_passed == tests_run ? EXIT_SUCCESS : EXIT_FAILURE;
 }
@@ -99,7 +114,7 @@ bool baltest_error_sanity(void)
         (void)_bal_get_last_error(&err);
         pass &= err.code == error_dict[n].code;
         pass &= err.desc[0] != '\0';
-        printf("%s = %s\n", error_dict[n].as_string, err.desc);
+        _bal_test_msg("%s = %s", error_dict[n].as_string, err.desc);
     }
 
     /* test OS-level errors. */
@@ -115,7 +130,7 @@ bool baltest_error_sanity(void)
     (void)_bal_get_last_error(&err);
     pass &= err.code == os_err;
     pass &= err.desc[0] != '\0';
-    printf("%d = %s\n", os_err, err.desc);
+    _bal_test_msg("%d = %s", os_err, err.desc);
 
     return pass;
 }
@@ -124,10 +139,45 @@ bool baltest_error_sanity(void)
  *                                Test Harness                                *
 \******************************************************************************/
 
-/* void _bal_print(int text_attr, int fg_color, int bg_color, const char* format, ...)
+void _bal_start_all_tests(size_t total)
 {
+    printf("\n" WHITEB("running %zu " ULINE("libbal") " %s...") "\n", total,
+        _TEST_PLURAL(total));
 }
 
-void _bal_infomsg(const char* format, ...)
+void _bal_start_test(size_t total, size_t run, const char* name)
 {
-} */
+    printf("\n" WHITEB("(%zu/%zu) '%s'...") "\n\n", run + 1, total, name);
+}
+
+void _bal_test_msg(const char* format, ...)
+{
+    char tmp[1024] = {0};
+    va_list args;
+
+    va_start(args, format);
+    (void)vsnprintf(tmp, sizeof(tmp), format, args);
+    va_end(args);
+
+    printf("\t%s\n", tmp);
+}
+
+void _bal_end_test(size_t total, size_t run, const char* name, bool pass)
+{
+    if (pass) {
+        printf("\n" WHITEB("(%zu/%zu) '%s': ") GREEN("PASS") "\n\n", run + 1, total, name);
+    } else {
+        printf("\n" WHITEB("(%zu/%zu) '%s': ") RED("FAIL") "\n\n", run + 1, total, name);
+    }
+}
+
+void _bal_end_all_tests(size_t total, size_t run, size_t passed)
+{
+    if (run == passed) {
+        printf(GREENB("all %zu "  ULINE("libbal") " %s passed!") "\n", run,
+            _TEST_PLURAL(run));
+    } else {
+        printf(REDB("%zu of %zu " ULINE("libbal") " %s failed") "\n", run - passed,
+            total, _TEST_PLURAL(run - passed));
+    }
+}
