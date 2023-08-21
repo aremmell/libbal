@@ -27,33 +27,42 @@
 #include "bal/errors.h"
 #include "bal/internal.h"
 
+/** Container for information about the last error that occurred on this thread. */
 static _bal_thread_local bal_error_info _error_info = {
     0, BAL_UNKNOWN, BAL_UNKNOWN, 0U, false
+};
+
+/** Map of defined libbal-specific packed error code values <-> descriptions. */
+static const struct {
+    const int code;
+    const char* const desc;
+} bal_error_dict[] = {
+    {_BAL_E_NULLPTR,    "NULL pointer argument"},
+    {_BAL_E_BADSTRING,  "Invalid string argument"},
+    {_BAL_E_BADSOCKET,  "Invalid bal_socket argument"},
+    {_BAL_E_BADBUFLEN,  "Invalid buffer length argument"},
+    {_BAL_E_INVALIDARG, "Invalid argument"},
+    {_BAL_E_NOTINIT,    "libbal is not initialized"},
+    {_BAL_E_DUPEINIT,   "libbal is already initialized"},
+    {_BAL_E_DUPESOCKET, "Socket is already registered for asynchronous I/O events"},
+    {_BAL_E_NOSOCKET,   "Socket is not registered for asynchronous I/O events"},
+    {_BAL_E_BADEVTMASK, "Invalid asynchronous I/O event bitmask"},
+    {_BAL_E_INTERNAL,   "An internal error has occurred"},
+    {_BAL_E_UNAVAIL,    "Feature is disabled or unavailable"}
 };
 
 #if defined(__WIN__)
 # pragma comment(lib, "shlwapi.lib")
 #endif
 
-int _bal_get_last_error(const bal_socket* s, bal_error* err)
+int _bal_get_last_error(bal_error* err)
 {
     int retval = 0;
 
     if (_bal_validptr(err)) {
         memset(err, 0, sizeof(bal_error));
-        bool resolved = false;
-
-        if (NULL != s) {
-            err->code = bal_get_error(s);
-            if (0 != err->code && -1 != err->code)
-                resolved = true;
-        }
-
-        if (!resolved)
-            err->code = _error_info.code;
-
-        retval = err->code;
-        _bal_formaterrormsg(err->code, err->desc, (NULL != s) ? false : _error_info.gai);
+        retval = err->code = _error_info.code;
+        _bal_formaterrormsg(err, _error_info.gai);
     }
 
     return retval;
@@ -71,50 +80,79 @@ bool __bal_setlasterror(int code, const char* func, const char* file,
     return false;
 }
 
-void _bal_formaterrormsg(int err, char buf[BAL_MAXERROR], bool gai)
+void _bal_formaterrormsg(bal_error* err, bool gai)
 {
-    buf[0] = '\0';
+    if (!_bal_validptr(err))
+        return;
 
+    memset(err, 0, sizeof(bal_error));
+    err->code = _error_info.code;
+
+    char raw_msg[BAL_MAXERROR] = {0};
+
+    /* libbal packed error code value? */
+    if (!_bal_is_error(err->code)) {
+        /* no; format message from platform. */
 #if defined(__WIN__)
-    DWORD flags = FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS |
-                  FORMAT_MESSAGE_MAX_WIDTH_MASK;
-    DWORD fmt = FormatMessageA(flags, NULL, (DWORD)err, 0UL, buf, BAL_MAXERROR, NULL);
-    assert(0UL != fmt);
+        BAL_UNUSED(gai);
 
-    if (fmt > 0UL) {
-        if (buf[fmt - 1] == '\n' || buf[fmt - 1] == ' ')
-            buf[fmt - 1] = '\0';
-    }
+        DWORD flags = FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS |
+                      FORMAT_MESSAGE_MAX_WIDTH_MASK;
+        DWORD fmt = FormatMessageA(flags, NULL, (DWORD)err->code, 0UL, raw_msg,
+            BAL_MAXERROR, NULL);
 
-    BAL_UNUSED(gai);
+        assert(0UL != fmt);
+        if (fmt > 0UL) {
+            if (raw_msg[fmt - 1] == '\n' || raw_msg[fmt - 1] == ' ')
+                raw_msg[fmt - 1] = '\0';
+        }
 #else
-    if (gai) {
-        const char* tmp = gai_strerror(err);
-        _bal_strcpy(buf, BAL_MAXERROR, tmp, strnlen(tmp, BAL_MAXERROR));
-    } else {
-     int finderr = -1;
+        if (gai) {
+            const char* tmp = gai_strerror(err->code);
+            _bal_strcpy(raw_msg, BAL_MAXERROR, tmp, strnlen(tmp, BAL_MAXERROR));
+        } else {
+            int finderr = -1;
 # if defined(__HAVE_XSI_STRERROR_R__)
-        finderr = strerror_r(err, buf, BAL_MAXERROR);
+            finderr = strerror_r(err->code, raw_msg, BAL_MAXERROR);
 #  if defined(__HAVE_XSI_STRERROR_R_ERRNO__)
-        if (finderr == -1)
-            finderr = errno;
+            if (finderr == -1)
+                finderr = errno;
 #  endif
 # elif defined(__HAVE_GNU_STRERROR_R__)
-        char* tmp = strerror_r(err, buf, BAL_MAXERROR);
-        if (tmp != buf)
-            _bal_strcpy(buf, BAL_MAXERROR, tmp, strnlen(tmp, BAL_MAXERROR));
+            char* tmp = strerror_r(err->code, raw_msg, BAL_MAXERROR);
+            if (tmp != raw_msg)
+                _bal_strcpy(raw_msg, BAL_MAXERROR, tmp, strnlen(tmp, BAL_MAXERROR));
 # elif defined(__HAVE_STRERROR_S__)
-        finderr = (int)strerror_s(buf, BAL_MAXERROR, err);
+            finderr = (int)strerror_s(raw_msg, BAL_MAXERROR, err->code);
 # else
-        char* tmp = strerror(err);
-        _bal_strcpy(buf, BAL_MAXERROR, tmp, strnlen(tmp, BAL_MAXERROR));
+            char* tmp = strerror(err->code);
+            _bal_strcpy(raw_msg, BAL_MAXERROR, tmp, strnlen(tmp, BAL_MAXERROR));
 # endif
 # if defined(__HAVE_XSI_STRERROR_R__) || defined(__HAVE_STRERROR_S__)
-        assert(0 == finderr);
+            assert(0 == finderr);
 # endif
-        BAL_UNUSED(finderr);
-    }
+            BAL_UNUSED(finderr);
+        }
 #endif
+        char pform_msg[BAL_MAXERROR] = {0};
+        (void)snprintf(pform_msg, BAL_MAXERROR, BAL_PFORMERRORFORMAT, err->code,
+            raw_msg);
+        (void)snprintf(err->desc, BAL_MAXERROR, BAL_ERRORFORMAT, _error_info.func,
+            _error_info.file, _error_info.line, pform_msg);
+    } else {
+        bool found = false;
+        for (size_t n = 0UL; n < _bal_countof(bal_error_dict); n++) {
+            if (bal_error_dict[n].code == err->code) {
+                found = true;
+                err->code = _bal_err_code(err->code);
+                (void)snprintf(err->desc, BAL_MAXERROR, BAL_ERRORFORMAT,
+                    _error_info.func, _error_info.file, _error_info.line,
+                    bal_error_dict[n].desc);
+                break;
+            }
+        }
+        assert(found);
+    }
 }
 
 #if defined(BAL_DBGLOG)

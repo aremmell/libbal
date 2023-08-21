@@ -87,7 +87,7 @@ void balclient::async_events_cb(bal_socket* s, uint32_t events)
         bal_error err {};
         printf("[" BAL_SOCKET_SPEC "] failed to connect to %s:%s %d (%s)\n",
             s->sd, balcommon::localaddr, balcommon::portnum,
-            bal_get_last_error(s, &err), err.desc);
+            bal_get_last_error(&err), err.desc);
         balcommon::quit();
     }
 
@@ -101,7 +101,7 @@ void balclient::async_events_cb(bal_socket* s, uint32_t events)
         } else if (-1 == read) {
             bal_error err {};
             printf("[" BAL_SOCKET_SPEC "] read error %d (%s)!\n", s->sd,
-                bal_get_last_error(s, &err), err.desc);
+                bal_get_last_error(&err), err.desc);
         } else {
             printf("[" BAL_SOCKET_SPEC "] read EOF\n", s->sd);
         }
@@ -117,7 +117,7 @@ void balclient::async_events_cb(bal_socket* s, uint32_t events)
             if (ret <= 0) {
                 bal_error err {};
                 printf("[" BAL_SOCKET_SPEC "] write error %d (%s)!\n", s->sd,
-                    bal_get_last_error(s, &err), err.desc);
+                    bal_get_last_error(&err), err.desc);
             } else {
                 printf("[" BAL_SOCKET_SPEC "] wrote %d bytes\n", s->sd, ret);
                 wrote_helo = true;

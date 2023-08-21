@@ -71,8 +71,7 @@ bool _bal_init(void)
         BAL_ASSERT(0U == magic || BAL_MAGIC == magic);
         if (BAL_MAGIC == magic) {
             /* already initialized. */
-#pragma message("TODO: set error")
-            _bal_dbglog("error: libbal is already initialized");
+            _bal_handleerr(_BAL_E_DUPEINIT);
             init = false;
         }
     }
@@ -125,8 +124,7 @@ bool _bal_cleanup(void)
 
     BAL_ASSERT(0U == magic || BAL_MAGIC == magic);
     if (BAL_MAGIC != magic) {
-#pragma message("TODO: set error")
-        _bal_dbglog("error: libbal is not initialized");
+        _bal_handleerr(_BAL_E_NOTINIT);
         cleanup = false;
     }
 

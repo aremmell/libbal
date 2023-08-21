@@ -1,6 +1,18 @@
 {
     "configurations": [
         {
+            "name": "lldb: Launch (tests)",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/baltests",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "lldb"
+        },
+        {
             "name": "gdb: Launch (server)",
             "type": "cppdbg",
             "request": "launch",

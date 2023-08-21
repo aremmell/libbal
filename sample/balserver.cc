@@ -125,7 +125,7 @@ void balserver::async_events_cb(bal_socket* s, uint32_t events)
         } else if (-1 == read) {
             bal_error err {};
             printf("[" BAL_SOCKET_SPEC "] read error %d (%s)!\n", s->sd,
-                bal_get_last_error(s, &err), err.desc);
+                bal_get_last_error(&err), err.desc);
         } else {
             printf("[" BAL_SOCKET_SPEC "] read EOF\n", s->sd);
         }
@@ -145,7 +145,7 @@ void balserver::async_events_cb(bal_socket* s, uint32_t events)
             } else {
                 bal_error err {};
                 printf("[" BAL_SOCKET_SPEC "] write error %d (%s)!\n", s->sd,
-                    bal_get_last_error(s, &err), err.desc);
+                    bal_get_last_error(&err), err.desc);
             }
             bal_remfrommask(s, BAL_EVT_WRITE);
         }

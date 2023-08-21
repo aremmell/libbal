@@ -555,9 +555,9 @@ int bal_get_error(const bal_socket* s)
     return err;
 }
 
-int bal_get_last_error(const bal_socket* s, bal_error* err)
+int bal_get_last_error(bal_error* err)
 {
-    return _bal_get_last_error(s, err);
+    return _bal_get_last_error(err);
 }
 
 bool bal_is_readable(const bal_socket* s)

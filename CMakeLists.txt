@@ -9,6 +9,7 @@ cmake_minimum_required(
 set(PROJECT_NAME bal)
 set(CLIENT_EXECUTABLE_NAME balclient)
 set(SERVER_EXECUTABLE_NAME balserver)
+set(TESTS_EXECUTABLE_NAME baltests)
 set(STATIC_LIBRARY_NAME bal_static)
 set(SHARED_LIBRARY_NAME bal_shared)
 
@@ -112,6 +113,11 @@ add_executable(
     sample/balcommon.cc
 )
 
+add_executable(
+    ${TESTS_EXECUTABLE_NAME}
+    tests/tests.c
+)
+
 file(
     GLOB
     BAL_SRC
@@ -138,7 +144,6 @@ endif()
 target_include_directories(
     ${STATIC_LIBRARY_NAME}
     PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_BINARY_DIR}/include
 )
@@ -146,7 +151,13 @@ target_include_directories(
 target_include_directories(
     ${SHARED_LIBRARY_NAME}
     PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_BINARY_DIR}/include
+)
+
+target_include_directories(
+    ${TESTS_EXECUTABLE_NAME}
+    PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_BINARY_DIR}/include
 )
@@ -161,16 +172,26 @@ target_link_libraries(
     ${STATIC_LIBRARY_NAME}
 )
 
-if(!WIN32)
 target_link_libraries(
-    ${SERVER_EXECUTABLE_NAME}
-    Threads::Threads
+    ${TESTS_EXECUTABLE_NAME}
+    ${STATIC_LIBRARY_NAME}
 )
 
-target_link_libraries(
-    ${CLIENT_EXECUTABLE_NAME}
-    Threads::Threads
-)
+if(!WIN32)
+    target_link_libraries(
+        ${SERVER_EXECUTABLE_NAME}
+        Threads::Threads
+    )
+
+    target_link_libraries(
+        ${CLIENT_EXECUTABLE_NAME}
+        Threads::Threads
+    )
+
+    target_link_libraries(
+        ${TESTS_EXECUTABLE_NAME}
+        Threads::Threads
+    )
 endif()
 
 target_compile_features(
@@ -183,6 +204,12 @@ target_compile_features(
     ${SERVER_EXECUTABLE_NAME}
     PUBLIC
     ${CXX_STANDARD}
+)
+
+target_compile_features(
+    ${TESTS_EXECUTABLE_NAME}
+    PUBLIC
+    ${C_STANDARD}
 )
 
 target_compile_features(
