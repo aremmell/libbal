@@ -89,7 +89,7 @@ typedef struct {
     } loc;
     struct {
         int code;
-        char message[BAL_MAXERROR];
+        char msg[BAL_MAXERROR];
     } os;
 } bal_thread_error_info;
 

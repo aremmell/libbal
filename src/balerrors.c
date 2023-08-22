@@ -47,8 +47,8 @@ static const char* const BAL_ERRFMT = "%s";
 /** Map of defined libbal-specific packed error code values <-> descriptions. */
 static const struct {
     const int code;
-    const char* const message;
-} bal_error_dict[] = {
+    const char* const msg;
+} bal_errors[] = {
     {_BAL_E_NULLPTR,    "NULL pointer argument"},
     {_BAL_E_BADSTRING,  "Invalid string argument"},
     {_BAL_E_BADSOCKET,  "Invalid bal_socket argument"},
@@ -72,35 +72,32 @@ int _bal_get_error(bal_error* err, bool extended)
 
     if (_bal_validptr(err)) {
         memset(err, 0, sizeof(bal_error));
-        bool found = false;
-        for (size_t n = 0UL; n < _bal_countof(bal_error_dict); n++) {
-            if (bal_error_dict[n].code == _bal_tei.code) {
-                found = true;
+        for (size_t n = 0UL; n < _bal_countof(bal_errors); n++) {
+            if (bal_errors[n].code == _bal_tei.code) {
                 char* heap_msg = NULL;
-                if (_BAL_E_PLATFORM == bal_error_dict[n].code) {
+                if (_BAL_E_PLATFORM == bal_errors[n].code) {
                     heap_msg = calloc(BAL_MAXERROR, sizeof(char));
                     if (NULL != heap_msg) {
-                        (void)snprintf(heap_msg, BAL_MAXERROR,
-                            bal_error_dict[n].message, _bal_tei.os.code,
-                            _bal_tei.os.message);
+
+                        (void)snprintf(heap_msg, BAL_MAXERROR, bal_errors[n].msg,
+                            _bal_tei.os.code, _bal_tei.os.msg);
                     }
                 }
 
                 if (extended) {
                     (void)snprintf(err->message, BAL_MAXERROR, BAL_ERRFMTEXT,
                         _bal_tei.loc.func, _bal_tei.loc.file, _bal_tei.loc.line,
-                        (NULL != heap_msg ? heap_msg : bal_error_dict[n].message));
+                        (NULL != heap_msg ? heap_msg : bal_errors[n].msg));
                 } else {
                     (void)snprintf(err->message, BAL_MAXERROR, BAL_ERRFMT,
-                        (NULL != heap_msg ? heap_msg : bal_error_dict[n].message));
+                        (NULL != heap_msg ? heap_msg : bal_errors[n].msg));
                 }
 
                 _bal_safefree(&heap_msg);
-                retval = err->code = _bal_err_code(bal_error_dict[n].code);
+                retval = err->code = _bal_err_code(bal_errors[n].code);
                 break;
             }
         }
-        assert(found && "failed to look up error!");
     }
 
     return retval;
@@ -129,10 +126,10 @@ void __bal_set_os_error(int code, const char* message, const char* func,
     const char* file, uint32_t line)
 {
     _bal_tei.os.code = code;
-    _bal_tei.os.message[0] = '\0';
+    _bal_tei.os.msg[0] = '\0';
 
     if (_bal_validstr(message))
-        _bal_strcpy(_bal_tei.os.message, BAL_MAXERROR, message,
+        _bal_strcpy(_bal_tei.os.msg, BAL_MAXERROR, message,
             strnlen(message, BAL_MAXERROR));
 
     (void)__bal_set_error(_BAL_E_PLATFORM, func, file, line);
