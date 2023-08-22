@@ -49,7 +49,7 @@ int main(int argc, char** argv)
     string remote_host = balcommon::get_input_line("Enter server hostname",
         balcommon::localaddr);
 
-    ret = bal_async_poll(s, &balclient::async_events_cb, BAL_EVT_NORMAL);
+    ret = bal_async_poll(s, &balclient::async_events_cb, BAL_EVT_CLIENT);
     EXIT_IF_FAILED(ret, "bal_async_poll");
 
     printf("connecting to %s:%s...\n", remote_host.c_str(), balcommon::portnum);
