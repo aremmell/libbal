@@ -25,7 +25,7 @@
  */
 #ifndef _BAL_TESTS_H_INCLUDED
 # define _BAL_TESTS_H_INCLUDED
-#include "bal.h"
+# include "bal.h"
 
 /******************************************************************************\
  *                               Types & Macros                               *

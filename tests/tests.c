@@ -104,49 +104,42 @@ bool baltest_error_sanity(void)
         {BAL_E_ASNOSOCKET, "BAL_E_ASNOSOCKET"}, /* Socket is not registered for asynchronous I/O events */
         {BAL_E_BADEVTMASK, "BAL_E_BADEVTMASK"}, /* Invalid asynchronous I/O event bitmask */
         {BAL_E_INTERNAL,   "BAL_E_INTERNAL"},   /* An internal error has occurred */
-        {BAL_E_UNAVAIL,    "BAL_E_UNAVAIL"}     /* Feature is disabled or unavailable */
+        {BAL_E_UNAVAIL,    "BAL_E_UNAVAIL"},    /* Feature is disabled or unavailable */
+        {BAL_E_PLATFORM,   "BAL_E_PLATFORM"},   /* Platform error code %d: %s */
+        {BAL_E_UNKNOWN,    "BAL_E_UNKNOWN"}     /* An unknown error has occurred */
     };
 
-    /* test the libbal-specific errors. */
+    /* for BAL_E_PLATFORM, there should be an error set. */
+#if defined(__WIN__)
+        _bal_handleerr(WSAENOTSOCK);
+#else
+        _bal_handleerr(ENOTSOCK);
+#endif
+
+    bool repeat = false;
     for (size_t n = 0UL; n < _bal_countof(error_dict); n++) {
-        (void)_bal_handleerr(_bal_mk_error(error_dict[n].code));
+        (void)_bal_seterror(_bal_mk_error(error_dict[n].code));
         bal_error err = {0};
 
         /* without extended information. */
-        int ret = bal_get_last_error(&err);
+        int ret = bal_get_error(&err);
         pass &= error_dict[n].code == ret && ret == err.code;
-        pass &= err.desc[0] != '\0';
-        _bal_test_msg("%s = %s", error_dict[n].as_string, err.desc);
+        pass &= err.message[0] != '\0';
+        _bal_test_msg("%s = %s", error_dict[n].as_string, err.message);
 
         /* with extended information. */
-        ret = bal_get_last_error_ext(&err);
+        ret = bal_get_error_ext(&err);
         pass &= error_dict[n].code == ret && ret == err.code;
-        pass &= err.desc[0] != '\0';
-        _bal_test_msg("%s (extended) = %s", error_dict[n].as_string, err.desc);
+        pass &= err.message[0] != '\0';
+        _bal_test_msg("%s (ext) = %s", error_dict[n].as_string, err.message);
+
+        /* getaddrinfo/getnameinfo errors. */
+        if (BAL_E_PLATFORM == error_dict[n].code && !repeat) {
+            _bal_handlegaierr(EAI_SERVICE);
+            repeat = true;
+            n--;
+        }
     }
-
-    /* test OS-level errors. */
-#if defined(__WIN__)
-    int os_err = WSAEINTR;
-    (void)_bal_handleerr(os_err);
-#else
-    int os_err = EINTR;
-    (void)_bal_handleerr(os_err);
-#endif
-
-    bal_error err = {0};
-
-    /* without extended information. */
-    int ret = bal_get_last_error(&err);
-    pass &= os_err == ret && ret == err.code;
-    pass &= err.desc[0] != '\0';
-    _bal_test_msg("%d = %s", os_err, err.desc);
-
-    /* with extended information. */
-    ret = bal_get_last_error_ext(&err);
-    pass &= os_err == ret && ret == err.code;
-    pass &= err.desc[0] != '\0';
-    _bal_test_msg("%d (extended) = %s", os_err, err.desc);
 
     return pass;
 }

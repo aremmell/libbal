@@ -56,10 +56,8 @@ bool _bal_init(void)
     bool init = _bal_once(&_bal_static_once_init, &_bal_static_once_init_func);
     BAL_ASSERT(init);
 
-    if (!init) {
-        _bal_handleerr(_BAL_E_INTERNAL);
-        return false;
-    }
+    if (!init)
+        return _bal_seterror(_BAL_E_INTERNAL);
 
     _BAL_LOCK_MUTEX(&_bal_state.mutex, init);
 
@@ -72,7 +70,7 @@ bool _bal_init(void)
     if (init) {
         BAL_ASSERT(0U == magic || BAL_MAGIC == magic);
         if (BAL_MAGIC == magic)
-            init = _bal_handleerr(_BAL_E_DUPEINIT);
+            init = _bal_seterror(_BAL_E_DUPEINIT);
     }
 
 #if defined(__WIN__)
@@ -142,10 +140,9 @@ bool _bal_sanity(void)
 #endif
 
     BAL_ASSERT(0U == magic || BAL_MAGIC == magic);
-    if (BAL_MAGIC != magic) {
-        _bal_handleerr(_BAL_E_NOTINIT);
-        return false;
-    }
+    if (BAL_MAGIC != magic)
+        return _bal_seterror(_BAL_E_NOTINIT);
+
     return true;
 }
 
@@ -192,7 +189,7 @@ bool _bal_async_poll(bal_socket* s, bal_async_cb proc, uint32_t mask)
                             s->sd, d);
                 retval = true;
             } else {
-                _bal_handleerr(_BAL_E_ASNOSOCKET);
+                (void)_bal_seterror(_BAL_E_ASNOSOCKET);
             }
         } else {
             bal_socket* d = NULL;
@@ -228,7 +225,7 @@ bool _bal_async_poll(bal_socket* s, bal_async_cb proc, uint32_t mask)
 bool _bal_init_asyncpoll(void)
 {
     if (_bal_get_boolean(&_bal_async_poll_init))
-        return _bal_handleerr(_BAL_E_ASDUPEINIT);
+        return _bal_seterror(_BAL_E_ASDUPEINIT);
 
     bool init = _bal_list_create(&_bal_as_container.lst);
     if (!init) {
@@ -281,7 +278,7 @@ bool _bal_init_asyncpoll(void)
 bool _bal_cleanup_asyncpoll(void)
 {
     if (!_bal_get_boolean(&_bal_async_poll_init))
-        return _bal_handleerr(_BAL_E_ASNOTINIT);
+        return _bal_seterror(_BAL_E_ASNOTINIT);
 
     _bal_set_boolean(&_bal_as_container.die, true);
     _bal_set_boolean(&_bal_async_poll_init, false);
@@ -436,7 +433,7 @@ uint32_t _bal_on_pending_conn_io(bal_socket* s, uint32_t* events)
         if (bal_isbitset(*events, BAL_EVT_CLOSE) ||
             bal_isbitset(*events, BAL_EVT_ERROR)) {
             bal_setbitslow(events, BAL_EVT_ERROR);
-            _bal_setsockerr(s);
+            _bal_handlesockerr(s);
             retval = BAL_EVT_CONNFAIL;
         } else {
             retval = BAL_EVT_CONNECT;

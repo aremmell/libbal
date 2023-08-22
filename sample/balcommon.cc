@@ -84,10 +84,10 @@ void balcommon::ctrl_c_handler_impl()
 void balcommon::print_last_lib_error(const string& func /* = std::string() */)
 {
     bal_error err {};
-    bal_get_last_error(&err);
+    bal_get_error(&err);
 
     cerr << "libbal error: " << (func.empty() ? func + " " : "") << err.code
-         << " (" << err.desc << ")" << endl;
+         << " (" << err.message << ")" << endl;
 }
 
 void balcommon::print_startup_banner(const string& name)

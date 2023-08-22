@@ -32,10 +32,12 @@
 extern "C" {
 # endif
 
-int _bal_get_last_error(bal_error* err, bool extended);
-bool __bal_setlasterror(int code, const char* func, const char* file,
+int _bal_get_error(bal_error* err, bool extended);
+bool __bal_set_error(int code, const char* func, const char* file, uint32_t line);
+void __bal_set_os_error(int code, const char* message, const char* func,
+    const char* file, uint32_t line);
+bool __bal_handle_error(int code, const char* func, const char* file,
     uint32_t line, bool gai);
-void _bal_formaterrormsg(bal_error* err, bool gai, bool extended);
 
 /** Creates a libbal-specific error code from a positive integer that would
  * otherwise likely collide with OS-level error codes. Supports values
@@ -43,19 +45,21 @@ void _bal_formaterrormsg(bal_error* err, bool gai, bool extended);
 # define _bal_mk_error(err) ((((err) & 0xff) << 16) | 0x78000000)
 
 /** libbal-specific error codes. */
-# define BAL_E_NULLPTR     1 /**< NULL pointer argument */
-# define BAL_E_BADSTRING   2 /**< Invalid string argument */
-# define BAL_E_BADSOCKET   3 /**< Invalid bal_socket argument */
-# define BAL_E_BADBUFLEN   4 /**< Invalid buffer length argument */
-# define BAL_E_INVALIDARG  5 /**< Invalid argument */
-# define BAL_E_NOTINIT     6 /**< libbal is not initialized */
-# define BAL_E_DUPEINIT    7 /**< libbal is already initialized */
-# define BAL_E_ASNOTINIT   8 /**< Asynchronous I/O is not initialized */
-# define BAL_E_ASDUPEINIT  9 /**< Asynchronous I/O is already initialized */
-# define BAL_E_ASNOSOCKET 10 /**< Socket is not registered for asynchronous I/O events */
-# define BAL_E_BADEVTMASK 11 /**< Invalid asynchronous I/O event bitmask */
-# define BAL_E_INTERNAL   12 /**< An internal error has occurred */
-# define BAL_E_UNAVAIL    13 /**< Feature is disabled or unavailable */
+# define BAL_E_NULLPTR      1 /**< NULL pointer argument */
+# define BAL_E_BADSTRING    2 /**< Invalid string argument */
+# define BAL_E_BADSOCKET    3 /**< Invalid bal_socket argument */
+# define BAL_E_BADBUFLEN    4 /**< Invalid buffer length argument */
+# define BAL_E_INVALIDARG   5 /**< Invalid argument */
+# define BAL_E_NOTINIT      6 /**< libbal is not initialized */
+# define BAL_E_DUPEINIT     7 /**< libbal is already initialized */
+# define BAL_E_ASNOTINIT    8 /**< Asynchronous I/O is not initialized */
+# define BAL_E_ASDUPEINIT   9 /**< Asynchronous I/O is already initialized */
+# define BAL_E_ASNOSOCKET  10 /**< Socket is not registered for asynchronous I/O events */
+# define BAL_E_BADEVTMASK  11 /**< Invalid asynchronous I/O event bitmask */
+# define BAL_E_INTERNAL    12 /**< An internal error has occurred */
+# define BAL_E_UNAVAIL     13 /**< Feature is disabled or unavailable */
+# define BAL_E_PLATFORM    14 /**< Platform error code %d (%s) */
+# define BAL_E_UNKNOWN    255 /**< An unknown error has occurred */
 
 /** libbal-specific packed error code values. */
 # define _BAL_E_NULLPTR    _bal_mk_error(BAL_E_NULLPTR)
@@ -71,6 +75,8 @@ void _bal_formaterrormsg(bal_error* err, bool gai, bool extended);
 # define _BAL_E_BADEVTMASK _bal_mk_error(BAL_E_BADEVTMASK)
 # define _BAL_E_INTERNAL   _bal_mk_error(BAL_E_INTERNAL)
 # define _BAL_E_UNAVAIL    _bal_mk_error(BAL_E_UNAVAIL)
+# define _BAL_E_PLATFORM   _bal_mk_error(BAL_E_PLATFORM)
+# define _BAL_E_UNKNOWN    _bal_mk_error(BAL_E_UNKNOWN)
 
 /** Determines if the input is a packed error created by _bal_mk_error. */
 static inline
@@ -88,21 +94,24 @@ int _bal_err_code(int err)
     return ((err >> 16) & 0x000000ff);
 }
 
-# define _bal_handleerr(err)  \
-    __bal_setlasterror(err, __func__, __file__, __LINE__, false)
+# define _bal_seterror(err) \
+    __bal_set_error(err, __func__, __file__, __LINE__)
 
-# define _bal_setsockerr(s) _bal_handleerr(bal_get_error(s))
+# define _bal_handleerr(err) \
+    __bal_handle_error(err, __func__, __file__, __LINE__, false)
+
+# define _bal_handlesockerr(s) _bal_handleerr(bal_sock_get_error(s))
 
 # if defined(__WIN__)
 #  define _bal_handlelasterr() \
-    __bal_setlasterror(WSAGetLastError(), __func__, __file__, __LINE__, false)
+    __bal_handle_error(WSAGetLastError(), __func__, __file__, __LINE__, false)
 # else
 #  define _bal_handlelasterr() \
-    __bal_setlasterror(errno, __func__, __file__, __LINE__, false)
+    __bal_handle_error(errno, __func__, __file__, __LINE__, false)
 # endif
 
 # define _bal_handlegaierr(err) \
-    __bal_setlasterror(err, __func__, __file__, __LINE__, true)
+    __bal_handle_error(err, __func__, __file__, __LINE__, true)
 
 # if defined(BAL_DBGLOG)
 void __bal_dbglog(const char* func, const char* file, uint32_t line,

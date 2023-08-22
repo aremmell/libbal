@@ -87,9 +87,9 @@ void balclient::async_events_cb(bal_socket* s, uint32_t events)
 
     if (bal_isbitset(events, BAL_EVT_CONNFAIL)) {
         bal_error err {};
-        bal_get_last_error(&err);
+        bal_get_error(&err);
         printf("[" BAL_SOCKET_SPEC "] connection failed! error: %s\n", s->sd,
-            err.desc);
+            err.message);
         balcommon::quit();
     }
 
@@ -103,7 +103,7 @@ void balclient::async_events_cb(bal_socket* s, uint32_t events)
         } else if (-1 == read) {
             bal_error err {};
             printf("[" BAL_SOCKET_SPEC "] read error %d (%s)!\n", s->sd,
-                bal_get_last_error(&err), err.desc);
+                bal_get_error(&err), err.message);
         } else {
             printf("[" BAL_SOCKET_SPEC "] read EOF\n", s->sd);
         }
@@ -119,7 +119,7 @@ void balclient::async_events_cb(bal_socket* s, uint32_t events)
             if (ret <= 0) {
                 bal_error err {};
                 printf("[" BAL_SOCKET_SPEC "] write error %d (%s)!\n", s->sd,
-                    bal_get_last_error(&err), err.desc);
+                    bal_get_error(&err), err.message);
             } else {
                 printf("[" BAL_SOCKET_SPEC "] wrote %d bytes\n", s->sd, ret);
                 wrote_helo = true;
@@ -138,6 +138,6 @@ void balclient::async_events_cb(bal_socket* s, uint32_t events)
     }
 
     if (bal_isbitset(events, BAL_EVT_ERROR)) {
-        printf("[" BAL_SOCKET_SPEC "] ERROR %d!\n", s->sd, bal_get_error(s));
+        printf("[" BAL_SOCKET_SPEC "] ERROR %d!\n", s->sd, bal_sock_get_error(s));
     }
 }

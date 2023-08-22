@@ -76,17 +76,22 @@ typedef struct {
 /** The public error type. */
 typedef struct {
     int code;
-    char desc[BAL_MAXERROR];
+    char message[BAL_MAXERROR];
 } bal_error;
 
 /** The internal error type. */
 typedef struct {
     int code;
-    const char* func;
-    const char* file;
-    uint32_t line;
-    bool gai;
-} bal_error_info;
+    struct {
+        const char* func;
+        const char* file;
+        uint32_t line;
+    } loc;
+    struct {
+        int code;
+        char message[BAL_MAXERROR];
+    } os;
+} bal_thread_error_info;
 
 /* Node type for bal_list. */
 typedef struct _bal_list_node {

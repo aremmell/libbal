@@ -44,27 +44,27 @@ void __bal_safefree(void** pp)
 
 /** Whether the specified pointeris non-null. Sets error to BAL_E_NULLPTR if not. */
 # define _bal_validptr(p) \
-    (NULL != (p) ? true : _bal_handleerr(_BAL_E_NULLPTR))
+    (NULL != (p) ? true : _bal_seterror(_BAL_E_NULLPTR))
 
 /** Whether the specified pointer-to-pointer is non-null. Sets error to
  * BAL_E_NULLPTR if not. */
 # define _bal_validptrptr(pp) \
-    (NULL != (pp) ? true : _bal_handleerr(_BAL_E_NULLPTR))
+    (NULL != (pp) ? true : _bal_seterror(_BAL_E_NULLPTR))
 
 /** Whether the specified pointer to string is non-null, and contains a non-zero
  * value at index 0. Sets error to BAL_E_BADSTRING if not. */
 # define _bal_validstr(str) \
-    ((NULL != (str) && '\0' != *(str)) ? true : _bal_handleerr(_BAL_E_BADSTRING))
+    ((NULL != (str) && '\0' != *(str)) ? true : _bal_seterror(_BAL_E_BADSTRING))
 
 /** Whether the specified socket is non-null and has a valid descriptor value.
  * Sets error to BAL_E_BADSOCKET if not. */
 # define _bal_validsock(s) \
-    ((NULL != (s) && -1 != (s)->sd) ? true : _bal_handleerr(_BAL_E_BADSOCKET))
+    ((NULL != (s) && -1 != (s)->sd) ? true : _bal_seterror(_BAL_E_BADSOCKET))
 
 /** Whether or not the specified length is > 0. Sets error to BAL_E_BADBUFLEN
  * if not. */
 # define _bal_validlen(len) \
-    ((len) > 0 ? true : _bal_handleerr(_BAL_E_BADBUFLEN))
+    ((len) > 0 ? true : _bal_seterror(_BAL_E_BADBUFLEN))
 
 /** Whether or not a particular bit or set of bits are set in a bitmask. */
 # define bal_isbitset(bitmask, bit) (((bitmask) & (bit)) == (bit))

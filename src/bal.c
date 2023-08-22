@@ -540,7 +540,7 @@ bool bal_get_recv_timeout(const bal_socket* s, long* sec, long* usec)
     return retval;
 }
 
-int bal_get_error(const bal_socket* s)
+int bal_sock_get_error(const bal_socket* s)
 {
     int err = 0;
 
@@ -555,14 +555,14 @@ int bal_get_error(const bal_socket* s)
     return err;
 }
 
-int bal_get_last_error(bal_error* err)
+int bal_get_error(bal_error* err)
 {
-    return _bal_get_last_error(err, false);
+    return _bal_get_error(err, false);
 }
 
-int bal_get_last_error_ext(bal_error* err)
+int bal_get_error_ext(bal_error* err)
 {
-    return _bal_get_last_error(err, true);
+    return _bal_get_error(err, true);
 }
 
 bool bal_is_readable(const bal_socket* s)
