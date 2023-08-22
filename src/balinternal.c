@@ -403,6 +403,7 @@ bool _bal_is_closed_conn(const bal_socket* s)
     /* Windows doesn't have MSG_DONTWAIT, so this method is unacceptable for that
      * platform. If the socket were not asynchronous, this could cause an
      * indefinite hang. */
+    BAL_UNUSED(s);
     return false;
 #else
     if (!_bal_validsock(s))
