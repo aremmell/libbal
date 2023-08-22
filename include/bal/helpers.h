@@ -101,7 +101,7 @@ void __bal_safefree(void** pp)
 /** Locks the specified mutex  and asserts that it was locked. */
 # define _BAL_LOCK_MUTEX(m, name) \
     bool name##_locked = _bal_mutex_lock(m); \
-    BAL_ASSERT(name##_locked)
+    BAL_ASSERT_UNUSED(name##_locked,name##_locked)
 
 /** Unlocks a mutex and asserts that it was unlocked. */
 # define _BAL_UNLOCK_MUTEX(m, name) \
