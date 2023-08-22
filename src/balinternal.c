@@ -128,7 +128,7 @@ bool _bal_cleanup(void)
     _BAL_UNLOCK_MUTEX(&_bal_state.mutex, cleanup);
     _bal_dbglog("libbal clean up %s", cleanup ? "succeeded" : "failed");
 
-    return true;
+    return cleanup;
 }
 
 bool _bal_sanity(void)
@@ -515,7 +515,7 @@ short _bal_mask_to_pollflags(uint32_t mask)
 
 bal_threadret _bal_eventthread(void* ctx)
 {
-    static const int poll_timeout = 1000;
+    static const int poll_timeout = 100;
     bal_as_container* asc = (bal_as_container*)ctx;
     BAL_ASSERT(NULL != asc);
 
