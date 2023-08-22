@@ -78,16 +78,18 @@ int main(int argc, char** argv)
 void balclient::async_events_cb(bal_socket* s, uint32_t events)
 {
     if (bal_isbitset(events, BAL_EVT_CONNECT)) {
-        printf("[" BAL_SOCKET_SPEC "] connected to %s:%s\n", s->sd,
-            balcommon::localaddr, balcommon::portnum);
+        bal_addrstrings peer_strs {};
+        bal_get_peer_strings(s, false, &peer_strs);
+        printf("[" BAL_SOCKET_SPEC "] connected to %s:%s\n", s->sd, peer_strs.addr,
+            peer_strs.port);
         bal_addtomask(s, BAL_EVT_WRITE);
     }
 
     if (bal_isbitset(events, BAL_EVT_CONNFAIL)) {
         bal_error err {};
-        printf("[" BAL_SOCKET_SPEC "] failed to connect to %s:%s %d (%s)\n",
-            s->sd, balcommon::localaddr, balcommon::portnum,
-            bal_get_last_error(&err), err.desc);
+        bal_get_last_error(&err);
+        printf("[" BAL_SOCKET_SPEC "] connection failed! error: %s\n", s->sd,
+            err.desc);
         balcommon::quit();
     }
 
