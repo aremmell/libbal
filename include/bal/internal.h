@@ -39,6 +39,7 @@ extern "C" {
 
 bool _bal_init(void);
 bool _bal_cleanup(void);
+bool _bal_sanity(void);
 
 bool _bal_async_poll(bal_socket* s, bal_async_cb proc, uint32_t mask);
 
@@ -53,6 +54,8 @@ bool _bal_getnameinfo(int flags, const bal_sockaddr* in, char* host, char* port)
 
 bool _bal_is_pending_conn(const bal_socket* s);
 bool _bal_is_closed_conn(const bal_socket* s);
+
+uint32_t _bal_on_pending_conn_io(bal_socket* s, uint32_t* events);
 
 uint32_t _bal_pollflags_to_events(short flags);
 short _bal_mask_to_pollflags(uint32_t mask);

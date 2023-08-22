@@ -32,10 +32,10 @@
 extern "C" {
 # endif
 
-int _bal_get_last_error(bal_error* err);
+int _bal_get_last_error(bal_error* err, bool extended);
 bool __bal_setlasterror(int code, const char* func, const char* file,
     uint32_t line, bool gai);
-void _bal_formaterrormsg(bal_error* err, bool gai);
+void _bal_formaterrormsg(bal_error* err, bool gai, bool extended);
 
 /** Creates a libbal-specific error code from a positive integer that would
  * otherwise likely collide with OS-level error codes. Supports values
@@ -50,11 +50,12 @@ void _bal_formaterrormsg(bal_error* err, bool gai);
 # define BAL_E_INVALIDARG  5 /**< Invalid argument */
 # define BAL_E_NOTINIT     6 /**< libbal is not initialized */
 # define BAL_E_DUPEINIT    7 /**< libbal is already initialized */
-# define BAL_E_DUPESOCKET  8 /**< Socket is already registered for asynchronous I/O events */
-# define BAL_E_NOSOCKET    9 /**< Socket is not registered for asynchronous I/O events */
-# define BAL_E_BADEVTMASK 10 /**< Invalid asynchronous I/O event bitmask */
-# define BAL_E_INTERNAL   11 /**< An internal error has occurred */
-# define BAL_E_UNAVAIL    12 /**< Feature is disabled or unavailable */
+# define BAL_E_ASNOTINIT   8 /**< Asynchronous I/O is not initialized */
+# define BAL_E_ASDUPEINIT  9 /**< Asynchronous I/O is already initialized */
+# define BAL_E_ASNOSOCKET 10 /**< Socket is not registered for asynchronous I/O events */
+# define BAL_E_BADEVTMASK 11 /**< Invalid asynchronous I/O event bitmask */
+# define BAL_E_INTERNAL   12 /**< An internal error has occurred */
+# define BAL_E_UNAVAIL    13 /**< Feature is disabled or unavailable */
 
 /** libbal-specific packed error code values. */
 # define _BAL_E_NULLPTR    _bal_mk_error(BAL_E_NULLPTR)
@@ -64,8 +65,9 @@ void _bal_formaterrormsg(bal_error* err, bool gai);
 # define _BAL_E_INVALIDARG _bal_mk_error(BAL_E_INVALIDARG)
 # define _BAL_E_NOTINIT    _bal_mk_error(BAL_E_NOTINIT)
 # define _BAL_E_DUPEINIT   _bal_mk_error(BAL_E_DUPEINIT)
-# define _BAL_E_DUPESOCKET _bal_mk_error(BAL_E_DUPESOCKET)
-# define _BAL_E_NOSOCKET   _bal_mk_error(BAL_E_NOSOCKET)
+# define _BAL_E_ASNOTINIT  _bal_mk_error(BAL_E_ASNOTINIT)
+# define _BAL_E_ASDUPEINIT _bal_mk_error(BAL_E_ASDUPEINIT)
+# define _BAL_E_ASNOSOCKET _bal_mk_error(BAL_E_ASNOSOCKET)
 # define _BAL_E_BADEVTMASK _bal_mk_error(BAL_E_BADEVTMASK)
 # define _BAL_E_INTERNAL   _bal_mk_error(BAL_E_INTERNAL)
 # define _BAL_E_UNAVAIL    _bal_mk_error(BAL_E_UNAVAIL)
@@ -88,6 +90,8 @@ int _bal_err_code(int err)
 
 # define _bal_handleerr(err)  \
     __bal_setlasterror(err, __func__, __file__, __LINE__, false)
+
+# define _bal_setsockerr(s) _bal_handleerr(bal_get_error(s))
 
 # if defined(__WIN__)
 #  define _bal_handlelasterr() \

@@ -106,6 +106,7 @@ bool bal_get_recv_timeout(const bal_socket* s, long* sec, long* usec);
 
 int bal_get_error(const bal_socket* s);
 int bal_get_last_error(bal_error* err);
+int bal_get_last_error_ext(bal_error* err);
 
 bool bal_is_readable(const bal_socket* s);
 bool bal_is_writable(const bal_socket* s);

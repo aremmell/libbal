@@ -56,8 +56,10 @@ bool _bal_init(void)
     bool init = _bal_once(&_bal_static_once_init, &_bal_static_once_init_func);
     BAL_ASSERT(init);
 
-    if (!init)
-        _bal_dbglog("error: _bal_static_once_init_func failed");
+    if (!init) {
+        _bal_handleerr(_BAL_E_INTERNAL);
+        return false;
+    }
 
     _BAL_LOCK_MUTEX(&_bal_state.mutex, init);
 
@@ -69,11 +71,8 @@ bool _bal_init(void)
 
     if (init) {
         BAL_ASSERT(0U == magic || BAL_MAGIC == magic);
-        if (BAL_MAGIC == magic) {
-            /* already initialized. */
-            _bal_handleerr(_BAL_E_DUPEINIT);
-            init = false;
-        }
+        if (BAL_MAGIC == magic)
+            init = _bal_handleerr(_BAL_E_DUPEINIT);
     }
 
 #if defined(__WIN__)
@@ -88,48 +87,33 @@ bool _bal_init(void)
     }
 #endif
 
-    if (init) {
+    if (init)
         init = _bal_init_asyncpoll();
-        if (!init) {
-            _bal_dbglog("error: _bal_init_asyncpoll failed");
-            bool cleanup = _bal_cleanup_asyncpoll();
-            BAL_ASSERT_UNUSED(cleanup, cleanup);
-        }
-    }
 
     if (init) {
 #if defined(__HAVE_STDATOMICS__)
         atomic_store(&_bal_state.magic, BAL_MAGIC);
 #else
-         _bal_state.magic = BAL_MAGIC;
+        _bal_state.magic = BAL_MAGIC;
 #endif
     }
 
     _BAL_UNLOCK_MUTEX(&_bal_state.mutex, init);
-    _bal_dbglog("libbal initialized successfully");
+    _bal_dbglog("libbal initialization %s", init ? "succeeded" : "failed");
 
     return init;
 }
 
 bool _bal_cleanup(void)
 {
+    if (!_bal_sanity())
+        return false;
+
     bool cleanup = true;
     _BAL_LOCK_MUTEX(&_bal_state.mutex, cleanup);
 
-#if defined(__HAVE_STDATOMICS__)
-    uint_fast32_t magic = atomic_load(&_bal_state.magic);
-#else
-    uint_fast32_t magic = _bal_state.magic;
-#endif
-
-    BAL_ASSERT(0U == magic || BAL_MAGIC == magic);
-    if (BAL_MAGIC != magic) {
-        _bal_handleerr(_BAL_E_NOTINIT);
-        cleanup = false;
-    }
-
 #if defined(__WIN__)
-        (void)WSACleanup();
+    (void)WSACleanup();
 #endif
 
     if (!_bal_cleanup_asyncpoll()) {
@@ -144,8 +128,24 @@ bool _bal_cleanup(void)
 #endif
 
     _BAL_UNLOCK_MUTEX(&_bal_state.mutex, cleanup);
-    _bal_dbglog("libbal cleaned up %s", cleanup ? "successfully" : "with errors");
+    _bal_dbglog("libbal clean up %s", cleanup ? "succeeded" : "failed");
 
+    return true;
+}
+
+bool _bal_sanity(void)
+{
+#if defined(__HAVE_STDATOMICS__)
+    uint_fast32_t magic = atomic_load(&_bal_state.magic);
+#else
+    uint_fast32_t magic = _bal_state.magic;
+#endif
+
+    BAL_ASSERT(0U == magic || BAL_MAGIC == magic);
+    if (BAL_MAGIC != magic) {
+        _bal_handleerr(_BAL_E_NOTINIT);
+        return false;
+    }
     return true;
 }
 
@@ -192,8 +192,7 @@ bool _bal_async_poll(bal_socket* s, bal_async_cb proc, uint32_t mask)
                             s->sd, d);
                 retval = true;
             } else {
-                _bal_dbglog("warning: socket "BAL_SOCKET_SPEC" not found;"
-                            " ignoring removal request", s->sd);
+                _bal_handleerr(_BAL_E_ASNOSOCKET);
             }
         } else {
             bal_socket* d = NULL;
@@ -228,6 +227,9 @@ bool _bal_async_poll(bal_socket* s, bal_async_cb proc, uint32_t mask)
 
 bool _bal_init_asyncpoll(void)
 {
+    if (_bal_get_boolean(&_bal_async_poll_init))
+        return _bal_handleerr(_BAL_E_ASDUPEINIT);
+
     bool init = _bal_list_create(&_bal_as_container.lst);
     if (!init) {
         _bal_handlelasterr();
@@ -256,10 +258,9 @@ bool _bal_init_asyncpoll(void)
         *threads[n].thread = _beginthreadex(NULL, 0U, threads[n].proc,
             &_bal_as_container, 0U, NULL);
         BAL_ASSERT(0ULL != *threads[n].thread);
-        init &= 0ULL != *threads[n].thread;
 
         if (0ULL == *threads[n].thread)
-            _bal_handlelasterr();
+            init &= _bal_handlelasterr();
 #else
         int op = pthread_create(threads[n].thread, NULL, threads[n].proc,
             &_bal_as_container);
@@ -267,18 +268,21 @@ bool _bal_init_asyncpoll(void)
         init &= 0 == op;
 
         if (0 != op)
-            _bal_handleerr(op);
+            (void)_bal_handleerr(op);
 #endif
     }
 
     _bal_set_boolean(&_bal_async_poll_init, true);
-    _bal_dbglog("async I/O initialized %s", init ? "successfully" : "with errors");
+    _bal_dbglog("async I/O initialization %s", init ? "succeeded" : "failed");
 
     return init;
 }
 
 bool _bal_cleanup_asyncpoll(void)
 {
+    if (!_bal_get_boolean(&_bal_async_poll_init))
+        return _bal_handleerr(_BAL_E_ASNOTINIT);
+
     _bal_set_boolean(&_bal_as_container.die, true);
     _bal_set_boolean(&_bal_async_poll_init, false);
 
@@ -317,7 +321,7 @@ bool _bal_cleanup_asyncpoll(void)
     BAL_ASSERT(destroy);
     cleanup &= destroy;
 
-    _bal_dbglog("async I/O cleaned up %s", cleanup ? "successfully" : "with errors");
+    _bal_dbglog("async I/O clean up %s", cleanup ? "succeeded" : "failed");
 
     return cleanup;
 }
@@ -420,6 +424,28 @@ bool _bal_is_closed_conn(const bal_socket* s)
 
     return false;
 #endif
+}
+
+uint32_t _bal_on_pending_conn_io(bal_socket* s, uint32_t* events)
+{
+    uint32_t retval = 0U;
+
+    if (_bal_validsock(s) && _bal_validptr(events))
+    {
+        if (bal_isbitset(*events, BAL_EVT_CLOSE) ||
+            bal_isbitset(*events, BAL_EVT_ERROR)) {
+            bal_setbitslow(events, BAL_EVT_ERROR);
+            _bal_setsockerr(s);
+            retval = BAL_EVT_CONNFAIL;
+        } else {
+            retval = BAL_EVT_CONNECT;
+        }
+
+        bal_setbitslow(&s->state.mask, BAL_EVT_WRITE);
+        bal_setbitslow(&s->state.bits, BAL_S_CONNECT);
+    }
+
+    return retval;
 }
 
 uint32_t _bal_pollflags_to_events(short flags)
@@ -568,11 +594,14 @@ void _bal_dispatch_events(bal_descriptor sd, bal_socket* s, uint32_t events)
 
     uint32_t _events = 0U;
 
-    //_bal_dbglog("events %"PRIx32" for socket "BAL_SOCKET_SPEC, events, sd);
+    _bal_dbglog("events %08"PRIx32" for socket "BAL_SOCKET_SPEC " (mask = %08"
+        PRIx32")", events, sd, s->state.mask);
 
     if (bal_isbitset(events, BAL_EVT_READ) && bal_bitsinmask(s, BAL_EVT_READ)) {
         if (bal_is_listening(s)) {
             bal_setbitshigh(&_events, BAL_EVT_ACCEPT);
+        } else if (_bal_is_pending_conn(s)) {
+            _events |= _bal_on_pending_conn_io(s, &events);
 #if !defined(__HAVE_POLLRDHUP__)
         } else if (_bal_is_closed_conn(s)) {
             /* Some platforms insist upon spamming read events if the peer
@@ -586,21 +615,19 @@ void _bal_dispatch_events(bal_descriptor sd, bal_socket* s, uint32_t events)
         }
     }
 
+    if (bal_isbitset(events, BAL_EVT_OOBREAD) && bal_bitsinmask(s, BAL_EVT_OOBREAD))
+        bal_setbitshigh(&_events, BAL_EVT_OOBREAD);
+
     if (bal_isbitset(events, BAL_EVT_WRITE) && bal_bitsinmask(s, BAL_EVT_WRITE)) {
         if (_bal_is_pending_conn(s)) {
-            if (bal_isbitset(events, BAL_EVT_CLOSE) || bal_isbitset(events, BAL_EVT_ERROR)) {
-                bal_setbitshigh(&_events, BAL_EVT_CONNFAIL);
-                bal_setbitslow(&events, BAL_EVT_ERROR);
-            } else {
-                bal_setbitshigh(&_events, BAL_EVT_CONNECT);
-            }
-
-            bal_setbitslow(&s->state.mask, BAL_EVT_WRITE);
-            bal_setbitslow(&s->state.bits, BAL_S_CONNECT);
+            _events |= _bal_on_pending_conn_io(s, &events);
         } else {
             bal_setbitshigh(&_events, BAL_EVT_WRITE);
         }
     }
+
+    if (bal_isbitset(events, BAL_EVT_OOBWRITE) && bal_bitsinmask(s, BAL_EVT_OOBWRITE))
+        bal_setbitshigh(&_events, BAL_EVT_OOBWRITE);
 
     if (bal_isbitset(events, BAL_EVT_CLOSE) && bal_bitsinmask(s, BAL_EVT_CLOSE))
         bal_setbitshigh(&_events, BAL_EVT_CLOSE);
