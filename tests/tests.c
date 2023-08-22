@@ -114,13 +114,13 @@ bool baltest_error_sanity(void)
 
         /* without extended information. */
         int ret = bal_get_last_error(&err);
-        pass &= (error_dict[n].code == ret == err.code);
+        pass &= error_dict[n].code == ret && ret == err.code;
         pass &= err.desc[0] != '\0';
         _bal_test_msg("%s = %s", error_dict[n].as_string, err.desc);
 
         /* with extended information. */
         ret = bal_get_last_error_ext(&err);
-        pass &= (error_dict[n].code == ret == err.code);
+        pass &= error_dict[n].code == ret && ret == err.code;
         pass &= err.desc[0] != '\0';
         _bal_test_msg("%s (extended) = %s", error_dict[n].as_string, err.desc);
     }
@@ -138,13 +138,13 @@ bool baltest_error_sanity(void)
 
     /* without extended information. */
     int ret = bal_get_last_error(&err);
-    pass &= (os_err == ret == err.code);
+    pass &= os_err == ret && ret == err.code;
     pass &= err.desc[0] != '\0';
     _bal_test_msg("%d = %s", os_err, err.desc);
 
     /* with extended information. */
     ret = bal_get_last_error_ext(&err);
-    pass &= (os_err == ret == err.code);
+    pass &= os_err == ret && ret == err.code;
     pass &= err.desc[0] != '\0';
     _bal_test_msg("%d (extended) = %s", os_err, err.desc);
 
