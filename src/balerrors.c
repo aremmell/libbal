@@ -149,13 +149,18 @@ void _bal_formaterrormsg(bal_error* err, bool gai, bool extended)
         }
 #endif
         char pform_msg[BAL_MAXERROR] = {0};
-        (void)snprintf(pform_msg, BAL_MAXERROR, BAL_ERRFMTPFORM, err->code,
-            raw_msg);
+        size_t raw_msg_len = strnlen(raw_msg, BAL_MAXERROR);
+        
+        (void)snprintf(pform_msg, BAL_MAXERROR - raw_msg_len, BAL_ERRFMTPFORM,
+            err->code, raw_msg);
+
+        size_t pform_msg_len = strnlen(pform_msg, BAL_MAXERROR);
         if (extended) {
-            (void)snprintf(err->desc, BAL_MAXERROR, BAL_ERRFMTEXT, _error_info.func,
-                _error_info.file, _error_info.line, pform_msg);
+            (void)snprintf(err->desc, BAL_MAXERROR - pform_msg_len, BAL_ERRFMTEXT,
+                _error_info.func, _error_info.file, _error_info.line, pform_msg);
         } else {
-            (void)snprintf(err->desc, BAL_MAXERROR, BAL_ERRFMT, pform_msg);
+            (void)snprintf(err->desc, BAL_MAXERROR - pform_msg_len, BAL_ERRFMT,
+                pform_msg);
         }
     } else {
         /* a libbal-specific error. */
