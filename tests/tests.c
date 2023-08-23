@@ -36,6 +36,12 @@ int main(int argc, char** argv)
     BAL_UNUSED(argc);
     BAL_UNUSED(argv);
 
+#if defined(__WIN__)
+    DWORD flags = ENABLE_VIRTUAL_TERMINAL_PROCESSING | ENABLE_PROCESSED_OUTPUT;
+    SetConsoleMode(GetStdHandle(STD_OUTPUT_HANDLE), flags);
+    SetConsoleMode(GetStdHandle(STD_ERROR_HANDLE), flags);
+#endif
+
     size_t tests_total  = _bal_countof(bal_tests);
     size_t tests_run    = 0UL;
     size_t tests_passed = 0UL;
