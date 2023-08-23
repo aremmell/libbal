@@ -83,7 +83,8 @@ int _bal_get_error(bal_error* err, bool extended)
                     heap_msg = calloc(heap_msg_size, sizeof(char));
                     if (NULL != heap_msg) {
                         (void)snprintf(heap_msg, heap_msg_size, bal_errors[n].msg,
-                            _bal_tei.os.code, _bal_tei.os.msg);
+                            _bal_tei.os.code, _bal_validstr(_bal_tei.os.msg)
+                                ? _bal_tei.os.msg : BAL_UNKNOWN);
                     }
                 }
 
