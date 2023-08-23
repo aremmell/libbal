@@ -148,25 +148,17 @@ bool _bal_sanity(void)
 
 bool _bal_async_poll(bal_socket* s, bal_async_cb proc, uint32_t mask)
 {
-    if (!_bal_get_boolean(&_bal_async_poll_init)) {
-        _bal_dbglog("error: async I/O not initialized; ignoring");
-        return false;
-    }
+    if (!_bal_get_boolean(&_bal_async_poll_init ||
+         _bal_get_boolean(&_bal_as_container.die)))
+        return _bal_seterror(_BAL_E_ASNOTINIT);
 
-    if (_bal_get_boolean(&_bal_as_container.die)) {
-        _bal_dbglog("error: async I/O shutting down; ignoring");
+    BAL_ASSERT(_bal_oksocknf(s));
+    if (!_bal_oksock(s))
         return false;
-    }
-
-    BAL_ASSERT(_bal_validsock(s));
-    if (!_bal_validsock(s)) {
-        return false;
-    }
 
     BAL_ASSERT(NULL != proc || 0U == mask);
-    if (!_bal_validptr(proc) && 0U != mask) {
-        return false;
-    }
+    if (!_bal_okptrnf(proc) && 0U != mask)
+        return _bal_seterror(_BAL_E_INVALIDARG);
 
     bool retval = false;
     _BAL_LOCK_MUTEX(&_bal_as_container.mutex, asio)
@@ -325,7 +317,7 @@ bool _bal_cleanup_asyncpoll(void)
 
 void _bal_sock_destroy(bal_socket** s)
 {
-    if (_bal_validptrptr(s) && _bal_validptr(*s)) {
+    if (_bal_okptrptr(s) && _bal_okptr(*s)) {
         _BAL_LOCK_MUTEX(&_bal_as_container.mutex, destroy)
 
         /* just to be safe, ensure that the socket is not currently in the
@@ -358,7 +350,7 @@ bool _bal_get_addrinfo(int flags, int addr_fam, int type, const char* host,
 {
     bool retval = false;
 
-    if ((_bal_validstr(host) || _bal_validstr(port)) && _bal_validptrptr(res)) {
+    if ((_bal_okstr(host) || _bal_okstr(port)) && _bal_okptrptr(res)) {
         struct addrinfo hints = {0};
 
         hints.ai_flags    = flags;
@@ -378,7 +370,7 @@ bool _bal_getnameinfo(int flags, const bal_sockaddr* in, char* host, char* port)
 {
     bool retval = false;
 
-    if (_bal_validptr(in) && _bal_validptr(host)) {
+    if (_bal_okptr(in) && _bal_okptr(host)) {
         int get = getnameinfo((const struct sockaddr*)in, _BAL_SASIZE(*in), host,
             NI_MAXHOST, port, NI_MAXSERV, flags);
         if (0 != get)
@@ -391,7 +383,7 @@ bool _bal_getnameinfo(int flags, const bal_sockaddr* in, char* host, char* port)
 
 bool _bal_is_pending_conn(const bal_socket* s)
 {
-    return _bal_validsock(s) && bal_isbitset(s->state.bits, BAL_S_CONNECT);
+    return _bal_oksock(s) && bal_isbitset(s->state.bits, BAL_S_CONNECT);
 }
 
 bool _bal_is_closed_conn(const bal_socket* s)
@@ -403,7 +395,7 @@ bool _bal_is_closed_conn(const bal_socket* s)
     BAL_UNUSED(s);
     return false;
 #else
-    if (!_bal_validsock(s))
+    if (!_bal_oksock(s))
         return true;
 
     int buf = 0;
@@ -428,7 +420,7 @@ uint32_t _bal_on_pending_conn_io(bal_socket* s, uint32_t* events)
 {
     uint32_t retval = 0U;
 
-    if (_bal_validsock(s) && _bal_validptr(events))
+    if (_bal_oksock(s) && _bal_okptr(events))
     {
         if (bal_isbitset(*events, BAL_EVT_CLOSE) ||
             bal_isbitset(*events, BAL_EVT_ERROR)) {
@@ -533,7 +525,7 @@ bal_threadret _bal_eventthread(void* ctx)
             fds = calloc(count, sizeof(struct pollfd));
             BAL_ASSERT(NULL != fds);
 
-            if (_bal_validptr(fds)) {
+            if (_bal_okptrnf(fds)) {
                 size_t offset      = 0;
                 bal_descriptor key = 0;
                 bal_socket* val    = NULL;
@@ -553,9 +545,9 @@ bal_threadret _bal_eventthread(void* ctx)
                     for (size_t n = 0UL; n < count; n++) {
                         bal_socket* s = NULL;
                         bool found    = _bal_list_find(asc->lst, fds[n].fd, &s);
-                        BAL_ASSERT(found && _bal_validsock(s));
+                        BAL_ASSERT(found && _bal_oksocknf(s));
 
-                        if (found && _bal_validsock(s)) {
+                        if (found && _bal_oksock(s)) {
                             uint32_t events = _bal_pollflags_to_events(fds[n].revents);
                             if (0U != events)
                                 _bal_dispatch_events(fds[n].fd, s, events);
@@ -586,7 +578,7 @@ bal_threadret _bal_eventthread(void* ctx)
 void _bal_dispatch_events(bal_descriptor sd, bal_socket* s, uint32_t events)
 {
     BAL_ASSERT(NULL != s);
-    if (!_bal_validptr(s)) {
+    if (!_bal_okptr(s)) {
         return;
     }
 
@@ -642,7 +634,7 @@ void _bal_dispatch_events(bal_descriptor sd, bal_socket* s, uint32_t events)
     bool closed  = bal_isbitset(events, BAL_EVT_CLOSE);
     bool invalid = bal_isbitset(events, BAL_EVT_INVALID);
 
-    if (0U != _events && _bal_validptr(s->state.proc))
+    if (0U != _events && _bal_okptr(s->state.proc))
         s->state.proc(s, _events);
 
     if (closed || invalid) {
@@ -665,7 +657,7 @@ void _bal_dispatch_events(bal_descriptor sd, bal_socket* s, uint32_t events)
 
 bool _bal_list_create(bal_list** lst)
 {
-    bool retval = _bal_validptr(lst);
+    bool retval = _bal_okptr(lst);
 
     if (retval) {
         *lst = calloc(1UL, sizeof(bal_list));
@@ -678,7 +670,7 @@ bool _bal_list_create(bal_list** lst)
 bool _bal_list_create_node(bal_list_node** node, bal_descriptor key,
     bal_socket* val)
 {
-    bool ok = _bal_validptrptr(node);
+    bool ok = _bal_okptrptr(node);
 
     if (ok) {
         *node = calloc(1UL, sizeof(bal_list_node));
@@ -694,7 +686,7 @@ bool _bal_list_create_node(bal_list_node** node, bal_descriptor key,
 
 bool _bal_list_add(bal_list* lst, bal_descriptor key, bal_socket* val)
 {
-    bool ok = _bal_validptr(lst);
+    bool ok = _bal_okptr(lst);
 
     if (ok) {
         if (_bal_list_empty(lst)) {
@@ -716,7 +708,7 @@ bool _bal_list_add(bal_list* lst, bal_descriptor key, bal_socket* val)
 
 bool _bal_list_find(bal_list* lst, bal_descriptor key, bal_socket** val)
 {
-    bool ok = !_bal_list_empty(lst) && _bal_validptr(val);
+    bool ok = !_bal_list_empty(lst) && _bal_okptr(val);
 
     if (ok) {
         bal_list_find_data lfd = {key, val, false};
@@ -750,7 +742,7 @@ size_t _bal_list_count(bal_list* lst)
 
 bool _bal_list_iterate(bal_list* lst, bal_descriptor* key, bal_socket** val)
 {
-    bool ok = !_bal_list_empty(lst) && _bal_validptr(key) && _bal_validptr(val);
+    bool ok = !_bal_list_empty(lst) && _bal_okptr(key) && _bal_okptr(val);
 
     if (ok) {
         ok = NULL != lst->iter;
@@ -766,13 +758,13 @@ bool _bal_list_iterate(bal_list* lst, bal_descriptor* key, bal_socket** val)
 
 void _bal_list_reset_iterator(bal_list* lst)
 {
-    if (_bal_validptr(lst))
+    if (_bal_okptr(lst))
         lst->iter = lst->head;
 }
 
 bool _bal_list_iterate_func(bal_list* lst, void* ctx, bal_list_iter_cb cb)
 {
-    bool ok = !_bal_list_empty(lst) && _bal_validptr(cb);
+    bool ok = !_bal_list_empty(lst) && _bal_okptr(cb);
 
     if (ok) {
         size_t count        = 0UL;
@@ -791,7 +783,7 @@ bool _bal_list_iterate_func(bal_list* lst, void* ctx, bal_list_iter_cb cb)
 
 bool _bal_list_remove(bal_list* lst, bal_descriptor key, bal_socket** val)
 {
-    bool ok = !_bal_list_empty(lst) && _bal_validptr(val);
+    bool ok = !_bal_list_empty(lst) && _bal_okptr(val);
 
     if (ok) {
         bool found          = false;
@@ -835,7 +827,7 @@ bool _bal_list_remove_all(bal_list* lst)
 
 bool _bal_list_destroy(bal_list** lst)
 {
-    bool ok = _bal_validptrptr(lst) && _bal_validptr(*lst);
+    bool ok = _bal_okptrptr(lst) && _bal_okptr(*lst);
 
     if (ok) {
         if (!_bal_list_empty(*lst))
@@ -848,7 +840,7 @@ bool _bal_list_destroy(bal_list** lst)
 
 bool _bal_list_destroy_node(bal_list_node** node)
 {
-    bool ok = _bal_validptrptr(node) && _bal_validptr(node);
+    bool ok = _bal_okptrptr(node) && _bal_okptr(node);
 
     if (ok) {
         if ((*node)->prev)
@@ -877,7 +869,7 @@ bool __bal_list_find_key(bal_descriptor key, bal_socket* val, void* ctx)
 #if !defined(__WIN__) /* pthread mutex implementation. */
 bool _bal_mutex_create(bal_mutex* mutex)
 {
-    if (_bal_validptr(mutex)) {
+    if (_bal_okptr(mutex)) {
         pthread_mutexattr_t attr;
         int op = pthread_mutexattr_init(&attr);
         if (0 == op) {
@@ -895,7 +887,7 @@ bool _bal_mutex_create(bal_mutex* mutex)
 
 bool _bal_mutex_lock(bal_mutex* mutex)
 {
-    if (_bal_validptr(mutex)) {
+    if (_bal_okptr(mutex)) {
         int op = pthread_mutex_lock(mutex);
         return 0 == op ? true : _bal_handleerr(op);
     }
@@ -904,7 +896,7 @@ bool _bal_mutex_lock(bal_mutex* mutex)
 
 bool _bal_mutex_unlock(bal_mutex* mutex)
 {
-    if (_bal_validptr(mutex)) {
+    if (_bal_okptr(mutex)) {
         int op = pthread_mutex_unlock(mutex);
         return 0 == op ? true : _bal_handleerr(op);
     }
@@ -913,7 +905,7 @@ bool _bal_mutex_unlock(bal_mutex* mutex)
 
 bool _bal_mutex_destroy(bal_mutex* mutex)
 {
-    if (_bal_validptr(mutex)) {
+    if (_bal_okptr(mutex)) {
         int op = pthread_mutex_destroy(mutex);
         return 0 == op ? true : _bal_handleerr(op);
     }
@@ -922,7 +914,7 @@ bool _bal_mutex_destroy(bal_mutex* mutex)
 #else /* __WIN__ */
 bool _bal_mutex_create(bal_mutex* mutex)
 {
-    if (_bal_validptr(mutex)) {
+    if (_bal_okptr(mutex)) {
         InitializeCriticalSection(mutex);
         return true;
     }
@@ -931,7 +923,7 @@ bool _bal_mutex_create(bal_mutex* mutex)
 
 bool _bal_mutex_lock(bal_mutex* mutex)
 {
-    if (_bal_validptr(mutex)) {
+    if (_bal_okptr(mutex)) {
         EnterCriticalSection(mutex);
         return true;
     }
@@ -940,14 +932,14 @@ bool _bal_mutex_lock(bal_mutex* mutex)
 
 bool _bal_mutex_trylock(bal_mutex* mutex)
 {
-    if (_bal_validptr(mutex))
+    if (_bal_okptr(mutex))
         return FALSE != TryEnterCriticalSection(mutex);
     return false;
 }
 
 bool _bal_mutex_unlock(bal_mutex* mutex)
 {
-    if (_bal_validptr(mutex)) {
+    if (_bal_okptr(mutex)) {
         LeaveCriticalSection(mutex);
         return true;
     }
@@ -956,7 +948,7 @@ bool _bal_mutex_unlock(bal_mutex* mutex)
 
 bool _bal_mutex_destroy(bal_mutex* mutex)
 {
-    if (_bal_validptr(mutex)) {
+    if (_bal_okptr(mutex)) {
         DeleteCriticalSection(mutex);
         return true;
     }
@@ -1009,13 +1001,13 @@ bool _bal_once(bal_once* once, bal_once_fn func)
 
 bool _bal_addrinfo_to_addrlist(struct addrinfo* ai, bal_addrlist* out)
 {
-    if (_bal_validptr(ai) && _bal_validptr(out)) {
+    if (_bal_okptr(ai) && _bal_okptr(out)) {
         struct addrinfo* cur = ai;
         bal_addr** a         = &out->addr;
 
         do {
             *a = calloc(1UL, sizeof(bal_addr));
-            if (!_bal_validptr(*a))
+            if (!_bal_okptrnf(*a))
                 return _bal_handlelasterr();
 
             memcpy(&(*a)->addr, cur->ai_addr, cur->ai_addrlen);
@@ -1033,8 +1025,8 @@ bool _bal_addrinfo_to_addrlist(struct addrinfo* ai, bal_addrlist* out)
 
 void _bal_strcpy(char* dest, size_t destsz, const char* src, size_t srcsz)
 {
-    if (_bal_validptr(dest) && _bal_validlen(destsz) && _bal_validstr(src) &&
-        _bal_validlen(srcsz)) {
+    if (_bal_okptr(dest) && _bal_oklen(destsz) && _bal_okstr(src) &&
+        _bal_oklen(srcsz)) {
         /* Use strncpy_s if it's available (will likely only ever be on Windows. */
 #if defined(__HAVE_STDC_SECURE_OR_EXT1__)
         errno_t copy = strncpy_s(dest, destsz, src, srcsz);
@@ -1060,7 +1052,7 @@ void _bal_strcpy(char* dest, size_t destsz, const char* src, size_t srcsz)
 
 void _bal_socket_print(const bal_socket* s)
 {
-    if (_bal_validptr(s)) {
+    if (_bal_okptr(s)) {
         printf("%p:\n{\n  sd = "BAL_SOCKET_SPEC"\n  addr_fam = %d\n  type = %d\n"
                "  proto = %d\nstate =\n  {\n  mask = %"PRIx32"\n  proc = %"
                PRIxPTR"\n  }\n}\n", (void*)s, s->sd, s->addr_fam, s->type, s->proto,

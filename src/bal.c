@@ -55,7 +55,7 @@ bool bal_auto_socket(bal_socket** s, int addr_fam, int proto, const char* host,
 {
     bool retval = false;
 
-    if (_bal_validptrptr(s) && _bal_validstr(host)) {
+    if (_bal_okptrptr(s) && _bal_okstr(host)) {
         struct addrinfo* ai = NULL;
         int type = (proto == 0 ? 0 : (proto == IPPROTO_TCP ? SOCK_STREAM : SOCK_DGRAM));
         bool get = _bal_get_addrinfo(0, addr_fam, type, host, srv, &ai);
@@ -81,9 +81,9 @@ bool bal_sock_create(bal_socket** s, int addr_fam, int type, int proto)
 {
     bool retval = false;
 
-    if (_bal_validptrptr(s)) {
+    if (_bal_okptrptr(s)) {
         *s = calloc(1UL, sizeof(bal_socket));
-        if (!_bal_validptr(*s)) {
+        if (!_bal_okptrnf(*s)) {
             _bal_handlelasterr();
         } else {
             (*s)->sd = socket(addr_fam, type, proto);
@@ -111,7 +111,7 @@ bool bal_close(bal_socket** s, bool destroy)
 {
     bool retval = false;
 
-    if (_bal_validptrptr(s) && _bal_validsock(*s)) {
+    if (_bal_okptrptr(s) && _bal_oksock(*s)) {
 #if defined(__WIN__)
         if (SOCKET_ERROR == closesocket((*s)->sd)) {
             _bal_handlelasterr();
@@ -140,7 +140,7 @@ bool bal_shutdown(bal_socket* s, int how)
 {
     bool retval = false;
 
-    if (_bal_validsock(s)) {
+    if (_bal_oksock(s)) {
         if (-1 == shutdown(s->sd, how)) {
             _bal_handlelasterr();
         } else {
@@ -165,7 +165,7 @@ bool bal_connect(bal_socket* s, const char* host, const char* port)
 {
     bool retval = false;
 
-    if (_bal_validsock(s) && _bal_validstr(host) && _bal_validstr(port)) {
+    if (_bal_oksock(s) && _bal_okstr(host) && _bal_okstr(port)) {
         struct addrinfo* ai = NULL;
         if (_bal_get_addrinfo(0, s->addr_fam, s->type, host, port, &ai)) {
             bal_addrlist al = {NULL, NULL};
@@ -184,7 +184,7 @@ bool bal_connect_addrlist(bal_socket* s, bal_addrlist* al)
 {
     bool retval = false;
 
-    if (_bal_validsock(s)) {
+    if (_bal_oksock(s)) {
         if (bal_reset_addrlist(al)) {
             const bal_sockaddr* sa = NULL;
             while (NULL != (sa = bal_enum_addrlist(al))) {
@@ -212,7 +212,7 @@ int bal_send(const bal_socket* s, const void* data, bal_iolen len, int flags)
 {
     int sent = -1;
 
-    if (_bal_validsock(s) && _bal_validptr(data) && _bal_validlen(len)) {
+    if (_bal_oksock(s) && _bal_okptr(data) && _bal_oklen(len)) {
         sent = send(s->sd, data, len, flags);
         if (-1 == sent)
             _bal_handlelasterr();
@@ -225,7 +225,7 @@ int bal_recv(const bal_socket* s, void* data, bal_iolen len, int flags)
 {
     int read = -1;
 
-    if (_bal_validsock(s) && _bal_validptr(data) && _bal_validlen(len)) {
+    if (_bal_oksock(s) && _bal_okptr(data) && _bal_oklen(len)) {
         read = recv(s->sd, data, len, flags);
         if (0 >= read)
             _bal_handlelasterr();
@@ -239,8 +239,8 @@ int bal_sendto(const bal_socket* s, const char* host, const char* port,
 {
     int sent = -1;
 
-    if (_bal_validsock(s) && _bal_validstr(host) && _bal_validstr(port) &&
-        _bal_validptr(data) && _bal_validlen(len)) {
+    if (_bal_oksock(s) && _bal_okstr(host) && _bal_okstr(port) &&
+        _bal_okptr(data) && _bal_oklen(len)) {
         struct addrinfo* ai = NULL;
         int gai_flags = AI_NUMERICSERV;
         bool get = _bal_get_addrinfo(gai_flags, PF_UNSPEC, SOCK_DGRAM, host, port, &ai);
@@ -258,7 +258,7 @@ int bal_sendto_addr(const bal_socket* s, const bal_sockaddr* sa, const void* dat
 {
     int sent = -1;
 
-    if (_bal_validsock(s) && _bal_validptr(sa) && _bal_validptr(data) && _bal_validlen(len)) {
+    if (_bal_oksock(s) && _bal_okptr(sa) && _bal_okptr(data) && _bal_oklen(len)) {
         sent = sendto(s->sd, data, len, flags, (const struct sockaddr*)sa, _BAL_SASIZE(*sa));
         if (-1 == sent)
             _bal_handlelasterr();
@@ -272,7 +272,7 @@ int bal_recvfrom(const bal_socket* s, void* data, bal_iolen len, int flags,
 {
     int read = -1;
 
-    if (_bal_validsock(s) && _bal_validptr(data) && _bal_validlen(len)) {
+    if (_bal_oksock(s) && _bal_okptr(data) && _bal_oklen(len)) {
         socklen_t sasize = sizeof(bal_sockaddr);
         read = recvfrom(s->sd, data, len, flags, (struct sockaddr*)res, &sasize);
         if (0 >= read)
@@ -286,7 +286,7 @@ bool bal_bind(const bal_socket* s, const char* addr, const char* srv)
 {
     bool retval = false;
 
-    if (_bal_validsock(s) && _bal_validstr(addr) && _bal_validstr(srv)) {
+    if (_bal_oksock(s) && _bal_okstr(addr) && _bal_okstr(srv)) {
         struct addrinfo* ai = NULL;
         bool get = _bal_get_addrinfo(AI_NUMERICHOST, s->addr_fam, s->type, addr, srv, &ai);
         if (get && NULL != ai) {
@@ -314,7 +314,7 @@ bool bal_bindall(const bal_socket* s, const char* srv)
 {
     bool retval = false;
 
-    if (_bal_validsock(s) && _bal_validstr(srv)) {
+    if (_bal_oksock(s) && _bal_okstr(srv)) {
         struct addrinfo* ai = NULL;
         int flags = AI_PASSIVE | AI_NUMERICHOST;
         bool get = _bal_get_addrinfo(flags, s->addr_fam, s->type, NULL, srv, &ai);
@@ -334,7 +334,7 @@ bool bal_listen(bal_socket* s, int backlog)
 {
     bool retval = false;
 
-    if (_bal_validsock(s)) {
+    if (_bal_oksock(s)) {
         if (0 == listen(s->sd, backlog)) {
             bal_setbitshigh(&s->state.mask, BAL_EVT_READ);
             bal_setbitshigh(&s->state.bits, BAL_S_LISTEN);
@@ -351,9 +351,9 @@ bool bal_accept(const bal_socket* s, bal_socket** res, bal_sockaddr* resaddr)
 {
     bool retval = false;
 
-    if (_bal_validsock(s) && _bal_validptrptr(res) && _bal_validptr(resaddr)) {
+    if (_bal_oksock(s) && _bal_okptrptr(res) && _bal_okptr(resaddr)) {
         *res = calloc(1UL, sizeof(bal_socket));
-        if (!_bal_validptr(*res)) {
+        if (!_bal_okptrnf(*res)) {
             _bal_handlelasterr();
         } else {
             socklen_t sasize = sizeof(bal_sockaddr);
@@ -378,7 +378,7 @@ bool bal_get_option(const bal_socket* s, int level, int name, void* optval, sock
 {
     bool retval = false;
 
-    if (_bal_validsock(s) && _bal_validptr(optval) && _bal_validlen(len)) {
+    if (_bal_oksock(s) && _bal_okptr(optval) && _bal_oklen(len)) {
         int get = getsockopt(s->sd, level, name, optval, &len);
         if (-1 == get)
             _bal_handlelasterr();
@@ -393,7 +393,7 @@ bool bal_set_option(const bal_socket* s, int level, int name, const void* optval
 {
     bool retval = false;
 
-    if (_bal_validsock(s) && _bal_validptr(optval) && _bal_validlen(len)) {
+    if (_bal_oksock(s) && _bal_okptr(optval) && _bal_oklen(len)) {
         int set = setsockopt(s->sd, level, name, optval, len);
         if (-1 == set)
             _bal_handlelasterr();
@@ -433,7 +433,7 @@ bool bal_get_linger(const bal_socket* s, bal_linger* sec)
 {
     bool retval = false;
 
-    if (_bal_validptr(sec)) {
+    if (_bal_okptr(sec)) {
         struct linger l = {0};
         if (bal_get_option(s, SOL_SOCKET, SO_LINGER, &l, sizeof(struct linger))) {
             *sec   = l.l_linger;
@@ -504,7 +504,7 @@ bool bal_get_send_timeout(const bal_socket* s, long* sec, long* usec)
 {
     bool retval = false;
 
-    if (_bal_validptr(sec) && _bal_validptr(usec)) {
+    if (_bal_okptr(sec) && _bal_okptr(usec)) {
         struct timeval t = {0};
         bool get = bal_get_option(s, SOL_SOCKET, SO_SNDTIMEO, &t, sizeof(struct timeval));
         if (get) {
@@ -527,7 +527,7 @@ bool bal_get_recv_timeout(const bal_socket* s, long* sec, long* usec)
 {
     bool retval = false;
 
-    if (_bal_validptr(sec) && _bal_validptr(usec)) {
+    if (_bal_okptr(sec) && _bal_okptr(usec)) {
         struct timeval t = {0};
         bool get = bal_get_option(s, SOL_SOCKET, SO_RCVTIMEO, &t, sizeof(struct timeval));
         if (get) {
@@ -569,7 +569,7 @@ bool bal_is_readable(const bal_socket* s)
 {
     bool r = false;
 
-    if (_bal_validsock(s)) {
+    if (_bal_oksock(s)) {
         fd_set fd        = {0};
         struct timeval t = {0};
 #if defined(__WIN__)
@@ -594,7 +594,7 @@ bool bal_is_writable(const bal_socket* s)
 {
     bool r = false;
 
-    if (_bal_validsock(s)) {
+    if (_bal_oksock(s)) {
         fd_set fd        = {0};
         struct timeval t = {0};
 #if defined(__WIN__)
@@ -624,7 +624,7 @@ bool bal_is_listening(const bal_socket* s)
     return bal_get_option(s, SOL_SOCKET, SO_ACCEPTCONN, &flag, sizeof(int)) && 0 != flag;
 #else
     /* backup method: bitmask. */
-    return _bal_validsock(s) && bal_isbitset(s->state.bits, BAL_S_LISTEN);
+    return _bal_oksock(s) && bal_isbitset(s->state.bits, BAL_S_LISTEN);
 #endif
 }
 
@@ -632,7 +632,7 @@ bool bal_set_io_mode(const bal_socket* s, bool async)
 {
     bool retval = false;
 
-    if (_bal_validsock(s)) {
+    if (_bal_oksock(s)) {
 #if defined(__WIN__)
         u_long flag = async ? 1UL : 0UL;
         int ret = ioctlsocket(s->sd, FIONBIO, &flag);
@@ -654,7 +654,7 @@ size_t bal_get_recvqueue_size(const bal_socket* s)
 {
     size_t size = 0UL;
 
-    if (_bal_validsock(s)) {
+    if (_bal_oksock(s)) {
 #if defined(__WIN__)
         if (0 != ioctlsocket(s->sd, FIONREAD, (void*)&size)) {
             size = 0UL;
@@ -675,7 +675,7 @@ bool bal_resolve_host(const char* host, bal_addrlist* out)
 {
     bool retval = false;
 
-    if (_bal_validstr(host) && _bal_validptr(out)) {
+    if (_bal_okstr(host) && _bal_okptr(out)) {
         struct addrinfo* ai = NULL;
         bool get = _bal_get_addrinfo(0, PF_UNSPEC, SOCK_STREAM, host, NULL, &ai);
         if (get && NULL != ai) {
@@ -691,7 +691,7 @@ bool bal_get_peer_addr(const bal_socket* s, bal_sockaddr* out)
 {
     bool retval = false;
 
-    if (_bal_validsock(s) && _bal_validptr(out)) {
+    if (_bal_oksock(s) && _bal_okptr(out)) {
         memset(out, 0, sizeof(bal_sockaddr));
         socklen_t salen = sizeof(bal_sockaddr);
         int get = getpeername(s->sd, (struct sockaddr*)out, &salen);
@@ -713,7 +713,7 @@ bool bal_get_localhost_addr(const bal_socket* s, bal_sockaddr* out)
 {
     bool retval = false;
 
-    if (_bal_validsock(s) && _bal_validptr(out)) {
+    if (_bal_oksock(s) && _bal_okptr(out)) {
         socklen_t salen = sizeof(bal_sockaddr);
         memset(out, 0, sizeof(bal_sockaddr));
         int get = getsockname(s->sd, (struct sockaddr*)out, &salen);
@@ -735,7 +735,7 @@ bool bal_get_addrstrings(const bal_sockaddr* in, bool dns, bal_addrstrings* out)
 {
     bool retval = false;
 
-    if (_bal_validptr(in) && _bal_validptr(out)) {
+    if (_bal_okptr(in) && _bal_okptr(out)) {
         memset(out, 0, sizeof(bal_addrstrings));
         bool get = _bal_getnameinfo(_BAL_NI_NODNS, in, out->addr, out->port);
         if (get) {
@@ -758,7 +758,7 @@ bool bal_reset_addrlist(bal_addrlist* addrs)
 {
     bool retval = false;
 
-    if (_bal_validptr(addrs)) {
+    if (_bal_okptr(addrs)) {
         addrs->iter = addrs->addr;
         retval = true;
     }
@@ -770,7 +770,7 @@ const bal_sockaddr* bal_enum_addrlist(bal_addrlist* addrs)
 {
     const bal_sockaddr* r = NULL;
 
-    if (_bal_validptr(addrs) && _bal_validptr(addrs->addr)) {
+    if (_bal_okptr(addrs) && _bal_okptr(addrs->addr)) {
         if (NULL != addrs->iter) {
             r        = &addrs->iter->addr;
             addrs->iter = addrs->iter->next;
@@ -786,7 +786,7 @@ bool bal_free_addrlist(bal_addrlist* addrs)
 {
     bool retval = false;
 
-    if (_bal_validptr(addrs)) {
+    if (_bal_okptr(addrs)) {
         bal_addr* a = NULL;
         addrs->iter = addrs->addr;
 

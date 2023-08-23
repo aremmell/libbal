@@ -70,7 +70,7 @@ int _bal_get_error(bal_error* err, bool extended)
 {
     int retval = err->code = _bal_err_code(_BAL_E_UNKNOWN);
 
-    if (_bal_validptr(err)) {
+    if (_bal_okptr(err)) {
         memset(err, 0, sizeof(bal_error));
         for (size_t n = 0UL; n < _bal_countof(bal_errors); n++) {
             if (bal_errors[n].code == _bal_tei.code) {
@@ -83,7 +83,7 @@ int _bal_get_error(bal_error* err, bool extended)
                     heap_msg = calloc(heap_msg_size, sizeof(char));
                     if (NULL != heap_msg) {
                         (void)snprintf(heap_msg, heap_msg_size, bal_errors[n].msg,
-                            _bal_tei.os.code, _bal_validstr(_bal_tei.os.msg)
+                            _bal_tei.os.code, _bal_okstrnf(_bal_tei.os.msg)
                                 ? _bal_tei.os.msg : BAL_UNKNOWN);
                     }
                 }
@@ -146,7 +146,7 @@ void __bal_set_os_error(int code, const char* message, const char* func,
     _bal_tei.os.code = code;
     _bal_tei.os.msg[0] = '\0';
 
-    if (_bal_validstr(message))
+    if (_bal_okstrnf(message))
         _bal_strcpy(_bal_tei.os.msg, BAL_MAXERROR, message,
             strnlen(message, BAL_MAXERROR));
 

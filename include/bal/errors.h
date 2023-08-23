@@ -94,6 +94,47 @@ int _bal_err_code(int err)
     return ((err >> 16) & 0x000000ff);
 }
 
+static inline
+bool __bal_validate(bool expr, int err, const char* func, const char* file,
+    uint32_t line)
+{
+    if (!expr && 0 != err)
+        __bal_set_error(err, func, file, line);
+    return expr;
+}
+
+# define _bal_okptrnf(p) \
+    __bal_validate(NULL != (p), 0, __func__, __file__, __LINE__)
+
+# define _bal_okptr(p) \
+    __bal_validate(NULL != (p), _BAL_E_NULLPTR, __func__, __file__, __LINE__)
+
+# define _bal_okptrptrnf(pp) \
+    __bal_validate(NULL != (pp), 0, __func__, __file__, __LINE__)
+
+# define _bal_okptrptr(pp) \
+    __bal_validate(NULL != (pp), _BAL_E_NULLPTR, __func__, __file__, __LINE__)
+
+# define _bal_okstrnf(str) \
+    __bal_validate(NULL != (str) && '\0' != *(str), 0, __func__, __file__, __LINE__)
+
+# define _bal_okstr(str) \
+    __bal_validate(NULL != (str) && '\0' != *(str), _BAL_E_BADSTRING, __func__, \
+        __file__, __LINE__)
+
+# define _bal_oksocknf(s) \
+    __bal_validate(NULL != (s) && -1 != (s)->sd, 0, __func__, __file__, __LINE__)
+
+# define _bal_oksock(s) \
+    __bal_validate(NULL != (s) && -1 != (s)->sd, _BAL_E_BADSOCKET, __func__, \
+        __file__, __LINE__)
+
+# define _bal_oklennf(len) \
+    __bal_validate((len) > 0, 0, __func__, __file__, __LINE__)
+
+# define _bal_oklen(len) \
+    __bal_validate((len) > 0, _BAL_E_BADBUFLEN, __func__, __file__, __LINE__)
+
 # define _bal_seterror(err) \
     __bal_set_error(err, __func__, __file__, __LINE__)
 

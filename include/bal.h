@@ -133,21 +133,21 @@ void bal_sleep_msec(uint32_t msec);
 static inline
 void bal_addtomask(bal_socket* s, uint32_t bits)
 {
-    if (_bal_validptr(s))
+    if (_bal_okptr(s))
         bal_setbitshigh(&s->state.mask, bits);
 }
 
 static inline
 void bal_remfrommask(bal_socket* s, uint32_t bits)
 {
-    if (_bal_validptr(s))
+    if (_bal_okptr(s))
         bal_setbitslow(&s->state.mask, bits);
 }
 
 static inline
 bool bal_bitsinmask(const bal_socket* s, uint32_t bits)
 {
-    return _bal_validptr(s) ? bal_isbitset(s->state.mask, bits) : false;
+    return _bal_okptr(s) ? bal_isbitset(s->state.mask, bits) : false;
 }
 
 # if defined(__cplusplus)
