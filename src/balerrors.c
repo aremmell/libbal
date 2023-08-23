@@ -115,14 +115,16 @@ bool __bal_set_error(int code, const char* func, const char* file, uint32_t line
     if (_bal_is_error(code)) {
         _bal_tei.code = code;
         _bal_tei.loc.func = func;
-#if !defined(__WIN__)
-        /* some compilers will send the absolute path of the
-         * file, since CMake passes absolute paths to the
-         * compiler. Strip everything except the file name. */
+#if defined(__WIN__)
+        char* last_slash = StrRChrA(file, NULL, '\\');
+        if (NULL == last_slash)
+              last_slash = StrRChrA(file, NULL, '/');
+#else
         char* last_slash = strrchr(file, '/');
-        if (last_slash)
-            file = last_slash + 1;
 #endif
+        if (NULL != last_slash)
+            file = last_slash + 1;
+
         _bal_tei.loc.file = file;
         _bal_tei.loc.line = line;
     }
