@@ -208,9 +208,9 @@ bool bal_connect_addrlist(bal_socket* s, bal_addrlist* al)
     return retval;
 }
 
-int bal_send(const bal_socket* s, const void* data, bal_iolen len, int flags)
+ssize_t bal_send(const bal_socket* s, const void* data, bal_iolen len, int flags)
 {
-    int sent = -1;
+    ssize_t sent = -1;
 
     if (_bal_oksock(s) && _bal_okptr(data) && _bal_oklen(len)) {
         sent = send(s->sd, data, len, flags);
@@ -221,9 +221,9 @@ int bal_send(const bal_socket* s, const void* data, bal_iolen len, int flags)
     return sent;
 }
 
-int bal_recv(const bal_socket* s, void* data, bal_iolen len, int flags)
+ssize_t bal_recv(const bal_socket* s, void* data, bal_iolen len, int flags)
 {
-    int read = -1;
+    ssize_t read = -1;
 
     if (_bal_oksock(s) && _bal_okptr(data) && _bal_oklen(len)) {
         read = recv(s->sd, data, len, flags);
@@ -234,10 +234,10 @@ int bal_recv(const bal_socket* s, void* data, bal_iolen len, int flags)
     return read;
 }
 
-int bal_sendto(const bal_socket* s, const char* host, const char* port,
+ssize_t bal_sendto(const bal_socket* s, const char* host, const char* port,
     const void* data, bal_iolen len, int flags)
 {
-    int sent = -1;
+    ssize_t sent = -1;
 
     if (_bal_oksock(s) && _bal_okstr(host) && _bal_okstr(port) &&
         _bal_okptr(data) && _bal_oklen(len)) {
@@ -253,10 +253,10 @@ int bal_sendto(const bal_socket* s, const char* host, const char* port,
     return sent;
 }
 
-int bal_sendto_addr(const bal_socket* s, const bal_sockaddr* sa, const void* data,
+ssize_t bal_sendto_addr(const bal_socket* s, const bal_sockaddr* sa, const void* data,
     bal_iolen len, int flags)
 {
-    int sent = -1;
+    ssize_t sent = -1;
 
     if (_bal_oksock(s) && _bal_okptr(sa) && _bal_okptr(data) && _bal_oklen(len)) {
         sent = sendto(s->sd, data, len, flags, (const struct sockaddr*)sa, _BAL_SASIZE(*sa));
@@ -267,10 +267,10 @@ int bal_sendto_addr(const bal_socket* s, const bal_sockaddr* sa, const void* dat
    return sent;
 }
 
-int bal_recvfrom(const bal_socket* s, void* data, bal_iolen len, int flags,
+ssize_t bal_recvfrom(const bal_socket* s, void* data, bal_iolen len, int flags,
     bal_sockaddr* res)
 {
-    int read = -1;
+    ssize_t read = -1;
 
     if (_bal_oksock(s) && _bal_okptr(data) && _bal_oklen(len)) {
         socklen_t sasize = sizeof(bal_sockaddr);

@@ -96,9 +96,9 @@ void balclient::async_events_cb(bal_socket* s, uint32_t events)
     if (bal_isbitset(events, BAL_EVT_READ)) {
         constexpr const size_t buf_size = 2048;
         std::array<char, buf_size> buf {};
-        int read = bal_recv(s, buf.data(), buf.size() - 1, 0);
+        ssize_t read = bal_recv(s, buf.data(), buf.size() - 1, 0);
         if (read > 0) {
-            printf("[" BAL_SOCKET_SPEC "] read %d bytes: '%s'\n", s->sd, read,
+            printf("[" BAL_SOCKET_SPEC "] read %ld bytes: '%s'\n", s->sd, read,
                 buf.data());
         } else if (-1 == read) {
             bal_error err {};
@@ -115,13 +115,13 @@ void balclient::async_events_cb(bal_socket* s, uint32_t events)
             const char* req = "HELO";
             constexpr const size_t req_size = 4;
 
-            int ret = bal_send(s, req, req_size, MSG_NOSIGNAL);
+            ssize_t ret = bal_send(s, req, req_size, MSG_NOSIGNAL);
             if (ret <= 0) {
                 bal_error err {};
                 printf("[" BAL_SOCKET_SPEC "] write error %d (%s)!\n", s->sd,
                     bal_get_error(&err), err.message);
             } else {
-                printf("[" BAL_SOCKET_SPEC "] wrote %d bytes\n", s->sd, ret);
+                printf("[" BAL_SOCKET_SPEC "] wrote %ld bytes\n", s->sd, ret);
                 wrote_helo = true;
                 bal_remfrommask(s, BAL_EVT_WRITE);
             }

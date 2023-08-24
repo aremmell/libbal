@@ -117,9 +117,9 @@ void balserver::async_events_cb(bal_socket* s, uint32_t events)
         constexpr const size_t buf_size = 2048;
         std::array<char, buf_size> buf {};
 
-        int read = bal_recv(s, buf.data(), buf.size() - 1, 0);
+        ssize_t read = bal_recv(s, buf.data(), buf.size() - 1, 0);
         if (read > 0) {
-            printf("[" BAL_SOCKET_SPEC "] read %d bytes: '%s'\n", s->sd, read,
+            printf("[" BAL_SOCKET_SPEC "] read %ld bytes: '%s'\n", s->sd, read,
                 buf.data());
            bal_addtomask(s, BAL_EVT_WRITE);
         } else if (-1 == read) {
@@ -136,12 +136,12 @@ void balserver::async_events_cb(bal_socket* s, uint32_t events)
             static const char* reply = "O, HELO 2 U";
             constexpr const size_t reply_size = 11;
 
-            int sent = bal_send(s, reply, reply_size, MSG_NOSIGNAL);
+            ssize_t sent = bal_send(s, reply, reply_size, MSG_NOSIGNAL);
             if (sent > 0) {
                 if (reply_size == sent) {
                     already_replied = true;
                 }
-                printf("[" BAL_SOCKET_SPEC "] wrote %d bytes\n", s->sd, sent);
+                printf("[" BAL_SOCKET_SPEC "] wrote %ld bytes\n", s->sd, sent);
             } else {
                 bal_error err {};
                 printf("[" BAL_SOCKET_SPEC "] write error %d (%s)!\n", s->sd,

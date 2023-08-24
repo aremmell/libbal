@@ -55,15 +55,15 @@ bool bal_shutdown(bal_socket* s, int how);
 bool bal_connect(bal_socket* s, const char* host, const char* port);
 bool bal_connect_addrlist(bal_socket* s, bal_addrlist* al);
 
-int bal_send(const bal_socket* s, const void* data, bal_iolen len, int flags);
-int bal_recv(const bal_socket* s, void* data, bal_iolen len, int flags);
+ssize_t bal_send(const bal_socket* s, const void* data, bal_iolen len, int flags);
+ssize_t bal_recv(const bal_socket* s, void* data, bal_iolen len, int flags);
 
-int bal_sendto(const bal_socket* s, const char* host, const char* port, const void* data,
+ssize_t bal_sendto(const bal_socket* s, const char* host, const char* port, const void* data,
     bal_iolen len, int flags);
-int bal_sendto_addr(const bal_socket* s, const bal_sockaddr* sa, const void* data,
+ssize_t bal_sendto_addr(const bal_socket* s, const bal_sockaddr* sa, const void* data,
     bal_iolen len, int flags);
 
-int bal_recvfrom(const bal_socket* s, void* data, bal_iolen len, int flags, bal_sockaddr* res);
+ssize_t bal_recvfrom(const bal_socket* s, void* data, bal_iolen len, int flags, bal_sockaddr* res);
 
 bool bal_bind(const bal_socket* s, const char* addr, const char* srv);
 bool bal_bindall(const bal_socket* s, const char* srv);
