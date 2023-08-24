@@ -148,8 +148,8 @@ bool _bal_sanity(void)
 
 bool _bal_async_poll(bal_socket* s, bal_async_cb proc, uint32_t mask)
 {
-    if (!_bal_get_boolean(&_bal_async_poll_init ||
-         _bal_get_boolean(&_bal_as_container.die)))
+    if (!_bal_get_boolean(&_bal_async_poll_init) ||
+         _bal_get_boolean(&_bal_as_container.die))
         return _bal_seterror(_BAL_E_ASNOTINIT);
 
     BAL_ASSERT(_bal_oksocknf(s));
