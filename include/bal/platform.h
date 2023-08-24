@@ -116,9 +116,6 @@
 #   define __HAVE_STDATOMICS__
 #  endif
 
-#  define BAL_SOCKET_SPEC "%d"
-#  define BAL_TID_SPEC "%x"
-
 /** The socket descriptor type. */
 typedef int bal_descriptor;
 
@@ -127,6 +124,16 @@ typedef size_t bal_iolen;
 
 /** The type used in the linger struct. */
 typedef int bal_linger;
+
+/** The type used for struct timeval::tv_sec. */
+typedef time_t bal_tvsec;
+
+/** The type used for struct timeval::tv_usec. */
+#if defined(__MACOS__)
+typedef int bal_tvusec;
+#else
+typedef useconds_t bal_tvusec;
+#endif
 
 /** The mutex type. */
 typedef pthread_mutex_t bal_mutex;
@@ -149,6 +156,9 @@ typedef void (*bal_once_fn)(void);
 /** The thread callback return type. */
 typedef void* bal_threadret;
 
+#  define BAL_SOCKET_SPEC "%d"
+#  define BAL_TID_SPEC "%x"
+
 /** The one-time initializer. */
 #  define BAL_ONCE_INIT PTHREAD_ONCE_INIT
 
@@ -158,20 +168,25 @@ typedef void* bal_threadret;
 /** The mutex initializer. */
 #  define BAL_MUTEX_INIT PTHREAD_MUTEX_INITIALIZER
 
+/** bal_shutdown: read and write. */
 #  define BAL_SHUT_RDWR SHUT_RDWR
-#  define BAL_SHUT_RD   SHUT_RD
-#  define BAL_SHUT_WR   SHUT_WR
+
+/** bal_shutdown: read. */
+#  define BAL_SHUT_RD SHUT_RD
+
+/** bal_shutdown: write. */
+#  define BAL_SHUT_WR SHUT_WR
 
 # else /* _WIN32 */
 
 #  define __WIN__
+#  define WIN32_LEAN_AND_MEAN
 #  define _CRT_SECURE_NO_WARNINGS
 #  define __WANT_STDC_SECURE_LIB__ 1
 #  include <winsock2.h>
 #  include <ws2tcpip.h>
 #  include <shlwapi.h>
 #  include <process.h>
-#  include <time.h>
 
 #  undef __HAVE_STDATOMICS__
 
@@ -179,9 +194,6 @@ typedef void* bal_threadret;
 #   include <stdatomic.h>
 #   define __HAVE_STDATOMICS__
 #  endif
-
-#  define BAL_SOCKET_SPEC "%llu"
-#  define BAL_TID_SPEC "%x"
 
 /** The socket descriptor type. */
 typedef SOCKET bal_descriptor;
@@ -191,6 +203,15 @@ typedef int bal_iolen;
 
 /** The type used in the linger struct. */
 typedef u_short bal_linger;
+
+/** The type used for struct timeval::tv_sec. */
+typedef long bal_tvsec;
+
+/** The type used for struct timeval::tv_usec. */
+typedef long bal_tvusec;
+
+/** The type passed to *poll for number of file descriptors. */
+typedef ULONG bal_pollcount;
 
 /** The mutex type. */
 typedef CRITICAL_SECTION bal_mutex;
@@ -213,8 +234,17 @@ typedef BOOL(CALLBACK* bal_once_fn)(PINIT_ONCE, PVOID, PVOID*);
 /** The process/thread identifier type. */
 typedef int pid_t;
 
+/** The signed size_t type. */
+typedef long ssize_t;
+
+/** The file descriptor count type. */
+typedef ULONG nfds_t;
+
 /** The thread callback return type. */
 typedef unsigned bal_threadret;
+
+#  define BAL_SOCKET_SPEC "%llu"
+#  define BAL_TID_SPEC "%x"
 
 /** The one-time initializer. */
 #  define BAL_ONCE_INIT INIT_ONCE_STATIC_INIT
@@ -225,11 +255,19 @@ typedef unsigned bal_threadret;
 /** The mutex initializer. */
 #  define BAL_MUTEX_INIT {0}
 
+/** bal_shutdown: read and write. */
 #  define BAL_SHUT_RDWR SD_BOTH
-#  define BAL_SHUT_RD   SD_RECEIVE
-#  define BAL_SHUT_WR   SD_SEND
 
+/** bal_shutdown: read. */
+#  define BAL_SHUT_RD SD_RECEIVE
+
+/** bal_shutdown: write. */
+#  define BAL_SHUT_WR SD_SEND
+
+/** Windows has no concept of MSG_NOSIGNAL. */
 #  define MSG_NOSIGNAL 0
+
+/** Windows has no concept of MSG_DONTWAIT. */
 #  define MSG_DONTWAIT 0
 
 # endif /* !_WIN32 */
