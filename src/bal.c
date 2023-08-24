@@ -292,8 +292,7 @@ bool bal_bind(const bal_socket* s, const char* addr, const char* srv)
         if (get && NULL != ai) {
             struct addrinfo* cur = ai;
             do {
-                int ret = bind(s->sd, (const struct sockaddr*)cur->ai_addr,
-                    (bal_iolen)cur->ai_addrlen);
+                int ret = bind(s->sd, (const struct sockaddr*)cur->ai_addr, cur->ai_addrlen);
                 if (0 == ret) {
                     retval = true;
                     break;
@@ -319,8 +318,7 @@ bool bal_bindall(const bal_socket* s, const char* srv)
         int flags = AI_PASSIVE | AI_NUMERICHOST;
         bool get = _bal_get_addrinfo(flags, s->addr_fam, s->type, NULL, srv, &ai);
         if (get && NULL != ai) {
-            int ret = bind(s->sd, (const struct sockaddr*)ai->ai_addr,
-                (bal_iolen)ai->ai_addrlen);
+            int ret = bind(s->sd, (const struct sockaddr*)ai->ai_addr, ai->ai_addrlen);
             if (0 != ret)
                 _bal_handlelasterr();
             retval = 0 == ret;
