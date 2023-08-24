@@ -75,11 +75,11 @@ if (WIN32)
     set(CMAKE_CXX_FLAGS_DEBUG "${CXX_FLAGS_BASE} /DDEBUG /DBAL_DBGLOG")
     set(CMAKE_CXX_FLAGS_RELEASE "${CXX_FLAGS_BASE} /DNDEBUG")
 else()
-    set(C_FLAGS_BASE "-Wall -Wextra -Wpedantic -Werror")
+    set(C_FLAGS_BASE "-Wall -Wextra -Wpedantic -Werror -Wbad-function-cast -Wmissing-prototypes -Wdouble-promotion -Wconversion -Wno-sign-conversion -Wno-string-conversion -Wextra-semi-stmt")
     set(CMAKE_C_FLAGS_DEBUG "${C_FLAGS_BASE} -g3 -O0 -DDEBUG -DBAL_DBGLOG")
     set(CMAKE_C_FLAGS_RELEASE "${C_FLAGS_BASE} -O3 -D_FORTIFY_SOURCE=2 -DNDEBUG")
 
-    set(CXX_FLAGS_BASE "-Wall -Wextra -Wpedantic -Werror")
+    set(CXX_FLAGS_BASE "-Wall -Wextra -Wpedantic -Werror -Wbad-function-cast -Wmissing-prototypes -Wdouble-promotion -Wconversion -Wno-sign-conversion -Wno-string-conversion -Wextra-semi-stmt")
     set(CMAKE_CXX_FLAGS_DEBUG "${C_FLAGS_BASE} -g3 -O0 -DDEBUG -DBAL_DBGLOG")
     set(CMAKE_CXX_FLAGS_RELEASE "${C_FLAGS_BASE} -O3 -D_FORTIFY_SOURCE=2 -DNDEBUG")
 
