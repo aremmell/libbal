@@ -160,10 +160,12 @@ void __bal_dbglog(const char* func, const char* file, uint32_t line,
 #  define _bal_dbglog(...) \
     __bal_dbglog(__func__, __file__, __LINE__, __VA_ARGS__)
 #  define BAL_ASSERT(...) \
-    if (!(__VA_ARGS__)) { \
-        __bal_dbglog(__func__, __file__, __LINE__, \
-            "!!! assertion failed: %s", #__VA_ARGS__ ""); \
-    }
+    do { \
+        if (!(__VA_ARGS__)) { \
+            __bal_dbglog(__func__, __file__, __LINE__, \
+                "!!! assertion failed: %s", #__VA_ARGS__ ""); \
+        } \
+    } while (false)
 # else
 #  define _bal_dbglog(...)
 #  define BAL_ASSERT(...)
@@ -171,7 +173,7 @@ void __bal_dbglog(const char* func, const char* file, uint32_t line,
 
 # define BAL_ASSERT_UNUSED(var, expr) \
     BAL_ASSERT(expr); \
-    BAL_UNUSED(var);
+    BAL_UNUSED(var)
 
 # if defined(__cplusplus)
 }
