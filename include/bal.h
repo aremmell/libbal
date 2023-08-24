@@ -98,11 +98,11 @@ bool bal_get_sendbuf_size(const bal_socket* s, int* size);
 bool bal_set_recvbuf_size(const bal_socket* s, int size);
 bool bal_get_recvbuf_size(const bal_socket* s, int* size);
 
-bool bal_set_send_timeout(const bal_socket* s, long sec, long usec);
-bool bal_get_send_timeout(const bal_socket* s, long* sec, long* usec);
+bool bal_set_send_timeout(const bal_socket* s, bal_tvsec sec, bal_tvusec usec);
+bool bal_get_send_timeout(const bal_socket* s, bal_tvsec* sec, bal_tvusec* usec);
 
-bool bal_set_recv_timeout(const bal_socket* s, long sec, long usec);
-bool bal_get_recv_timeout(const bal_socket* s, long* sec, long* usec);
+bool bal_set_recv_timeout(const bal_socket* s, bal_tvsec sec, bal_tvusec usec);
+bool bal_get_recv_timeout(const bal_socket* s, bal_tvsec* sec, bal_tvusec* usec);
 
 int bal_sock_get_error(const bal_socket* s);
 int bal_get_error(bal_error* err);

@@ -494,22 +494,22 @@ bool bal_get_recvbuf_size(const bal_socket* s, int* size)
     return bal_get_option(s, SOL_SOCKET, SO_RCVBUF, size, sizeof(int));
 }
 
-bool bal_set_send_timeout(const bal_socket* s, long sec, long usec)
+bool bal_set_send_timeout(const bal_socket* s, bal_tvsec sec, bal_tvusec usec)
 {
-    struct timeval t = {sec, usec};
-    return bal_set_option(s, SOL_SOCKET, SO_SNDTIMEO, &t, sizeof(struct timeval));
+    const struct timeval tv = {sec, usec};
+    return bal_set_option(s, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(struct timeval));
 }
 
-bool bal_get_send_timeout(const bal_socket* s, long* sec, long* usec)
+bool bal_get_send_timeout(const bal_socket* s, bal_tvsec* sec, bal_tvusec* usec)
 {
     bool retval = false;
 
     if (_bal_okptr(sec) && _bal_okptr(usec)) {
-        struct timeval t = {0};
-        bool get = bal_get_option(s, SOL_SOCKET, SO_SNDTIMEO, &t, sizeof(struct timeval));
+        struct timeval tv = {0};
+        bool get = bal_get_option(s, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(struct timeval));
         if (get) {
-            *sec  = t.tv_sec;
-            *usec = t.tv_usec;
+            *sec  = tv.tv_sec;
+            *usec = tv.tv_usec;
         }
         retval = get;
     }
@@ -517,22 +517,22 @@ bool bal_get_send_timeout(const bal_socket* s, long* sec, long* usec)
     return retval;
 }
 
-bool bal_set_recv_timeout(const bal_socket* s, long sec, long usec)
+bool bal_set_recv_timeout(const bal_socket* s, bal_tvsec sec, bal_tvusec usec)
 {
-    struct timeval t = {sec, usec};
-    return bal_set_option(s, SOL_SOCKET, SO_RCVTIMEO, &t, sizeof(struct timeval));
+    const struct timeval tv = {sec, usec};
+    return bal_set_option(s, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(struct timeval));
 }
 
-bool bal_get_recv_timeout(const bal_socket* s, long* sec, long* usec)
+bool bal_get_recv_timeout(const bal_socket* s, bal_tvsec* sec, bal_tvusec* usec)
 {
     bool retval = false;
 
     if (_bal_okptr(sec) && _bal_okptr(usec)) {
-        struct timeval t = {0};
-        bool get = bal_get_option(s, SOL_SOCKET, SO_RCVTIMEO, &t, sizeof(struct timeval));
+        struct timeval tv = {0};
+        bool get = bal_get_option(s, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(struct timeval));
         if (get) {
-            *sec  = t.tv_sec;
-            *usec = t.tv_usec;
+            *sec  = tv.tv_sec;
+            *usec = tv.tv_usec;
         }
         retval = get;
     }
@@ -570,8 +570,8 @@ bool bal_is_readable(const bal_socket* s)
     bool r = false;
 
     if (_bal_oksock(s)) {
-        fd_set fd        = {0};
-        struct timeval t = {0};
+        fd_set fd         = {0};
+        struct timeval tv = {0};
 #if defined(__WIN__)
         int high_sd = (int)s->sd + 1;
 #else
@@ -581,7 +581,7 @@ bool bal_is_readable(const bal_socket* s)
         FD_ZERO(&fd);
         FD_SET(s->sd, &fd);
 
-        if (0 == select(high_sd, &fd, NULL, NULL, &t) &&
+        if (0 == select(high_sd, &fd, NULL, NULL, &tv) &&
             FD_ISSET(s->sd, &fd)) {
             r = true;
         }
@@ -595,8 +595,8 @@ bool bal_is_writable(const bal_socket* s)
     bool r = false;
 
     if (_bal_oksock(s)) {
-        fd_set fd        = {0};
-        struct timeval t = {0};
+        fd_set fd         = {0};
+        struct timeval tv = {0};
 #if defined(__WIN__)
         int high_sd = (int)s->sd + 1;
 #else
@@ -606,7 +606,7 @@ bool bal_is_writable(const bal_socket* s)
         FD_ZERO(&fd);
         FD_SET(s->sd, &fd);
 
-        if (0 == select(high_sd, NULL, &fd, NULL, &t) &&
+        if (0 == select(high_sd, NULL, &fd, NULL, &tv) &&
             FD_ISSET(s->sd, &fd)) {
             r = true;
         }
