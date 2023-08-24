@@ -152,64 +152,56 @@ bool _bal_async_poll(bal_socket* s, bal_async_cb proc, uint32_t mask)
          _bal_get_boolean(&_bal_as_container.die))
         return _bal_seterror(_BAL_E_ASNOTINIT);
 
-    BAL_ASSERT(_bal_oksocknf(s));
     if (!_bal_oksock(s))
         return false;
 
-    BAL_ASSERT(NULL != proc || 0U == mask);
     if (!_bal_okptrnf(proc) && 0U != mask)
         return _bal_seterror(_BAL_E_INVALIDARG);
 
     bool retval = false;
-    _BAL_LOCK_MUTEX(&_bal_as_container.mutex, asio)
-    {
-        if (0U == mask) {
-            /* this thread holds the mutex that guards the list, so in theory,
-             * a remove operation should be possible (even if it's the current
-             * iterator) without an issue, as long as no further access to the
-             * iterator is attempted. */
-            bal_socket* d = NULL;
-            bool success  = _bal_list_remove(_bal_as_container.lst, s->sd, &d);
-            BAL_ASSERT(NULL != d && s == d);
+    _BAL_LOCK_MUTEX(&_bal_as_container.mutex, aspoll);
 
-            if (success) {
-                /* The iterator is kaput, but d and s are still allocated.
-                 * Since this is just a removal request, (mask = 0), don't close
-                 * or delete the socket itself–just the data. The caller will
-                 * have to call bal_sock_destroy later on. */
-                _bal_dbglog("removed socket "BAL_SOCKET_SPEC" (%p) from list",
-                            s->sd, d);
-                retval = true;
-            } else {
-                (void)_bal_seterror(_BAL_E_ASNOSOCKET);
-            }
+    if (0U == mask) {
+        /* this thread holds the mutex for the list, so it can remove an iterator. */
+        bal_socket* d = NULL;
+        bool success  = _bal_list_remove(_bal_as_container.lst, s->sd, &d);
+        BAL_ASSERT(NULL != d && s == d);
+
+        if (success) {
+            /* The iterator is kaput, but s is still allocated. Since this is a
+             * removal request (mask = 0), don't close or delete the socket. */
+            _bal_dbglog("removed socket "BAL_SOCKET_SPEC" (%p) from list", s->sd, d);
+            retval = true;
         } else {
-            bal_socket* d = NULL;
-            if (_bal_list_find(_bal_as_container.lst, s->sd, &d)) {
-                BAL_ASSERT(NULL != d && s == d);
+            (void)_bal_seterror(_BAL_E_ASNOSOCKET);
+        }
+    } else {
+        bal_socket* d = NULL;
+        if (_bal_list_find(_bal_as_container.lst, s->sd, &d)) {
+            BAL_ASSERT(NULL != d && s == d);
+            s->state.mask = mask;
+            s->state.proc = proc;
+            retval        = true;
+            _bal_dbglog("updated socket "BAL_SOCKET_SPEC" (%p)", s->sd, s);
+        } else {
+            bool success = false;
+            if (bal_set_io_mode(s, true)) {
                 s->state.mask = mask;
                 s->state.proc = proc;
-                retval        = true;
-                _bal_dbglog("updated socket "BAL_SOCKET_SPEC" (%p)", s->sd, s);
+                success = _bal_list_add(_bal_as_container.lst, s->sd, s);
+                retval  = success;
+            }
+            if (success) {
+                _bal_dbglog("added socket "BAL_SOCKET_SPEC" to list (%p"
+                            ", mask = %08"PRIx32")", s->sd, s, s->state.mask);
             } else {
-                bool success = false;
-                if (bal_set_io_mode(s, true)) {
-                    s->state.mask = mask;
-                    s->state.proc = proc;
-                    success = _bal_list_add(_bal_as_container.lst, s->sd, s);
-                    retval  = success;
-                }
-                if (success) {
-                    _bal_dbglog("added socket "BAL_SOCKET_SPEC" to list (%p"
-                                ", mask = %08"PRIx32")", s->sd, s, s->state.mask);
-                } else {
-                    _bal_dbglog("error: failed to add socket "BAL_SOCKET_SPEC
-                                " to list!", s->sd);
-                }
+                _bal_dbglog("error: failed to add socket "BAL_SOCKET_SPEC
+                            " to list!", s->sd);
             }
         }
     }
-    _BAL_UNLOCK_MUTEX(&_bal_as_container.mutex, asio);
+
+    _BAL_UNLOCK_MUTEX(&_bal_as_container.mutex, aspoll);
 
     return retval;
 }
@@ -318,7 +310,7 @@ bool _bal_cleanup_asyncpoll(void)
 void _bal_sock_destroy(bal_socket** s)
 {
     if (_bal_okptrptr(s) && _bal_okptr(*s)) {
-        _BAL_LOCK_MUTEX(&_bal_as_container.mutex, destroy)
+        _BAL_LOCK_MUTEX(&_bal_as_container.mutex, destroy);
 
         /* just to be safe, ensure that the socket is not currently in the
         * async I/O list. */
@@ -399,7 +391,7 @@ bool _bal_is_closed_conn(const bal_socket* s)
         return true;
 
     int buf = 0;
-    int rcv = bal_recv(s, &buf, sizeof(int), MSG_PEEK | MSG_DONTWAIT);
+    ssize_t rcv = bal_recv(s, &buf, sizeof(int), MSG_PEEK | MSG_DONTWAIT);
     if (0 == rcv)
         return true;
     if (-1 == rcv) {
@@ -539,7 +531,7 @@ bal_threadret _bal_eventthread(void* ctx)
 #if defined(__WIN__)
                 int res = WSAPoll(fds, (ULONG)count, poll_timeout);
 #else
-                int res = poll(fds, count, poll_timeout);
+                int res = poll(fds, (nfds_t)count, poll_timeout);
 #endif
                 if (res > 0) {
                     for (size_t n = 0UL; n < count; n++) {
