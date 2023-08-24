@@ -51,10 +51,12 @@ namespace balcommon
         const std::string& def);
 
 # define EXIT_IF_FAILED(retval, func) \
-    if (!retval) { \
-        balcommon::print_last_lib_error(func); \
-        return EXIT_FAILURE; \
-    }
+    do { \
+        if (!retval) { \
+            balcommon::print_last_lib_error(func); \
+            return EXIT_FAILURE; \
+        } \
+    } while (false)
 
 # if defined(__WIN__)
     BOOL WINAPI on_ctrl_c(DWORD ctl_type);
