@@ -54,13 +54,21 @@ void __bal_safefree(void** pp)
 /** Returns the number of entries in an array. */
 # define _bal_countof(arr) (sizeof((arr)) / sizeof((arr)[0]))
 
+/** Use when truncation is expected/probable. Prevents truncation warnings
+ * from GCC in particular. */
+# define _bal_snprintf_trunc(dst, size, ...) \
+    do { \
+      volatile size_t n = size; \
+      (void)snprintf(dst, n, __VA_ARGS__); \
+    } while (false)
+
 /** Allows a parameter to be unreferenced without compiler warnings. */
 # define BAL_UNUSED(var) (void)(var)
 
-/** Used with getnameinfo: do not perform DNS queries. */
+/** getnameinfo flags: do not perform DNS queries. */
 # define _BAL_NI_NODNS (NI_NUMERICHOST | NI_NUMERICSERV)
 
-/** Used with getnameinfo: perform DNS queries. */
+/** getnameinfo flags: perform DNS queries. */
 # define _BAL_NI_DNS   (NI_NAMEREQD | NI_NUMERICSERV)
 
 /** Returns the size of a sockaddr struct (IPv4/IPv6). */

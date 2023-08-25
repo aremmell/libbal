@@ -79,29 +79,21 @@ int _bal_get_error(bal_error* err, bool extended)
             if (bal_errors[n].code == _bal_tei.code) {
                 char* heap_msg = NULL;
                 if (_BAL_E_PLATFORM == bal_errors[n].code) {
-                     /* characters in _BAL_E_PLATFORM's message plus the maximum
-                      * length of a formatted int. */
-                    static const size_t pform_msg_size = 22 + 11;
-                    size_t heap_msg_size = BAL_MAXERROR + pform_msg_size;
-                    heap_msg = calloc(heap_msg_size, sizeof(char));
+                    heap_msg = calloc(BAL_MAXERROR, sizeof(char));
                     if (NULL != heap_msg) {
-                        (void)snprintf(heap_msg, heap_msg_size, bal_errors[n].msg,
+                        _bal_snprintf_trunc(heap_msg, BAL_MAXERROR, bal_errors[n].msg,
                             _bal_tei.os.code, _bal_okstrnf(_bal_tei.os.msg)
                                 ? _bal_tei.os.msg : BAL_UNKNOWN);
                     }
                 }
 
                 if (extended) {
-                    /* characters in BAL_ERRFMTEXT plus the maximumm length of
-                     * a formatted uint32_t. */
-                    static const size_t ext_msg_size = 17 + 10;
-                    (void)snprintf(err->message, BAL_MAXERROR + ext_msg_size,
-                        BAL_ERRFMTEXT, _bal_tei.loc.func, _bal_tei.loc.file,
-                        _bal_tei.loc.line, NULL != heap_msg
-                            ? heap_msg : bal_errors[n].msg);
+                    _bal_snprintf_trunc(err->message, BAL_MAXERROR, BAL_ERRFMTEXT,
+                        _bal_tei.loc.func, _bal_tei.loc.file, _bal_tei.loc.line,
+                        _bal_okptrnf(heap_msg) ? heap_msg : bal_errors[n].msg);
                 } else {
-                    (void)snprintf(err->message, BAL_MAXERROR, BAL_ERRFMT,
-                        (NULL != heap_msg ? heap_msg : bal_errors[n].msg));
+                    _bal_snprintf_trunc(err->message, BAL_MAXERROR, BAL_ERRFMT,
+                        _bal_okptrnf(heap_msg) ? heap_msg : bal_errors[n].msg);
                 }
 
                 _bal_safefree(&heap_msg);
