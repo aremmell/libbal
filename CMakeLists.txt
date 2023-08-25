@@ -66,22 +66,35 @@ project(
 )
 
 # toolchain-related
-if (WIN32)
-    set(C_FLAGS_BASE "/experimental:c11atomics")
-    set(CMAKE_C_FLAGS_DEBUG "${C_FLAGS_BASE} ${CMAKE_C_FLAGS} /MP /W4 /DDEBUG /DBAL_DBGLOG")
-    set(CMAKE_C_FLAGS_RELEASE "${C_FLAGS_BASE} ${CMAKE_C_FLAGS} /MP /W4 /DNDEBUG")
+add_compile_definitions(
+    $<$<CONFIG:Debug>:DEBUG>
+    $<$<CONFIG:Debug>:BAL_DBGLOG>
+    $<$<CONFIG:Release>:NDEBUG>
+)
 
-    set(CXX_FLAGS_BASE "")
-    set(CMAKE_CXX_FLAGS_DEBUG "${CXX_FLAGS_BASE} /DDEBUG /DBAL_DBGLOG")
-    set(CMAKE_CXX_FLAGS_RELEASE "${CXX_FLAGS_BASE} /DNDEBUG")
+if (MSVC)
+    add_compile_options(
+        /W4 /MP /experimental:c11atomics
+        $<$<CONFIG:Release>:/O3>
+    )
 else()
-    set(C_FLAGS_BASE "-Wall -Wextra -Wpedantic -Werror -Wbad-function-cast -Wmissing-prototypes -Wdouble-promotion -Wconversion -Wno-sign-conversion -Wno-string-conversion -Wextra-semi-stmt")
-    set(CMAKE_C_FLAGS_DEBUG "${C_FLAGS_BASE} -g3 -O0 -DDEBUG -DBAL_DBGLOG")
-    set(CMAKE_C_FLAGS_RELEASE "${C_FLAGS_BASE} -O3 -D_FORTIFY_SOURCE=2 -DNDEBUG")
+    # -Wformat-nonliteral is also an option
+    add_compile_options(
+        -Wall -Wextra -Wpedantic -Werror -Wbad-function-cast -Wmissing-prototypes -Wdouble-promotion -Wconversion -Wno-sign-conversion -Wno-string-conversion -Wextra-semi-stmt
+        $<$<CONFIG:Debug>:-O0>
+        $<$<CONFIG:Debug>:-g3>
+        $<$<CONFIG:Release>:-O3>
+    )
 
-    set(CXX_FLAGS_BASE "-Wall -Wextra -Wpedantic -Werror -Wbad-function-cast -Wmissing-prototypes -Wdouble-promotion -Wconversion -Wno-sign-conversion -Wno-string-conversion -Wextra-semi-stmt")
-    set(CMAKE_CXX_FLAGS_DEBUG "${C_FLAGS_BASE} -g3 -O0 -DDEBUG -DBAL_DBGLOG")
-    set(CMAKE_CXX_FLAGS_RELEASE "${C_FLAGS_BASE} -O3 -D_FORTIFY_SOURCE=2 -DNDEBUG")
+    if (CMAKE_COMPILER_IS_GNUCC)
+        add_compile_options(
+            -Wformat-truncation
+        )
+    endif()
+
+    add_compile_definitions(
+        $<$<CONFIG:Release>:_FORTIFY_SOURCE=2>
+    )
 
     set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
     set(THREADS_PREFER_PTHREAD_FLAG TRUE)
