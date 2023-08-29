@@ -80,7 +80,7 @@ if (MSVC)
 else()
     # -Wformat-nonliteral is also an option
     add_compile_options(
-        -Wall -Wextra -Wpedantic -Werror -Wbad-function-cast -Wmissing-prototypes -Wdouble-promotion -Wconversion -Wno-sign-conversion -Wno-string-conversion -Wextra-semi-stmt
+        -Wall -Wextra -Wpedantic -Werror -Wbad-function-cast -Wmissing-prototypes -Wdouble-promotion -Wconversion -Wno-sign-conversion -Wno-string-conversion -Wextra-semi-stmt -Wstring-conversion -Wdisabled-macro-expansion -Wassign-enum -Wshift-overflow
         $<$<CONFIG:Debug>:-O0>
         $<$<CONFIG:Debug>:-g3>
         $<$<CONFIG:Release>:-O3>
@@ -237,12 +237,12 @@ target_compile_features(
     ${C_STANDARD}
 )
 
-#install(
-#    TARGETS ${STATIC_LIBRARY_NAME} ${SHARED_LIBRARY_NAME}
-#    DESTINATION lib
-#    PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
-#    CONFIGURATIONS Release
-#)
+install(
+    TARGETS ${STATIC_LIBRARY_NAME} ${SHARED_LIBRARY_NAME}
+    DESTINATION lib
+    PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+    CONFIGURATIONS Release
+)
 
 #file(
 #    GLOB
