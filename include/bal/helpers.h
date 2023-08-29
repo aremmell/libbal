@@ -58,8 +58,8 @@ void __bal_safefree(void** pp)
  * from GCC in particular. */
 # define _bal_snprintf_trunc(dst, size, ...) \
     do { \
-      volatile size_t n = size; \
-      (void)snprintf(dst, n, __VA_ARGS__); \
+      volatile size_t _n = size; \
+      (void)snprintf(dst, _n, __VA_ARGS__); \
     } while (false)
 
 /** Allows a parameter to be unreferenced without compiler warnings. */
