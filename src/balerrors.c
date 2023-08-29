@@ -71,10 +71,11 @@ static const struct {
 
 int _bal_get_error(bal_error* err, bool extended)
 {
-    int retval = err->code = _bal_err_code(_BAL_E_UNKNOWN);
+    int retval = -1;
 
     if (_bal_okptr(err)) {
         memset(err, 0, sizeof(bal_error));
+        err->code = _bal_err_code(_BAL_E_UNKNOWN);
         for (size_t n = 0UL; n < _bal_countof(bal_errors); n++) {
             if (bal_errors[n].code == _bal_tei.code) {
                 char* heap_msg = NULL;

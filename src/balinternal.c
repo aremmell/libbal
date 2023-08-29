@@ -67,11 +67,9 @@ bool _bal_init(void)
     uint_fast32_t magic = _bal_state.magic;
 #endif
 
-    if (init) {
-        BAL_ASSERT(0U == magic || BAL_MAGIC == magic);
-        if (BAL_MAGIC == magic)
-            init = _bal_seterror(_BAL_E_DUPEINIT);
-    }
+    BAL_ASSERT(0U == magic || BAL_MAGIC == magic);
+    if (BAL_MAGIC == magic)
+        init = _bal_seterror(_BAL_E_DUPEINIT);
 
 #if defined(__WIN__)
     if (init) {
