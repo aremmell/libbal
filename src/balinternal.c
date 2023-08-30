@@ -59,6 +59,7 @@ bool _bal_init(void)
     if (!init)
         return _bal_seterror(_BAL_E_INTERNAL);
 
+    _BAL_MUTEX_COUNTER_INIT(init);
     _BAL_LOCK_MUTEX(&_bal_state.mutex, init);
 
 #if defined(__HAVE_STDATOMICS__)
@@ -95,6 +96,8 @@ bool _bal_init(void)
     }
 
     _BAL_UNLOCK_MUTEX(&_bal_state.mutex, init);
+    _BAL_MUTEX_COUNTER_CHECK(init);
+
     _bal_dbglog("libbal initialization %s", init ? "succeeded" : "failed");
 
     return init;
@@ -106,6 +109,8 @@ bool _bal_cleanup(void)
         return false;
 
     bool cleanup = true;
+
+    _BAL_MUTEX_COUNTER_INIT(cleanup);
     _BAL_LOCK_MUTEX(&_bal_state.mutex, cleanup);
 
 #if defined(__WIN__)
@@ -124,6 +129,8 @@ bool _bal_cleanup(void)
 #endif
 
     _BAL_UNLOCK_MUTEX(&_bal_state.mutex, cleanup);
+    _BAL_MUTEX_COUNTER_CHECK(cleanup);
+
     _bal_dbglog("libbal clean up %s", cleanup ? "succeeded" : "failed");
 
     return cleanup;
@@ -157,6 +164,8 @@ bool _bal_async_poll(bal_socket* s, bal_async_cb proc, uint32_t mask)
         return _bal_seterror(_BAL_E_INVALIDARG);
 
     bool retval = false;
+
+    _BAL_MUTEX_COUNTER_INIT(aspoll);
     _BAL_LOCK_MUTEX(&_bal_as_container.mutex, aspoll);
 
     if (0U == mask) {
@@ -200,6 +209,7 @@ bool _bal_async_poll(bal_socket* s, bal_async_cb proc, uint32_t mask)
     }
 
     _BAL_UNLOCK_MUTEX(&_bal_as_container.mutex, aspoll);
+    _BAL_MUTEX_COUNTER_CHECK(aspoll);
 
     return retval;
 }
@@ -234,15 +244,14 @@ bool _bal_init_asyncpoll(void)
 
     for (size_t n = 0; n < _bal_countof(threads); n++) {
 #if defined(__WIN__)
-        *threads[n].thread = _beginthreadex(NULL, 0U, threads[n].proc,
-            &_bal_as_container, 0U, NULL);
+        *threads[n].thread = _beginthreadex(NULL, 0U, threads[n].proc, NULL,
+            0U, NULL);
         BAL_ASSERT(0ULL != *threads[n].thread);
 
         if (0ULL == *threads[n].thread)
             init &= _bal_handlelasterr();
 #else
-        int op = pthread_create(threads[n].thread, NULL, threads[n].proc,
-            &_bal_as_container);
+        int op = pthread_create(threads[n].thread, NULL, threads[n].proc, NULL);
         BAL_ASSERT(0 == op);
         init &= 0 == op;
 
@@ -308,6 +317,7 @@ bool _bal_cleanup_asyncpoll(void)
 void _bal_sock_destroy(bal_socket** s)
 {
     if (_bal_okptrptr(s) && _bal_okptr(*s)) {
+        _BAL_MUTEX_COUNTER_INIT(destroy);
         _BAL_LOCK_MUTEX(&_bal_as_container.mutex, destroy);
 
         /* just to be safe, ensure that the socket is not currently in the
@@ -332,6 +342,7 @@ void _bal_sock_destroy(bal_socket** s)
         _bal_safefree(s);
 
         _BAL_UNLOCK_MUTEX(&_bal_as_container.mutex, destroy);
+        _BAL_MUTEX_COUNTER_CHECK(destroy);
     }
 }
 
@@ -497,19 +508,20 @@ short _bal_mask_to_pollflags(uint32_t mask)
 
 bal_threadret _bal_eventthread(void* ctx)
 {
+    BAL_UNUSED(ctx);
     static const int poll_timeout = 500;
-    bal_as_container* asc = (bal_as_container*)ctx;
-    BAL_ASSERT(NULL != asc);
 
-    while (!_bal_get_boolean(&asc->die)) {
+    while (!_bal_get_boolean(&_bal_as_container.die)) {
         size_t count       = 0UL;
 #if defined(__WIN__)
         WSAPOLLFD* fds     = NULL;
 #else
         struct pollfd* fds = NULL;
 #endif
-        _BAL_LOCK_MUTEX(&asc->mutex, one);
-        count = _bal_list_count(asc->lst);
+        _BAL_MUTEX_COUNTER_INIT(eventthread);
+        _BAL_LOCK_MUTEX(&_bal_as_container.mutex, eventthread);
+
+        count = _bal_list_count(_bal_as_container.lst);
         if (count > 0UL) {
             fds = calloc(count, sizeof(struct pollfd));
             BAL_ASSERT(NULL != fds);
@@ -519,8 +531,8 @@ bal_threadret _bal_eventthread(void* ctx)
                 bal_descriptor key = 0;
                 bal_socket* val    = NULL;
 
-                _bal_list_reset_iterator(asc->lst);
-                while (_bal_list_iterate(asc->lst, &key, &val)) {
+                _bal_list_reset_iterator(_bal_as_container.lst);
+                while (_bal_list_iterate(_bal_as_container.lst, &key, &val)) {
                     fds[offset].fd     = key;
                     fds[offset].events = _bal_mask_to_pollflags(val->state.mask);
                     offset++;
@@ -528,20 +540,20 @@ bal_threadret _bal_eventthread(void* ctx)
 
                 /* relinquish the mutex during poll; this gives other threads
                  * a chance to obtain the lock and do some work. */
-                _BAL_UNLOCK_MUTEX(&asc->mutex, one);
+                _BAL_UNLOCK_MUTEX(&_bal_as_container.mutex, eventthread);
 #if defined(__WIN__)
-                int res = WSAPoll(fds, (ULONG)count, poll_timeout);
+                int res = WSAPoll(fds, (nfds_t)count, poll_timeout);
 #else
                 int res = poll(fds, (nfds_t)count, poll_timeout);
 #endif
                 /* get the mutex back. */
-                _BAL_LOCK_MUTEX(&asc->mutex, two);
+                _BAL_LOCK_MUTEX(&_bal_as_container.mutex, eventthread);
 
                 if (res > 0) {
                     for (size_t n = 0UL; n < count; n++) {
                         bal_socket* s = NULL;
-                        bool found    = _bal_list_find(asc->lst, fds[n].fd, &s);
-                        BAL_ASSERT(found && _bal_oksocknf(s));
+                        bool found    = _bal_list_find(_bal_as_container.lst,
+                            fds[n].fd, &s);
 
                         if (found && _bal_oksock(s)) {
                             uint32_t events = _bal_pollflags_to_events(fds[n].revents);
@@ -555,12 +567,13 @@ bal_threadret _bal_eventthread(void* ctx)
 
                 _bal_safefree(&fds);
             }
-         } else {
-            // TODO: better alternative than sleeping here?
-            bal_sleep_msec(100);
          }
 
-        _BAL_UNLOCK_MUTEX(&asc->mutex, two);
+        _BAL_UNLOCK_MUTEX(&_bal_as_container.mutex, eventthread);
+        _BAL_MUTEX_COUNTER_CHECK(eventthread);
+
+        if (0 == count)
+            bal_sleep_msec(100); // TODO: better alternative than sleeping here?
         bal_thread_yield();
     }
 
@@ -580,8 +593,10 @@ void _bal_dispatch_events(bal_descriptor sd, bal_socket* s, uint32_t events)
 
     uint32_t _events = 0U;
 
+#if defined(BAL_DBGLOG_ASYNC_IO)
     _bal_dbglog("events %08"PRIx32" for socket "BAL_SOCKET_SPEC " (mask = %08"
         PRIx32")", events, sd, s->state.mask);
+#endif
 
     if (bal_isbitset(events, BAL_EVT_READ) && bal_bitsinmask(s, BAL_EVT_READ)) {
         if (bal_is_listening(s)) {

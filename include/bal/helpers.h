@@ -69,21 +69,47 @@ void __bal_safefree(void** pp)
 # define _BAL_NI_NODNS (NI_NUMERICHOST | NI_NUMERICSERV)
 
 /** getnameinfo flags: perform DNS queries. */
-# define _BAL_NI_DNS   (NI_NAMEREQD | NI_NUMERICSERV)
+# define _BAL_NI_DNS (NI_NAMEREQD | NI_NUMERICSERV)
 
 /** Returns the size of a sockaddr struct (IPv4/IPv6). */
 # define _BAL_SASIZE(sa) \
     ((PF_INET6 == ((struct sockaddr* )&(sa))->sa_family) \
         ? sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in))
 
-/** Locks the specified mutex and asserts that it was locked. */
-# define _BAL_LOCK_MUTEX(m, name) \
-    bool name##_locked = _bal_mutex_lock(m); \
-    BAL_ASSERT_UNUSED(name##_locked, name##_locked)
+/** Initializes a counter used to determine whether or not a given mutex
+ * was locked and unlocked precisely the same amount of times. */
+# define _BAL_MUTEX_COUNTER_INIT(counter) \
+    size_t _##counter = 0
 
-/** Unlocks a mutex and asserts that it was unlocked. */
-# define _BAL_UNLOCK_MUTEX(m, name) \
-    bool name##_unlocked = _bal_mutex_unlock(m); \
-    BAL_ASSERT_UNUSED(name##_unlocked, name##_unlocked)
+/** Locks the specified mutex, asserts that it was locked successfully,
+ * and increments a counter. */
+# define _BAL_LOCK_MUTEX(m, counter) \
+    do { \
+        if (!_bal_mutex_lock(m)) { \
+            BAL_ASSERT(!"failed to lock mutex!"); \
+        } else { \
+            _##counter++; \
+        } \
+     } while (false)
+
+/** Unocks the specified mutex, asserts that it was unlocked successfully,
+ * and increments a counter. */
+# define _BAL_UNLOCK_MUTEX(m, counter) \
+    do { \
+        if (!_bal_mutex_unlock(m)) { \
+            BAL_ASSERT(!"failed to unlock mutex!"); \
+        } else { \
+            _##counter--; \
+        } \
+    } while (false)
+
+# define _BAL_MUTEX_COUNTER_CHECK(counter) \
+    do { \
+        if (0 != _##counter) { \
+            _bal_dbglog("error: %zu != 0: unbalanced mutex lock/unlock!", \
+                _##counter); \
+            BAL_ASSERT(!"mutex lock/unlock unbalanced!"); \
+        } \
+    } while (false)
 
 #endif /* !_BAL_HELPERS_H_INCLUDED */
