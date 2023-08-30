@@ -82,6 +82,10 @@ if (MSVC)
         $<$<CONFIG:Release>:/Ox>
     )
 else()
+    set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
+    set(THREADS_PREFER_PTHREAD_FLAG TRUE)
+    find_package(Threads REQUIRED)
+
     # -Wformat-nonliteral is also an option
     add_compile_options(
         -Wall -Wextra -Wpedantic -Werror -Wdouble-promotion -Wconversion -Wno-sign-conversion -Wno-string-conversion -Wshift-overflow
@@ -96,13 +100,18 @@ else()
         )
     endif()
 
+    if (THREADS_HAVE_PTHREAD_ARG)
+        add_compile_options(
+            -pthread
+        )
+        add_link_options(
+            -pthread
+        )
+    endif()
+
     add_compile_definitions(
         $<$<CONFIG:Release>:_FORTIFY_SOURCE=2>
     )
-
-    set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
-    set(THREADS_PREFER_PTHREAD_FLAG TRUE)
-    find_package(Threads REQUIRED)
 endif()
 
 execute_process(
@@ -179,6 +188,26 @@ target_include_directories(
     ${CMAKE_CURRENT_BINARY_DIR}/include
 )
 
+if(!WIN32)
+    target_link_libraries(
+        ${SERVER_EXECUTABLE_NAME}
+        PUBLIC
+        Threads::Threads
+    )
+
+    target_link_libraries(
+        ${CLIENT_EXECUTABLE_NAME}
+        PUBLIC
+        Threads::Threads
+    )
+
+    target_link_libraries(
+        ${TESTS_EXECUTABLE_NAME}
+        PUBLIC
+        Threads::Threads
+    )
+endif()
+
 target_link_libraries(
     ${CLIENT_EXECUTABLE_NAME}
     ${STATIC_LIBRARY_NAME}
@@ -193,23 +222,6 @@ target_link_libraries(
     ${TESTS_EXECUTABLE_NAME}
     ${STATIC_LIBRARY_NAME}
 )
-
-if(!WIN32)
-    target_link_libraries(
-        ${SERVER_EXECUTABLE_NAME}
-        Threads::Threads
-    )
-
-    target_link_libraries(
-        ${CLIENT_EXECUTABLE_NAME}
-        Threads::Threads
-    )
-
-    target_link_libraries(
-        ${TESTS_EXECUTABLE_NAME}
-        Threads::Threads
-    )
-endif()
 
 target_compile_features(
     ${CLIENT_EXECUTABLE_NAME}
