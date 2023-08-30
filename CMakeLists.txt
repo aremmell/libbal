@@ -76,8 +76,9 @@ add_compile_definitions(
 # on every error handled.
 if (MSVC)
     add_compile_options(
-        /W4 /MP /GS /experimental:c11atomics /fsanitize-address
-        $<$<CONFIG:Debug>:"/Od /Zi">
+        /W4 /MP /GS /experimental:c11atomics /wd4267
+        $<$<CONFIG:Debug>:/Od>
+        $<$<CONFIG:Debug>:/Zi>
         $<$<CONFIG:Release>:/Ox>
     )
 else()
