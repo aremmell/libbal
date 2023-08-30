@@ -497,7 +497,7 @@ short _bal_mask_to_pollflags(uint32_t mask)
 
 bal_threadret _bal_eventthread(void* ctx)
 {
-    static const int poll_timeout = 100;
+    static const int poll_timeout = 500;
     bal_as_container* asc = (bal_as_container*)ctx;
     BAL_ASSERT(NULL != asc);
 
@@ -508,8 +508,7 @@ bal_threadret _bal_eventthread(void* ctx)
 #else
         struct pollfd* fds = NULL;
 #endif
-        _BAL_LOCK_MUTEX(&asc->mutex, dispatch);
-
+        _BAL_LOCK_MUTEX(&asc->mutex, one);
         count = _bal_list_count(asc->lst);
         if (count > 0UL) {
             fds = calloc(count, sizeof(struct pollfd));
@@ -526,11 +525,18 @@ bal_threadret _bal_eventthread(void* ctx)
                     fds[offset].events = _bal_mask_to_pollflags(val->state.mask);
                     offset++;
                 }
+
+                /* relinquish the mutex during poll; this gives other threads
+                 * a chance to obtain the lock and do some work. */
+                _BAL_UNLOCK_MUTEX(&asc->mutex, one);
 #if defined(__WIN__)
                 int res = WSAPoll(fds, (ULONG)count, poll_timeout);
 #else
                 int res = poll(fds, (nfds_t)count, poll_timeout);
 #endif
+                /* get the mutex back. */
+                _BAL_LOCK_MUTEX(&asc->mutex, two);
+
                 if (res > 0) {
                     for (size_t n = 0UL; n < count; n++) {
                         bal_socket* s = NULL;
@@ -554,7 +560,7 @@ bal_threadret _bal_eventthread(void* ctx)
             bal_sleep_msec(100);
          }
 
-        _BAL_UNLOCK_MUTEX(&asc->mutex, dispatch);
+        _BAL_UNLOCK_MUTEX(&asc->mutex, two);
         bal_thread_yield();
     }
 
