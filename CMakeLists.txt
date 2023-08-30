@@ -84,7 +84,7 @@ if (MSVC)
 else()
     # -Wformat-nonliteral is also an option
     add_compile_options(
-        -Wall -Wextra -Wpedantic -Werror -Wbad-function-cast -Wmissing-prototypes -Wdouble-promotion -Wconversion -Wno-sign-conversion -Wno-string-conversion -Wextra-semi-stmt -Wstring-conversion -Wdisabled-macro-expansion -Wassign-enum -Wshift-overflow
+        -Wall -Wextra -Wpedantic -Werror -Wdouble-promotion -Wconversion -Wno-sign-conversion -Wno-string-conversion -Wshift-overflow
         $<$<CONFIG:Debug>:-O0>
         $<$<CONFIG:Debug>:-g3>
         $<$<CONFIG:Release>:-O3>
