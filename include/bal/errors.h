@@ -159,6 +159,13 @@ void __bal_dbglog(const char* func, const char* file, uint32_t line,
     const char* format, ...);
 #  define _bal_dbglog(...) \
     __bal_dbglog(__func__, __file__, __LINE__, __VA_ARGS__)
+# else
+#  define _bal_dbglog(...)
+# endif
+
+# if defined(BAL_ASSERT_ENABLED)
+#  define BAL_ASSERT(...) assert(__VA_ARGS__)
+# elif defined(BAL_DBGLOG)
 #  define BAL_ASSERT(...) \
     do { \
         if (!(__VA_ARGS__)) { \
@@ -167,7 +174,6 @@ void __bal_dbglog(const char* func, const char* file, uint32_t line,
         } \
     } while (false)
 # else
-#  define _bal_dbglog(...)
 #  define BAL_ASSERT(...)
 # endif
 
