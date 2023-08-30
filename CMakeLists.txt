@@ -72,10 +72,13 @@ add_compile_definitions(
     $<$<CONFIG:Release>:NDEBUG>
 )
 
+# define BAL_DBGLOG_SETERROR to get a debug trace
+# on every error handled.
 if (MSVC)
     add_compile_options(
-        /W4 /MP /experimental:c11atomics
-        $<$<CONFIG:Release>:/O3>
+        /W4 /MP /GS /experimental:c11atomics /fsanitize-address
+        $<$<CONFIG:Debug>:"/Od /Zi">
+        $<$<CONFIG:Release>:/Ox>
     )
 else()
     # -Wformat-nonliteral is also an option

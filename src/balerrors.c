@@ -126,7 +126,7 @@ bool __bal_set_error(int code, const char* func, const char* file, uint32_t line
         _bal_tei.loc.line = line;
     }
 
-#if defined(BAL_DBGLOG)/*  && defined(BAL_DBGLOG_SETERROR) */
+#if defined(BAL_DBGLOG) && defined(BAL_DBGLOG_SETERROR)
     if (0 != code) {
         bal_error err = {0};
         __bal_dbglog(func, file, line, "%d (%s)",
