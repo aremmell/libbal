@@ -43,12 +43,12 @@ int main(int argc, char** argv)
 #endif
 
     size_t tests_total  = _bal_countof(bal_tests);
-    size_t tests_run    = 0UL;
-    size_t tests_passed = 0UL;
+    size_t tests_run    = 0;
+    size_t tests_passed = 0;
 
     _bal_start_all_tests(tests_total);
 
-    for (size_t n = 0UL; n < tests_total; n++) {
+    for (size_t n = 0; n < tests_total; n++) {
         _bal_start_test(tests_total, tests_run, bal_tests[n].name);
         bool pass = bal_tests[n].func();
         _bal_end_test(tests_total, tests_run, bal_tests[n].name, pass);
@@ -123,7 +123,7 @@ bool baltest_error_sanity(void)
 #endif
 
     bool repeat = false;
-    for (size_t n = 0UL; n < _bal_countof(error_dict); n++) {
+    for (size_t n = 0; n < _bal_countof(error_dict); n++) {
         (void)_bal_seterror(_bal_mk_error(error_dict[n].code));
         bal_error err = {0};
 
@@ -174,7 +174,18 @@ void _bal_test_msg(const char* format, ...)
     (void)vsnprintf(tmp, sizeof(tmp), format, args);
     va_end(args);
 
-    printf("\t%s\n", tmp);
+    (void)printf("\t%s\n", tmp);
+}
+
+bool _bal_print_err(bool pass, bool expected)
+{
+    if (!pass) {
+        bal_error err = {0};
+        bal_get_error(&err);
+        _bal_test_msg(expected ? GREEN("%d (%s)") : RED("%d (%s)") "\n", err.code,
+            err.message);
+    }
+    return pass;
 }
 
 void _bal_end_test(size_t total, size_t run, const char* name, bool pass)

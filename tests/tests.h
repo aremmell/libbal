@@ -38,7 +38,7 @@ typedef bool (*bal_test_func)(void);
 typedef struct {
     const char* const name; /**< Human-readable name */
     bal_test_func func;     /**< Function pointer. */
-    bool online_only;       /**< If an Internet connection is required or not. */
+    bool online_only;       /**< Whether an Internet connection is required. */
 } bal_test_data;
 
 /******************************************************************************\
@@ -66,6 +66,7 @@ bool baltest_error_sanity(void);
 void _bal_start_all_tests(size_t total);
 void _bal_start_test(size_t total, size_t run, const char* name);
 void _bal_test_msg(const char* format, ...);
+bool _bal_print_err(bool pass, bool expected);
 void _bal_end_test(size_t total, size_t run, const char* name, bool pass);
 void _bal_end_all_tests(size_t total, size_t run, size_t passed);
 
