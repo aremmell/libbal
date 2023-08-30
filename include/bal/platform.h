@@ -132,7 +132,7 @@ typedef time_t bal_tvsec;
 #if defined(__MACOS__)
 typedef int bal_tvusec;
 #else
-typedef useconds_t bal_tvusec;
+typedef suseconds_t bal_tvusec;
 #endif
 
 /** The mutex type. */
