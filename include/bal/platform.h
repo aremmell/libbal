@@ -129,11 +129,11 @@ typedef int bal_linger;
 typedef time_t bal_tvsec;
 
 /** The type used for struct timeval::tv_usec. */
-#if defined(__MACOS__)
+#  if defined(__MACOS__)
 typedef int bal_tvusec;
-#else
+#  else
 typedef suseconds_t bal_tvusec;
-#endif
+#  endif
 
 /** The mutex type. */
 typedef pthread_mutex_t bal_mutex;
