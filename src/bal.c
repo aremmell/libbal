@@ -26,6 +26,7 @@
 #include "bal.h"
 #include "bal/internal.h"
 #include "bal/helpers.h"
+#include "bal/state.h"
 
 #if defined(__WIN__)
 # pragma comment(lib, "ws2_32.lib")
@@ -37,17 +38,150 @@
 
 bool bal_init(void)
 {
-    return _bal_init();
+    bool init = _bal_once(&_bal_static_once_init, &_bal_static_once_init_func);
+    BAL_ASSERT(init);
+
+    if (!init)
+        return _bal_seterror(_BAL_E_INTERNAL);
+
+    _BAL_MUTEX_COUNTER_INIT(init);
+    _BAL_LOCK_MUTEX(&_bal_state.mutex, init);
+
+#if defined(__HAVE_STDATOMICS__)
+    uint_fast32_t magic = atomic_load(&_bal_state.magic);
+#else
+    uint_fast32_t magic = _bal_state.magic;
+#endif
+
+    BAL_ASSERT(0U == magic || BAL_MAGIC == magic);
+    if (BAL_MAGIC == magic)
+        init = _bal_seterror(_BAL_E_DUPEINIT);
+
+#if defined(__WIN__)
+    if (init) {
+        WORD wVer  = MAKEWORD(2, 2);
+        WSADATA wd = {0};
+
+        if (0 != WSAStartup(wVer, &wd)) {
+            _bal_handlelasterr();
+            init = false;
+        }
+    }
+#endif
+
+    if (init)
+        init = _bal_init_asyncpoll();
+
+    if (init) {
+#if defined(__HAVE_STDATOMICS__)
+        atomic_store(&_bal_state.magic, BAL_MAGIC);
+#else
+        _bal_state.magic = BAL_MAGIC;
+#endif
+    }
+
+    _BAL_UNLOCK_MUTEX(&_bal_state.mutex, init);
+    _BAL_MUTEX_COUNTER_CHECK(init);
+
+    _bal_dbglog("libbal initialization %s", init ? "succeeded" : "failed");
+
+    return init;
 }
 
 bool bal_cleanup(void)
 {
-    return _bal_cleanup();
+    if (!_bal_sanity())
+        return false;
+
+    bool cleanup = true;
+
+    _BAL_MUTEX_COUNTER_INIT(cleanup);
+    _BAL_LOCK_MUTEX(&_bal_state.mutex, cleanup);
+
+#if defined(__WIN__)
+    (void)WSACleanup();
+#endif
+
+    if (!_bal_cleanup_asyncpoll()) {
+        _bal_dbglog("error: _bal_cleanup_asyncpoll failed");
+        cleanup = false;
+    }
+
+#if defined(__HAVE_STDATOMICS__)
+    atomic_store(&_bal_state.magic, 0U);
+#else
+    _bal_state.magic = 0U;
+#endif
+
+    _BAL_UNLOCK_MUTEX(&_bal_state.mutex, cleanup);
+    _BAL_MUTEX_COUNTER_CHECK(cleanup);
+
+    _bal_dbglog("libbal clean up %s", cleanup ? "succeeded" : "failed");
+
+    return cleanup;
 }
 
 bool bal_async_poll(bal_socket* s, bal_async_cb proc, uint32_t mask)
 {
-    return _bal_async_poll(s, proc, mask);
+    if (!_bal_get_boolean(&_bal_async_poll_init) ||
+        _bal_get_boolean(&_bal_as_container.die))
+        return _bal_seterror(_BAL_E_ASNOTINIT);
+
+    if (!_bal_oksock(s))
+        return false;
+
+    if (!_bal_okptrnf(proc) && 0U != mask)
+        return _bal_seterror(_BAL_E_INVALIDARG);
+
+    bool retval = false;
+
+    _BAL_MUTEX_COUNTER_INIT(aspoll);
+    _BAL_LOCK_MUTEX(&_bal_as_container.mutex, aspoll);
+
+    if (0U == mask) {
+        /* this thread holds the mutex for the list, so it can remove an iterator. */
+        bal_socket* d = NULL;
+        bool success  = _bal_list_remove(_bal_as_container.lst, s->sd, &d);
+        BAL_ASSERT(NULL != d && s == d);
+
+        if (success) {
+            /* The iterator is kaput, but s is still allocated. Since this is a
+             * removal request (mask = 0), don't close or delete the socket. */
+            _bal_dbglog("removed socket "BAL_SOCKET_SPEC" (%p) from list", s->sd, d);
+            retval = true;
+        } else {
+            (void)_bal_seterror(_BAL_E_ASNOSOCKET);
+        }
+    } else {
+        bal_socket* d = NULL;
+        if (_bal_list_find(_bal_as_container.lst, s->sd, &d)) {
+            BAL_ASSERT(NULL != d && s == d);
+            s->state.mask = mask;
+            s->state.proc = proc;
+            retval        = true;
+            _bal_dbglog("updated socket "BAL_SOCKET_SPEC" (%p)", s->sd, s);
+        } else {
+            bool success = false;
+            if (bal_set_io_mode(s, true)) {
+                s->state.mask = mask;
+                s->state.proc = proc;
+                success = _bal_list_add(_bal_as_container.lst, s->sd, s);
+                retval  = success;
+            }
+            if (success) {
+                _bal_dbglog("added socket "BAL_SOCKET_SPEC" to list (%p"
+                            ", mask = %08"PRIx32")", s->sd, s, s->state.mask);
+            } else {
+                _bal_dbglog("error: failed to add socket "BAL_SOCKET_SPEC
+                            " to list!", s->sd);
+            }
+        }
+    }
+
+    _BAL_UNLOCK_MUTEX(&_bal_as_container.mutex, aspoll);
+    _BAL_MUTEX_COUNTER_CHECK(aspoll);
+
+    return retval;
 }
 
 bool bal_auto_socket(bal_socket** s, int addr_fam, int proto, const char* host,
@@ -104,7 +238,34 @@ bool bal_sock_create(bal_socket** s, int addr_fam, int type, int proto)
 
 void bal_sock_destroy(bal_socket** s)
 {
-    _bal_sock_destroy(s);
+    if (_bal_okptrptr(s) && _bal_okptr(*s)) {
+        _BAL_MUTEX_COUNTER_INIT(destroy);
+        _BAL_LOCK_MUTEX(&_bal_as_container.mutex, destroy);
+
+        /* just to be safe, ensure that the socket is not currently in the
+        * async I/O list. */
+        bal_socket* d = NULL;
+        bool removed  = _bal_list_remove(_bal_as_container.lst, (*s)->sd, &d);
+
+        if (removed) {
+            BAL_ASSERT(*s == d);
+            _bal_dbglog("removed socket "BAL_SOCKET_SPEC" (%p) from list",
+                (*s)->sd, *s);
+        }
+
+        if (!bal_isbitset((*s)->state.bits, BAL_S_CLOSE)) {
+            _bal_dbglog("warning: freeing possibly open socket "BAL_SOCKET_SPEC
+                        " (%p)", (*s)->sd, *s);
+        } else {
+            _bal_dbglog("freeing socket "BAL_SOCKET_SPEC" (%p)", (*s)->sd, *s);
+        }
+
+        memset(*s, 0, sizeof(bal_socket));
+        _bal_safefree(s);
+
+        _BAL_UNLOCK_MUTEX(&_bal_as_container.mutex, destroy);
+        _BAL_MUTEX_COUNTER_CHECK(destroy);
+    }
 }
 
 bool bal_close(bal_socket** s, bool destroy)

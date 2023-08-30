@@ -163,7 +163,7 @@ typedef void* bal_threadret;
 #  define BAL_ONCE_INIT PTHREAD_ONCE_INIT
 
 /** The thread initializer. */
-#  define BAL_THREAD_INIT {0}
+#  define BAL_THREAD_INIT 0
 
 /** The mutex initializer. */
 #  define BAL_MUTEX_INIT PTHREAD_MUTEX_INITIALIZER

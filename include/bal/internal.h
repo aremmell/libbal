@@ -26,7 +26,6 @@
 #ifndef _BAL_INTERNAL_H_INCLUDED
 # define _BAL_INTERNAL_H_INCLUDED
 
-# include "platform.h"
 # include "types.h"
 
 /******************************************************************************\
@@ -37,11 +36,7 @@
 extern "C" {
 # endif
 
-bool _bal_init(void);
-bool _bal_cleanup(void);
 bool _bal_sanity(void);
-
-bool _bal_async_poll(bal_socket* s, bal_async_cb proc, uint32_t mask);
 
 bool _bal_init_asyncpoll(void);
 bool _bal_cleanup_asyncpoll(void);

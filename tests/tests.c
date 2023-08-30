@@ -27,8 +27,8 @@
 #include <stdlib.h>
 
 static const bal_test_data bal_tests[] = {
-    {"init-cleanup-sanity", baltest_init_cleanup_sanity},
-    {"error-sanity",        baltest_error_sanity}
+    {"init-cleanup-sanity", baltest_init_cleanup_sanity, false},
+    {"error-sanity",        baltest_error_sanity, false}
 };
 
 int main(int argc, char** argv)
@@ -137,7 +137,7 @@ bool baltest_error_sanity(void)
         ret = bal_get_error_ext(&err);
         pass &= error_dict[n].code == ret && ret == err.code;
         pass &= err.message[0] != '\0';
-        _bal_test_msg("%s (ext) = %s", error_dict[n].as_string, err.message);
+        _bal_test_msg("%s[ext] = %s", error_dict[n].as_string, err.message);
 
         /* getaddrinfo/getnameinfo errors. */
         if (BAL_E_PLATFORM == error_dict[n].code && !repeat) {

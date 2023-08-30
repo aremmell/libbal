@@ -36,8 +36,9 @@ typedef bool (*bal_test_func)(void);
 
 /** Test metadata container type. */
 typedef struct {
-    const char* const name;
-    bal_test_func func;
+    const char* const name; /**< Human-readable name */
+    bal_test_func func;     /**< Function pointer. */
+    bool online_only;       /**< If an Internet connection is required or not. */
 } bal_test_data;
 
 /******************************************************************************\
