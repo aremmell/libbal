@@ -54,9 +54,8 @@ bool _bal_init_asyncpoll(void)
 
     bool init = _bal_list_create(&_bal_as_container.lst);
     if (!init) {
-        _bal_handlelasterr();
         _bal_dbglog("error: failed to create list");
-        return false;
+        return _bal_handlelasterr();
     }
 
     init &= _bal_mutex_create(&_bal_as_container.mutex);
@@ -93,7 +92,8 @@ bool _bal_init_asyncpoll(void)
 #endif
     }
 
-    _bal_set_boolean(&_bal_async_poll_init, true);
+    _bal_set_boolean(&_bal_async_poll_init, init);
+    _bal_set_boolean(&_bal_as_container.die, !init);
     _bal_dbglog("async I/O initialization %s", init ? "succeeded" : "failed");
 
     return init;
