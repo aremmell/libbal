@@ -38,6 +38,8 @@
 
 bool bal_init(void)
 {
+    _bal_seterror(0);
+
     bool init = _bal_once(&_bal_static_once_init, &_bal_static_once_init_func);
     BAL_ASSERT(init);
 
@@ -90,6 +92,8 @@ bool bal_init(void)
 
 bool bal_cleanup(void)
 {
+    _bal_seterror(0);
+
     if (!_bal_sanity())
         return false;
 
