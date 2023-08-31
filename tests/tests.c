@@ -25,9 +25,11 @@
  */
 #include "tests.h"
 #include <stdlib.h>
-
+#pragma message("TODO: implement CLI")
+#pragma message("TODO: implement offline-only test runs")
 static const bal_test_data bal_tests[] = {
     {"init-cleanup-sanity", baltest_init_cleanup_sanity, false},
+    {"create-bind-listen",  baltest_create_bind_listen_tcp, false},
     {"error-sanity",        baltest_error_sanity, false}
 };
 
@@ -72,20 +74,63 @@ bool baltest_init_cleanup_sanity(void)
     /* initialize twice. first should succeed, second should fail. */
     _bal_test_msg("running bal_init twice in a row...");
     pass &= bal_init();
+    _bal_print_err(pass, false);
+
     pass &= !bal_init();
+    _bal_print_err(pass, false);
 
     /* clean up twice. same scenario. */
     _bal_test_msg("running bal_cleanup twice in a row...");
     pass &= bal_cleanup();
+    _bal_print_err(pass, false);
+
     pass &= !bal_cleanup();
+    _bal_print_err(pass, false);
 
     /* initialize after cleanup should succeed. */
     _bal_test_msg("running bal_init after bal_cleanup...");
     pass &= bal_init();
+    _bal_print_err(pass, false);
 
     /* cleanup after init should succeed. */
     _bal_test_msg("running bal_cleanup after bal_init...");
     pass &= bal_cleanup();
+    _bal_print_err(pass, false);
+
+    return pass;
+}
+
+bool baltest_create_bind_listen_tcp(void)
+{
+    bal_socket* s = NULL;
+#pragma message("TODO: create macros that init/clean up")
+    _bal_test_msg("initializing library...");
+    bool pass     = bal_init();
+    _bal_print_err(pass, false);
+
+    _bal_test_msg("creating socket...");
+    pass = bal_sock_create(&s, AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    _bal_print_err(pass, false);
+
+    _bal_test_msg("binding on all available adapters on port 6969...");
+    pass &= bal_bindall(s, "6969");
+    _bal_print_err(pass, false);
+
+    _bal_test_msg("registering for async I/O...");
+    pass &= bal_async_poll(s, &_bal_async_poll_callback, BAL_EVT_NORMAL);
+    _bal_print_err(pass, false);
+
+    _bal_test_msg("asynchronously listening for connect events...");
+    pass &= bal_listen(s, SOMAXCONN);
+    _bal_print_err(pass, false);
+
+    _bal_test_msg("closing and destroying socket...");
+    pass &= bal_close(&s, true);
+    _bal_print_err(pass, false);
+
+    _bal_test_msg("cleaning up library...");
+    pass &= bal_cleanup();
+    _bal_print_err(pass, false);
 
     return pass;
 }
@@ -137,7 +182,7 @@ bool baltest_error_sanity(void)
         ret = bal_get_error_ext(&err);
         pass &= error_dict[n].code == ret && ret == err.code;
         pass &= err.message[0] != '\0';
-        _bal_test_msg("%s[ext] = %s", error_dict[n].as_string, err.message);
+        _bal_test_msg("%s [ext] = %s", error_dict[n].as_string, err.message);
 
         /* getaddrinfo/getnameinfo errors. */
         if (BAL_E_PLATFORM == error_dict[n].code && !repeat) {
@@ -181,9 +226,9 @@ bool _bal_print_err(bool pass, bool expected)
 {
     if (!pass) {
         bal_error err = {0};
-        bal_get_error(&err);
-        _bal_test_msg(expected ? GREEN("%d (%s)") : RED("%d (%s)") "\n", err.code,
-            err.message);
+        bal_get_error_ext(&err);
+        _bal_test_msg(expected ? GREEN("%s: %d (%s)") : RED("%s: %d (%s)") "\n",
+            expected ? "Expected" : "Unexpected", err.code, err.message);
     }
     return pass;
 }
@@ -206,4 +251,11 @@ void _bal_end_all_tests(size_t total, size_t run, size_t passed)
         printf(REDB("%zu of %zu " ULINE("libbal") " %s failed") "\n", run - passed,
             total, _TEST_PLURAL(run - passed));
     }
+}
+
+void _bal_async_poll_callback(bal_socket* s, uint32_t events)
+{
+#pragma message("TODO: print events")
+    BAL_UNUSED(s);
+    BAL_UNUSED(events);
 }

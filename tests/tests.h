@@ -53,6 +53,13 @@ typedef struct {
 bool baltest_init_cleanup_sanity(void);
 
 /**
+ * @test baltest_create_bind_listen_tcp
+ * Ensure that a bal_socket can be instantiated, bound to a local address, and
+ * set to listen for connections (then be closed and destroyed).
+ */
+bool baltest_create_bind_listen_tcp(void);
+
+/**
  * @test baltest_error_sanity
  * Ensures that libbal properly handles reported errors and returns the expected
  * error codes and messages for each known error code.
@@ -69,6 +76,9 @@ void _bal_test_msg(const char* format, ...);
 bool _bal_print_err(bool pass, bool expected);
 void _bal_end_test(size_t total, size_t run, const char* name, bool pass);
 void _bal_end_all_tests(size_t total, size_t run, size_t passed);
+
+/** Handles and prints async I/O events as they arrive for a socket. */
+void _bal_async_poll_callback(bal_socket* s, uint32_t events);
 
 /** Returns the plural form of test(s) based on `num`. */
 # define _TEST_PLURAL(num) ((0 == (num) || (num) > 1) ? "tests" : "test")
