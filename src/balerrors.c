@@ -113,11 +113,11 @@ bool __bal_set_error(int code, const char* func, const char* file, uint32_t line
         _bal_tei.code = code;
         _bal_tei.loc.func = func;
 #if defined(__WIN__)
-        char* last_slash = StrRChrA(file, NULL, '\\');
+        const char* last_slash = StrRChrA(file, NULL, '\\');
         if (NULL == last_slash)
               last_slash = StrRChrA(file, NULL, '/');
 #else
-        char* last_slash = strrchr(file, '/');
+        const char* last_slash = strrchr(file, '/');
 #endif
         if (NULL != last_slash)
             file = last_slash + 1;

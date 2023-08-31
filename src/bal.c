@@ -349,23 +349,21 @@ bool bal_connect_addrlist(bal_socket* s, bal_addrlist* al)
 {
     bool retval = false;
 
-    if (_bal_oksock(s)) {
-        if (bal_reset_addrlist(al)) {
-            const bal_sockaddr* sa = NULL;
-            while (NULL != (sa = bal_enum_addrlist(al))) {
-                int ret = connect(s->sd, (const struct sockaddr*)sa, _BAL_SASIZE(*sa));
+    if (_bal_oksock(s) && bal_reset_addrlist(al)) {
+        const bal_sockaddr* sa = NULL;
+        while (NULL != (sa = bal_enum_addrlist(al))) {
+            int ret = connect(s->sd, (const struct sockaddr*)sa, _BAL_SASIZE(*sa));
 #if defined(__WIN__)
-                if (!ret || WSAEWOULDBLOCK == WSAGetLastError()) {
+            if (!ret || WSAEWOULDBLOCK == WSAGetLastError()) {
 #else
-                if (!ret || EAGAIN == errno || EINPROGRESS == errno) {
+            if (!ret || EAGAIN == errno || EINPROGRESS == errno) {
 #endif
-                    bal_setbitshigh(&s->state.mask, BAL_EVT_WRITE);
-                    bal_setbitshigh(&s->state.bits, BAL_S_CONNECT);
-                    retval = true;
-                    break;
-                } else {
-                    _bal_handlelasterr();
-                }
+                bal_setbitshigh(&s->state.mask, BAL_EVT_WRITE);
+                bal_setbitshigh(&s->state.bits, BAL_S_CONNECT);
+                retval = true;
+                break;
+            } else {
+                _bal_handlelasterr();
             }
         }
     }
@@ -904,9 +902,9 @@ bool bal_get_addrstrings(const bal_sockaddr* in, bool dns, bal_addrstrings* out)
         if (get) {
             if (dns && _bal_getnameinfo(_BAL_NI_DNS, in, out->host, out->port))
                 _bal_strcpy(out->host, NI_MAXHOST, BAL_UNKNOWN, sizeof(BAL_UNKNOWN));
-            if (PF_INET == ((struct sockaddr*)in)->sa_family)
+            if (PF_INET == ((const struct sockaddr*)in)->sa_family)
                 out->type = BAL_AS_IPV4;
-            else if (PF_INET6 == ((struct sockaddr*)in)->sa_family)
+            else if (PF_INET6 == ((const struct sockaddr*)in)->sa_family)
                 out->type = BAL_AS_IPV6;
             else
                 out->type = BAL_UNKNOWN;

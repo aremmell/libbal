@@ -29,7 +29,7 @@
 
 using namespace std;
 
-atomic_bool _run;
+static atomic_bool _run;
 
 bool balcommon::initialize()
 {

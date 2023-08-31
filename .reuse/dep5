@@ -24,11 +24,11 @@ Copyright: 2004-current Ryan M. Lederman <lederman@gmail.com>
 License: MIT
 
 # C source code
-Files: src/*.c
+Files: src/*.c tests/tests.c
 Copyright: 2004-current Ryan M. Lederman <lederman@gmail.com>
 License: MIT
 
 # C headers
-Files: include/*.h include/bal/version.h.in
+Files: include/*.h tests/tests.h include/bal/version.h.in
 Copyright: 2004-current Ryan M. Lederman <lederman@gmail.com>
 License: MIT

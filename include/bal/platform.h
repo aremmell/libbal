@@ -33,7 +33,6 @@
 #   define _DARWIN_C_SOURCE
 #   define __HAVE_LIBC_STRLCPY__
 #  elif defined(__linux__)
-#   undef _GNU_SOURCE
 #   define _GNU_SOURCE
 #   define __HAVE_POLLRDHUP__
 #  elif defined(__OpenBSD__)
@@ -112,7 +111,6 @@
 
 #  if !defined(__STDC_NO_ATOMICS__) && !defined(__cplusplus)
 #   include <stdatomic.h>
-#   undef __HAVE_STDATOMICS__
 #   define __HAVE_STDATOMICS__
 #  endif
 
