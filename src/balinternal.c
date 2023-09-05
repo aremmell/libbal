@@ -58,7 +58,7 @@ bool _bal_init_asyncpoll(void)
         return _bal_handlelasterr();
     }
 
-    init &= _bal_mutex_create(&_bal_as_container.mutex);
+    _bal_andeql(init, _bal_mutex_create(&_bal_as_container.mutex));
     if (!init) {
         _bal_dbglog("error: failed to create mutex(es)");
         return false;
@@ -81,11 +81,11 @@ bool _bal_init_asyncpoll(void)
         BAL_ASSERT(0ULL != *threads[n].thread);
 
         if (0ULL == *threads[n].thread)
-            init &= _bal_handlelasterr();
+            _bal_andeql(init, _bal_handlelasterr());
 #else
         int op = pthread_create(threads[n].thread, NULL, threads[n].proc, NULL);
         BAL_ASSERT(0 == op);
-        init &= 0 == op;
+        _bal_andeql(init, 0 == op);
 
         if (0 != op)
             (void)_bal_handleerr(op);
@@ -136,11 +136,11 @@ bool _bal_cleanup_asyncpoll(void)
 
     bool destroy = _bal_list_destroy(&_bal_as_container.lst);
     BAL_ASSERT(destroy);
-    cleanup &= destroy;
+    _bal_andeql(cleanup, destroy);
 
     destroy = _bal_mutex_destroy(&_bal_as_container.mutex);
     BAL_ASSERT(destroy);
-    cleanup &= destroy;
+    _bal_andeql(cleanup, destroy);
 
     _bal_dbglog("async I/O clean up %s", cleanup ? "succeeded" : "failed");
 
@@ -613,7 +613,7 @@ bool _bal_list_remove(bal_list* lst, bal_descriptor key, bal_socket** val)
             }
             node = node->next;
         }
-        ok &= found;
+        _bal_andeql(ok, found);
     }
 
     return ok;
@@ -627,7 +627,7 @@ bool _bal_list_remove_all(bal_list* lst)
         bal_list_node* node = lst->head;
         while (node) {
             bal_list_node* next = node->next;
-            ok  &= _bal_list_destroy_node(&node);
+            _bal_andeql(ok , _bal_list_destroy_node(&node));
             node = next;
         }
 

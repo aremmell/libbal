@@ -54,6 +54,10 @@ void __bal_safefree(void** pp)
 /** Returns the number of entries in an array. */
 # define _bal_countof(arr) (sizeof((arr)) / sizeof((arr)[0]))
 
+/** Effectively performs b &= expr without the linter warnings about using
+ * bool as an operand for that operator. */
+# define _bal_andeql(b, expr) ((b) = (b) && (expr))
+
 /** Use when truncation is expected/probable. Prevents truncation warnings
  * from GCC in particular. */
 # define _bal_snprintf_trunc(dst, size, ...) \

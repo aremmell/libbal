@@ -179,13 +179,13 @@ bool __bal_handle_error(int code, const char* func, const char* file,
             finderr = errno;
 #  endif
 # elif defined(__HAVE_GNU_STRERROR_R__)
-        char* tmp = strerror_r(code, msg, BAL_MAXERROR);
+        const char* tmp = strerror_r(code, msg, BAL_MAXERROR);
         if (tmp != msg)
             _bal_strcpy(msg, BAL_MAXERROR, tmp, strnlen(tmp, BAL_MAXERROR));
 # elif defined(__HAVE_STRERROR_S__)
         finderr = (int)strerror_s(msg, BAL_MAXERROR, code);
 # else
-        char* tmp = strerror(code);
+        const char* tmp = strerror(code);
         _bal_strcpy(msg, BAL_MAXERROR, tmp, strnlen(tmp, BAL_MAXERROR));
 # endif
 # if defined(__HAVE_XSI_STRERROR_R__) || defined(__HAVE_STRERROR_S__)

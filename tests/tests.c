@@ -73,28 +73,28 @@ bool baltest_init_cleanup_sanity(void)
 
     /* initialize twice. first should succeed, second should fail. */
     _bal_test_msg("running bal_init twice in a row...");
-    pass &= bal_init();
+    _bal_andeql(pass, bal_init());
     _bal_print_err(pass, false);
 
-    pass &= !bal_init();
+    _bal_andeql(pass, !bal_init());
     _bal_print_err(pass, false);
 
     /* clean up twice. same scenario. */
     _bal_test_msg("running bal_cleanup twice in a row...");
-    pass &= bal_cleanup();
+    _bal_andeql(pass, bal_cleanup());
     _bal_print_err(pass, false);
 
-    pass &= !bal_cleanup();
+    _bal_andeql(pass, !bal_cleanup());
     _bal_print_err(pass, false);
 
     /* initialize after cleanup should succeed. */
     _bal_test_msg("running bal_init after bal_cleanup...");
-    pass &= bal_init();
+    _bal_andeql(pass, bal_init());
     _bal_print_err(pass, false);
 
     /* cleanup after init should succeed. */
     _bal_test_msg("running bal_cleanup after bal_init...");
-    pass &= bal_cleanup();
+    _bal_andeql(pass, bal_cleanup());
     _bal_print_err(pass, false);
 
     return pass;
@@ -113,23 +113,23 @@ bool baltest_create_bind_listen_tcp(void)
     _bal_print_err(pass, false);
 
     _bal_test_msg("binding on all available adapters on port 6969...");
-    pass &= bal_bindall(s, "6969");
+    _bal_andeql(pass, bal_bindall(s, "6969"));
     _bal_print_err(pass, false);
 
     _bal_test_msg("registering for async I/O...");
-    pass &= bal_async_poll(s, &_bal_async_poll_callback, BAL_EVT_NORMAL);
+    _bal_andeql(pass, bal_async_poll(s, &_bal_async_poll_callback, BAL_EVT_NORMAL));
     _bal_print_err(pass, false);
 
     _bal_test_msg("asynchronously listening for connect events...");
-    pass &= bal_listen(s, SOMAXCONN);
+    _bal_andeql(pass, bal_listen(s, SOMAXCONN));
     _bal_print_err(pass, false);
 
     _bal_test_msg("closing and destroying socket...");
-    pass &= bal_close(&s, true);
+    _bal_andeql(pass, bal_close(&s, true));
     _bal_print_err(pass, false);
 
     _bal_test_msg("cleaning up library...");
-    pass &= bal_cleanup();
+    _bal_andeql(pass, bal_cleanup());
     _bal_print_err(pass, false);
 
     return pass;
@@ -174,14 +174,14 @@ bool baltest_error_sanity(void)
 
         /* without extended information. */
         int ret = bal_get_error(&err);
-        pass &= error_dict[n].code == ret && ret == err.code;
-        pass &= err.message[0] != '\0';
+        _bal_andeql(pass, error_dict[n].code == ret && ret == err.code);
+        _bal_andeql(pass, err.message[0] != '\0');
         _bal_test_msg("%s = %s", error_dict[n].as_string, err.message);
 
         /* with extended information. */
         ret = bal_get_error_ext(&err);
-        pass &= error_dict[n].code == ret && ret == err.code;
-        pass &= err.message[0] != '\0';
+        _bal_andeql(pass, error_dict[n].code == ret && ret == err.code);
+        _bal_andeql(pass, err.message[0] != '\0');
         _bal_test_msg("%s [ext] = %s", error_dict[n].as_string, err.message);
 
         /* getaddrinfo/getnameinfo errors. */

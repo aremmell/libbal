@@ -108,9 +108,9 @@ void balserver::async_events_cb(bal_socket* s, uint32_t events)
         }
 
         printf("[" BAL_SOCKET_SPEC "] got connection from %s %s:%s: "
-            BAL_SOCKET_SPEC " (%p)\n", s->sd, client_strings.type,
+            BAL_SOCKET_SPEC " (%" PRIxPTR ")\n", s->sd, client_strings.type,
             client_strings.addr, client_strings.port, client_socket->sd,
-            client_socket);
+            reinterpret_cast<uintptr_t>(client_socket));
     }
 
     if (bal_isbitset(events, BAL_EVT_READ)) {
@@ -135,8 +135,7 @@ void balserver::async_events_cb(bal_socket* s, uint32_t events)
         static const char* reply = "O, HELO 2 U";
         constexpr const size_t reply_size = 11;
 
-        ssize_t sent = bal_send(s, reply, reply_size, MSG_NOSIGNAL);
-        if (sent > 0) {
+        if (ssize_t sent = bal_send(s, reply, reply_size, MSG_NOSIGNAL); sent > 0) {
             if (reply_size == sent) {
                 already_replied = true;
             }
