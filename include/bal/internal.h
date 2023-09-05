@@ -131,9 +131,6 @@ bool _bal_addrinfo_to_addrlist(struct addrinfo* ai, bal_addrlist* out);
 /** Uses the best-avaiable string copying routine. */
 void _bal_strcpy(char* dest, size_t destsz, const char* src, size_t srcsz);
 
-/** Prints a bal_socket to stdout. */
-void _bal_socket_print(const bal_socket* s);
-
 # if defined(BAL_DBGLOG)
 /** Returns the current thread identifier (used by _bal_dbglog). */
 pid_t _bal_gettid(void);
