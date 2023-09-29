@@ -56,7 +56,7 @@ void __bal_safefree(void** pp)
 
 /** Effectively performs b &= expr without the linter warnings about using
  * bool as an operand for that operator. */
-# define _bal_andeql(b, expr) ((b) = (b) && (expr))
+# define _bal_eqland(b, expr) ((b) = (expr) && (b))
 
 /** Use when truncation is expected/probable. Prevents truncation warnings
  * from GCC in particular. */
