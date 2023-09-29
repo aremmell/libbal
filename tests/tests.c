@@ -201,6 +201,7 @@ bool baltest_error_sanity(void)
 
 void _bal_start_all_tests(size_t total)
 {
+    printf("\n" WHITE("built with libbal version %s") "\n", bal_get_versionstring());
     printf("\n" WHITEB("running %zu " ULINE("libbal") " %s...") "\n\n", total,
         _TEST_PLURAL(total));
 }
