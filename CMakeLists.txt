@@ -2,7 +2,7 @@
 # SPDX-FileCopyrightText: Copyright (c) 2004-current Ryan M. Lederman
 
 cmake_minimum_required(
-    VERSION 3.0.0...3.27.1
+    VERSION 3.12.0
 )
 
 # variables
@@ -22,17 +22,12 @@ set(PROJECT_IS_REL_BUILD false)
 # create compile commands for static analysis
 set(CMAKE_EXPORT_COMPILE_COMMANDS true)
 
-# select the C/C++ standards we can use based on the CMake version
-if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.21")
-    set(CMAKE_C_STANDARD 17)
-else()
-    set(CMAKE_C_STANDARD 11)
-endif()
-
+# set the C/C++ standards
 if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.12")
+    set(CMAKE_C_STANDARD 17)
     set(CMAKE_CXX_STANDARD 20)
 else()
-    set(CMAKE_CXX_STANDARD 17)
+    message(FATAL_ERROR, "CMake >= 3.12 is required in order to build libbal")
 endif()
 
 set(CMAKE_C_STANDARD_REQUIRED TRUE)
@@ -62,7 +57,7 @@ project(
     ${PROJECT_NAME}
     VERSION 0.2.0
     LANGUAGES C CXX
-    DESCRIPTION "Berkeley Abstraction Layer Library"
+    DESCRIPTION "Berkeley Abstraction Layer library"
 )
 
 # toolchain-related
