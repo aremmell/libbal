@@ -30,11 +30,11 @@
 
 extern bal_once _bal_static_once_init;
 
-#if defined(__HAVE_STDATOMICS__)
+# if defined(__HAVE_STDATOMICS__)
 extern atomic_bool _bal_async_poll_init;
-#else
+# else
 extern volatile bool _bal_async_poll_init;
-#endif
+# endif
 
 extern bal_as_container _bal_as_container;
 extern bal_state _bal_state;

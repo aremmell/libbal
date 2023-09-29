@@ -24,9 +24,9 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 #ifndef _BAL_CLIENT_HH_INCLUDED
-#define _BAL_CLIENT_HH_INCLUDED
+# define _BAL_CLIENT_HH_INCLUDED
 
-#include "balcommon.hh"
+# include "balcommon.hh"
 
 namespace balclient
 {
