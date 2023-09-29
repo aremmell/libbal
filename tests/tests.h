@@ -94,25 +94,19 @@ void _bal_async_poll_callback(bal_socket* s, uint32_t events);
 
 /** Allows for setting of the attributes, foreground, and background colors
  * simultaneously. */
-# undef COLOR
 # define COLOR(attr, fg, bg, s) \
     _ESC_SEQ(#attr ";38;5;" #fg ";48;5;" #bg, s) _ESC_RST
 
 /** Sets only the foreground color, setting background to its default. */
-# undef FG_COLOR
 # define FG_COLOR(attr, fg, s) \
-    _ESC_SEQ(#attr ";38;5;" #fg ";49;5;49", s) _ESC_RST
+    _ESC_SEQ(#attr ";5;38;" #fg ";5;49", s) _ESC_RST
 
 /** Sets only the background color, setting foreground to its default. */
-# undef BG_COLOR
 # define BG_COLOR(attr, bg, s) \
-    _ESC_SEQ(#attr ";39;5;39;48;5;" #bg, s) _ESC_RST
+    _ESC_SEQ(#attr ";5;39;5;48;" #bg, s) _ESC_RST
 
-# undef ULINE
 # define ULINE(s) _ESC_SEQ("4", s) _ESC_SEQE("24") /**< Underlined. */
-# undef EMPH
 # define EMPH(s)  _ESC_SEQ("3", s) _ESC_SEQE("23") /**< Emphasis/italic. */
-# undef BOLD
 # define BOLD(s)  _ESC_SEQ("1", s) _ESC_SEQE("22") /**< Bold. */
 
 # define BLACK(s)     FG_COLOR(0, 0, s) /**< Black foreground text. */
