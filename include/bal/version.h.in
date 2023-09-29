@@ -37,8 +37,8 @@ extern "C" {
 # define BAL_VERSION_MAJOR   ${PROJECT_VERSION_MAJOR}
 # define BAL_VERSION_MINOR   ${PROJECT_VERSION_MINOR}
 # define BAL_VERSION_PATCH   ${PROJECT_VERSION_PATCH}
-# define BAL_VERSION_SUFFIX  ${PROJECT_VERSION_SUFFIX}
-# define BAL_IS_DEV_BUILD    ${PROJECT_IS_DEV_BUILD}
+# define BAL_VERSION_SUFFIX  "${PROJECT_VERSION_SUFFIX}"
+# define BAL_IS_REL_BUILD    ${PROJECT_IS_REL_BUILD}
 
 # define _BAL_VER2STR(n) #n
 # define _BAL_MK_VERSTR(maj, min, patch) \
@@ -59,9 +59,9 @@ uint32_t bal_get_versionhex(void)
 }
 
 static inline
-bool bal_is_developmentbuild(void)
+bool bal_is_releasebuild(void)
 {
-    return BAL_IS_DEV_BUILD;
+    return BAL_IS_REL_BUILD;
 }
 
 # if defined(__cplusplus)

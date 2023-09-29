@@ -14,10 +14,10 @@ set(STATIC_LIBRARY_NAME bal_static)
 set(SHARED_LIBRARY_NAME bal_shared)
 
 # "-dev" if this is a development build, empty if it is a release build.
-set(PROJECT_VERSION_SUFFIX, "-dev")
+set(PROJECT_VERSION_SUFFIX -dev)
 
-# true if this is a development build, false if it is a release build.
-set(PROJECT_IS_DEV_BUILD true)
+# true if this is a release build, false if it is a development build.
+set(PROJECT_IS_REL_BUILD false)
 
 # create compile commands for static analysis
 set(CMAKE_EXPORT_COMPILE_COMMANDS true)
