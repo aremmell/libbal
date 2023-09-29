@@ -201,9 +201,9 @@ bool baltest_error_sanity(void)
 
 void _bal_start_all_tests(size_t total)
 {
-    printf("\n" WHITE("built with libbal version %s") "\n", bal_get_versionstring());
-    printf("\n" WHITEB("running %zu " ULINE("libbal") " %s...") "\n\n", total,
-        _TEST_PLURAL(total));
+    printf("\n" WHITEB("" ULINE("libbal") " %s (%s) running %zu %s...") "\n\n",
+        bal_get_versionstring(), (bal_is_releasebuild() ? "" : "prerelease"),
+        total, _TEST_PLURAL(total));
 }
 
 void _bal_start_test(size_t total, size_t run, const char* name)
