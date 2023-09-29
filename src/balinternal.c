@@ -451,7 +451,7 @@ void _bal_dispatch_events(bal_descriptor sd, bal_socket* s, uint32_t events)
 
     if (closed || invalid) {
         /* if the callback did the right thing, it has called bal_close and
-         * possibly bal_sock_destroy. if it didn't call the latter, the socket
+         * possibly bal_destroy. if it didn't call the latter, the socket
          * still resides in the list. presume that the callback is behaving
          * properly–don't free the socket, but remove it from the list. */
         bal_socket* d = NULL;

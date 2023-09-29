@@ -195,12 +195,18 @@ bool bal_auto_socket(bal_socket** s, int addr_fam, int proto, const char* host,
 
     if (_bal_okptrptr(s) && _bal_okstr(host)) {
         struct addrinfo* ai = NULL;
-        int type = (proto == 0 ? 0 : (proto == IPPROTO_TCP ? SOCK_STREAM : SOCK_DGRAM));
+        int type = 0;
+        if (IPPROTO_TCP == proto) {
+            type = SOCK_STREAM;
+        } else if (IPPROTO_UDP == proto) {
+            type = SOCK_DGRAM;
+        }
+
         bool get = _bal_get_addrinfo(0, addr_fam, type, host, srv, &ai);
         if (get && NULL != ai) {
             struct addrinfo* cur = ai;
             do {
-                if (bal_sock_create(s, cur->ai_family, cur->ai_protocol,
+                if (bal_create(s, cur->ai_family, cur->ai_protocol,
                     cur->ai_socktype)) {
                     retval = true;
                     break;
@@ -215,7 +221,7 @@ bool bal_auto_socket(bal_socket** s, int addr_fam, int proto, const char* host,
     return retval;
 }
 
-bool bal_sock_create(bal_socket** s, int addr_fam, int type, int proto)
+bool bal_create(bal_socket** s, int addr_fam, int type, int proto)
 {
     bool retval = false;
 
@@ -240,7 +246,7 @@ bool bal_sock_create(bal_socket** s, int addr_fam, int type, int proto)
     return retval;
 }
 
-void bal_sock_destroy(bal_socket** s)
+void bal_destroy(bal_socket** s)
 {
     if (_bal_okptrptr(s) && _bal_okptr(*s)) {
         _BAL_MUTEX_COUNTER_INIT(destroy);
@@ -295,7 +301,7 @@ bool bal_close(bal_socket** s, bool destroy)
         }
 
         if (destroy)
-            bal_sock_destroy(s);
+            bal_destroy(s);
     }
 
     return retval;

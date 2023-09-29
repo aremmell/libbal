@@ -41,7 +41,7 @@ bool _bal_sanity(void);
 bool _bal_init_asyncpoll(void);
 bool _bal_cleanup_asyncpoll(void);
 
-void _bal_sock_destroy(bal_socket** s);
+void _bal_destroy(bal_socket** s);
 
 bool _bal_get_addrinfo(int flags, int addr_fam, int type, const char* host,
     const char* port, struct addrinfo** res);
