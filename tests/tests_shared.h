@@ -64,11 +64,11 @@ typedef struct {
 
 /** Sets only the foreground color, setting background to its default. */
 # define FG_COLOR(attr, fg, s) \
-    _ESC_SEQ(#attr ";5;38;" #fg ";5;49", s) _ESC_RST
+    _ESC_SEQ(#attr ";38;5;" #fg ";49;5", s) _ESC_RST
 
 /** Sets only the background color, setting foreground to its default. */
 # define BG_COLOR(attr, bg, s) \
-    _ESC_SEQ(#attr ";5;39;5;48;" #bg, s) _ESC_RST
+    _ESC_SEQ(#attr ";39;5;48;5;" #bg, s) _ESC_RST
 
 # define ULINE(s) _ESC_SEQ("4", s) _ESC_SEQE("24") /**< Underlined. */
 # define EMPH(s)  _ESC_SEQ("3", s) _ESC_SEQE("23") /**< Emphasis/italic. */
