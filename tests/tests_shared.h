@@ -29,9 +29,9 @@
 extern "C" {
 # endif
 
-/******************************************************************************\
- *                               Types & Macros                               *
-\******************************************************************************/
+/**
+ * Types & macros
+ */
 
 /** Test function pointer type. */
 typedef bool (*bal_test_func)(void);
@@ -125,22 +125,22 @@ typedef struct {
 /** Prints an informational message during the execution of a test. */
 # define TEST_MSG(msg, ...) \
     do { \
-        (void)printf("\t" msg "\n", __VA_ARGS__); \
+        (void)printf("\t" WHITE(msg) "\n", __VA_ARGS__); \
     } while (false)
 
 /** Prints an informational message during the execution of a test. */
-# define TEST_MSG_0(msg) (void)printf("\t" msg "\n");
+# define TEST_MSG_0(msg) (void)printf("\t" WHITE(msg) "\n");
 
 /** Prints an error message during the execution of a test. */
-# define ERROR_MSG(msg, ...) TEST_MSG(RED(msg), __VA_ARGS__)
+# define ERROR_MSG(msg, ...) (void)printf("\t" RED(msg) "\n", __VA_ARGS__);
 
 /** If the pass/fail result of a test is false, prints the last error. Used as
  * the return statement for tests. */
 # define PRINT_RESULT_RETURN(pass) _bal_print_err(pass, false)
 
-/******************************************************************************\
- *                               Implementation                               *
-\******************************************************************************/
+/**
+ * Test rig implementation
+ */
 
 void _bal_tests_init(void);
 void _bal_start_all_tests(size_t total);
