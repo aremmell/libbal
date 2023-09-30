@@ -32,6 +32,7 @@
 # include <atomic>
 # include <string>
 
+/** The one and only namespace for libbal. */
 namespace bal
 {
     struct error
@@ -138,6 +139,11 @@ namespace bal
                 addr = bal_enum_addrlist(addrs);
             }
         }
+    };
+
+    class socket
+    {
+    public:
     };
 
 } // !namespace bal
