@@ -111,7 +111,7 @@ bool baltest_create_bind_listen_tcp(void)
     _bal_print_err(pass, false);
 
     TEST_MSG_0("creating socket...");
-    pass = bal_create(&s, AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    pass = bal_create(&s, 0, AF_INET, SOCK_STREAM, IPPROTO_TCP);
     _bal_print_err(pass, false);
 
     TEST_MSG_0("binding on all available adapters on port 6969...");

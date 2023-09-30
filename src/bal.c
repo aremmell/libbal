@@ -198,7 +198,7 @@ bool bal_async_poll(bal_socket* s, bal_async_cb proc, uint32_t mask)
     return retval;
 }
 
-bool bal_create(bal_socket** s, int addr_fam, int type, int proto)
+bool bal_create(bal_socket** s, uintptr_t user_data, int addr_fam, int type, int proto)
 {
     bool retval = false;
 
@@ -212,10 +212,11 @@ bool bal_create(bal_socket** s, int addr_fam, int type, int proto)
                 _bal_handlelasterr();
                 _bal_safefree(s);
             } else {
-                (*s)->addr_fam = addr_fam;
-                (*s)->type     = type;
-                (*s)->proto    = proto;
-                retval         = true;
+                (*s)->addr_fam  = addr_fam;
+                (*s)->type      = type;
+                (*s)->proto     = proto;
+                (*s)->user_data = user_data;
+                retval          = true;
             }
         }
     }
@@ -223,8 +224,8 @@ bool bal_create(bal_socket** s, int addr_fam, int type, int proto)
     return retval;
 }
 
-bool bal_auto_socket(bal_socket** s, int addr_fam, int proto, const char* host,
-    const char* srv)
+bool bal_auto_socket(bal_socket** s, uintptr_t user_data, int addr_fam, int proto,
+    const char* host, const char* srv)
 {
     bool retval = false;
 
@@ -241,7 +242,8 @@ bool bal_auto_socket(bal_socket** s, int addr_fam, int proto, const char* host,
         if (get && NULL != ai) {
             struct addrinfo* cur = ai;
             do {
-                if (bal_create(s, cur->ai_family, cur->ai_protocol, cur->ai_socktype)) {
+                if (bal_create(s, user_data, cur->ai_family, cur->ai_protocol,
+                    cur->ai_socktype)) {
                     retval = true;
                     break;
                 }
@@ -260,6 +262,7 @@ void bal_destroy(bal_socket** s)
     if (_bal_okptrptr(s) && _bal_okptr(*s)) {
         _BAL_MUTEX_COUNTER_INIT(destroy);
         _BAL_LOCK_MUTEX(&_bal_as_container.mutex, destroy);
+
         /* if async I/O is active, just to be safe, ensure that the socket is not
          * currently in the async I/O list. */
         if (_bal_get_boolean(&_bal_async_poll_init)) {
