@@ -52,7 +52,9 @@ namespace bal::common
         [[maybe_unused]] auto unused = printf(msg "\n", __VA_ARGS__); \
     } while (false)
 
-# define PRINT_SD(msg, ...) PRINT("[" BAL_SOCKET_SPEC "]" msg, __VA_ARGS__)
+# define PRINT_0(msg) [[maybe_unused]] auto unused = printf(msg "\n")
+
+# define PRINT_SD(msg, ...) PRINT("[" BAL_SOCKET_SPEC "] " msg, __VA_ARGS__)
 
 # define EXIT_IF_FAILED(retval, func) \
     do { \

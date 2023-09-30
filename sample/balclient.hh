@@ -28,9 +28,9 @@
 
 # include "balcommon.hh"
 
-namespace balclient
+namespace bal::client
 {
 
-} // !namespace balclient
+} // !namespace bal::client
 
 #endif // !_BAL_CLIENT_HH_INCLUDED

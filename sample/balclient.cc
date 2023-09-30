@@ -32,6 +32,7 @@
 using namespace std;
 using namespace bal;
 using namespace bal::common;
+using namespace bal::client;
 
 int main(int argc, char** argv)
 {
@@ -48,70 +49,83 @@ int main(int argc, char** argv)
         initializer balinit;
         scoped_socket sock {AF_INET, SOCK_STREAM, IPPROTO_TCP};
 
-        sock.on_connect = [&sock]()
+        sock.on_connect = [](scoped_socket* sock) -> bool
         {
             address peer_addr {};
-            sock.get_peer_addr(peer_addr);
+            sock->get_peer_addr(peer_addr);
             auto addr_info = peer_addr.get_address_info();
-            printf("connected to %s:%s", addr_info.get_addr().c_str(),
+            PRINT("connected to %s:%s", addr_info.get_addr().c_str(),
                 addr_info.get_port().c_str());
-            sock.want_write_events(true);
+            sock->want_write_events(true);
+            return true;
         };
 
-        sock.on_conn_fail = [&sock]()
+        sock.on_conn_fail = [](scoped_socket* sock) -> bool
         {
-            const auto err = sock.get_error(false);
-            PRINT_SD("connection failed! errror: %s", sock.get()->sd,
+            const auto err = sock->get_error(false);
+            PRINT_SD("connection failed! errror: %s", sock->get_descriptor(),
                 err.message.c_str());
             quit();
+            return false;
         };
 
-        sock.on_read = [&sock]()
+        sock.on_read = [](scoped_socket* sock) -> bool
         {
             constexpr size_t buf_size = 2048;
             std::array<char, buf_size> buf {};
-            if (ssize_t read = sock.recv(buf.data(), buf.size() - 1, 0); read > 0) {
-                PRINT_SD("read %ld bytes: '%s'", sock.get()->sd, read, buf.data());
+            if (ssize_t read = sock->recv(buf.data(), buf.size() - 1, 0); read > 0) {
+                PRINT_SD("read %ld bytes: '%s'", sock->get_descriptor(), read, buf.data());
             } else if (-1 == read) {
-                const auto err = sock.get_error(false);
-                PRINT_SD("read error %d (%s)!", sock.get()->sd, err.code,
+                const auto err = sock->get_error(false);
+                PRINT_SD("read error %d (%s)!", sock->get_descriptor(), err.code,
                     err.message.c_str());
             } else {
-                PRINT_SD("read EOF", sock.get()->sd);
+                PRINT_SD("read EOF", sock->get_descriptor());
             }
+            return true;
         };
 
-        sock.on_write = [&sock]()
+        sock.on_write = [](scoped_socket* sock) -> bool
         {
             const char* req = "HELO";
             constexpr const size_t req_size = 4;
 
-            ssize_t ret = sock.send(req, req_size, MSG_NOSIGNAL);
+            ssize_t ret = sock->send(req, req_size, MSG_NOSIGNAL);
             if (ret <= 0) {
-                const auto err = sock.get_error(false);
-                PRINT_SD("write error %d (%s)!", sock.get()->sd, err.code,
+                const auto err = sock->get_error(false);
+                PRINT_SD("write error %d (%s)!", sock->get_descriptor(), err.code,
                     err.message.c_str());
             } else {
-                PRINT_SD("wrote %ld bytes", sock.get()->sd, ret);
+                PRINT_SD("wrote %ld bytes", sock->get_descriptor(), ret);
             }
 
-            sock.want_write_events(false);
+            sock->want_write_events(false);
+            return true;
         };
 
-        sock.on_close = [&sock]()
+        sock.on_close = [](scoped_socket* sock) -> bool
         {
-            PRINT_SD("connection closed.", sock.get()->sd);
+            PRINT_SD("connection closed.", sock->get_descriptor());
             quit();
+            return false;
+        };
+
+        sock.on_error = [](scoped_socket* sock) -> bool
+        {
+            const auto err = sock->get_error(false);
+            PRINT_SD("error: %d (%s)!", sock->get_descriptor(), err.code, err.message.c_str());
+            quit();
+            return false;
         };
 
         sock.async_poll(BAL_EVT_CLIENT);
 
         string remote_host = get_input_line("Enter server hostname", localaddr);
-        printf("connecting to %s:%s...\n", remote_host.c_str(), portnum);
+        PRINT("connecting to %s:%s...\n", remote_host.c_str(), portnum);
 
         sock.connect(remote_host, portnum);
 
-        printf("running; ctrl+c to exit...\n");
+        PRINT_0("running; ctrl+c to exit...");
 
         do {
             bal_sleep_msec(sleepfor);
@@ -120,7 +134,7 @@ int main(int argc, char** argv)
 
         return EXIT_SUCCESS;
     } catch (bal::exception& ex) {
-        printf("error: caught exception: '%s'!", ex.what());
+        PRINT("error: caught exception: '%s'!", ex.what());
         return EXIT_FAILURE;
     }
 }

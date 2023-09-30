@@ -28,9 +28,9 @@
 #include "bal/state.h"
 #include "bal.h"
 
-/******************************************************************************\
- *                             Internal Functions                             *
-\******************************************************************************/
+/**
+ * Internal functions
+ */
 
 bool _bal_sanity(void)
 {
@@ -364,7 +364,7 @@ bal_threadret _bal_eventthread(void* ctx)
         _BAL_MUTEX_COUNTER_CHECK(eventthread);
 
         if (0 == count)
-            bal_sleep_msec(100); // TODO: better alternative than sleeping here?
+            bal_sleep_msec(100);
         bal_thread_yield();
     }
 

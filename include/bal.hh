@@ -216,16 +216,22 @@ namespace bal
     class socket_base
     {
     public:
-        using policy_type = TPolicy;
+        using async_io_cb = std::function<bool(socket_base*)>;
+
+        socket_base()
+        {
+            set_default_event_handlers();
+        }
 
         socket_base(int addr_fam, int type, int proto) requires RAII
+            : socket_base()
         {
             [[maybe_unused]]
             auto unused = create(addr_fam, type, proto);
         }
 
         socket_base(int addr_fam, int proto, const std::string& host,
-            const std::string& srv) requires RAII
+            const std::string& srv) requires RAII : socket_base()
         {
             [[maybe_unused]]
             auto unused = create(addr_fam, proto, host, srv);
@@ -233,7 +239,7 @@ namespace bal
 
         socket_base(socket_base&) = delete;
 
-        explicit socket_base(bal_socket* s) : _s(s) { }
+        explicit socket_base(bal_socket* s) : socket_base(), _s(s) { }
 
         virtual ~socket_base()
         {
@@ -249,12 +255,32 @@ namespace bal
         socket_base& operator=(socket_base&& rhs)
         {
             [[maybe_unused]] auto unused = attach(rhs.detach());
+
+            on_read          = rhs.on_read;
+            on_write         = rhs.on_write;
+            on_connect       = rhs.on_connect;
+            on_conn_fail     = rhs.on_conn_fail;
+            on_incoming_conn = rhs.on_incoming_conn;
+            on_close         = rhs.on_close;
+            on_priority      = rhs.on_priority;
+            on_error         = rhs.on_error;
+            on_invalid       = rhs.on_invalid;
+            on_oob_read      = rhs.on_oob_read;
+            on_oob_write     = rhs.on_oob_write;
+
+            rhs.set_default_event_handlers();
+
             return *this;
         }
 
         bal_socket* get() const noexcept
         {
             return _s;
+        }
+
+        bal_descriptor get_descriptor() const noexcept
+        {
+            return _s != nullptr ? _s->sd : 0;
         }
 
         bool is_valid() const noexcept
@@ -266,12 +292,23 @@ namespace bal
         {
             bal_socket* tmp = _s;
             _s = s;
+
+            if (tmp != nullptr) {
+                tmp->user_data = 0;
+            }
+
+            if (_s != nullptr) {
+                _s->user_data = to_user_data();
+            }
+
             return tmp;
         }
 
         bal_socket* detach() noexcept
         {
-            return attach(nullptr);
+            const auto ret = attach(nullptr);
+            set_default_event_handlers();
+            return ret;
         }
 
         bool create(int addr_fam, int type, int proto)
@@ -279,7 +316,7 @@ namespace bal
             [[maybe_unused]] const auto existing = detach();
             BAL_ASSERT(existing == nullptr);
 
-            const auto ret = bal_create(&_s, addr_fam, type, proto);
+            const auto ret = bal_create(&_s, to_user_data(), addr_fam, type, proto);
             return throw_on_policy<TPolicy>(ret, false);
         }
 
@@ -287,7 +324,8 @@ namespace bal
             const std::string& srv)
         {
             const auto ret =
-                bal_auto_socket(&_s, addr_fam, proto, host.c_str(), srv.c_str());
+                bal_auto_socket(&_s, to_user_data(), addr_fam, proto, host.c_str(),
+                    srv.c_str());
             return throw_on_policy<TPolicy>(ret, false);
         }
 
@@ -313,32 +351,9 @@ namespace bal
                 return false;
             }
 
-            _s->user_data = std::bit_cast<uintptr_t>(this);
-
             const auto ret = bal_async_poll(_s, &socket_base::_on_async_io, mask);
             return throw_on_policy<TPolicy>(ret, false);
         }
-
-        std::function<void()> on_read = []() { };
-        std::function<void()> on_write = []() { };
-        std::function<void()> on_connect = []() { };
-        std::function<void()> on_conn_fail = []() { };
-        std::function<void()> on_incoming_conn = []() { };
-        std::function<void()> on_close = [this]()
-        {
-            [[maybe_unused]] const auto closed = close();
-        };
-        std::function<void()> on_priority = []() { };
-        std::function<void()> on_error = [this]()
-        {
-            [[maybe_unused]] const auto closed = close();
-        };
-        std::function<void()> on_invalid = [this]()
-        {
-            [[maybe_unused]] const auto closed = close();
-        };
-        std::function<void()> on_oob_read = []() { };
-        std::function<void()> on_oob_write = []() { };
 
         void want_write_events(bool want)
         {
@@ -355,14 +370,14 @@ namespace bal
             return throw_on_policy<TPolicy>(ret, false);
         }
 
-        ssize_t send(const void* data, bal_iolen len, int flags)
+        ssize_t send(const void* data, bal_iolen len, int flags = MSG_NOSIGNAL)
         {
             const auto ret = bal_send(_s, data, len, flags);
             return throw_on_policy<TPolicy>(ret, -1L);
         }
 
         ssize_t sendto(const std::string& host, const std::string& port,
-            const void* data, bal_iolen len, int flags)
+            const void* data, bal_iolen len, int flags = MSG_NOSIGNAL)
         {
             const auto ret =
                 bal_sendto(_s, host.c_str(), port.c_str(), data, len, flags);
@@ -463,54 +478,192 @@ namespace bal
             return {err.code, err.message};
         }
 
+        static socket_base* from_user_data(bal_socket* s)
+        {
+            return std::bit_cast<socket_base*>(s->user_data);
+        }
+
+        uintptr_t to_user_data() const
+        {
+            return std::bit_cast<uintptr_t>(this);
+        }
+
+        async_io_cb on_read;
+        async_io_cb on_write;
+        async_io_cb on_connect;
+        async_io_cb on_conn_fail;
+        async_io_cb on_incoming_conn;
+        async_io_cb on_close;
+        async_io_cb on_priority;
+        async_io_cb on_error;
+        async_io_cb on_invalid;
+        async_io_cb on_oob_read;
+        async_io_cb on_oob_write;
+
+        void set_default_event_handlers()
+        {
+            on_read = [](socket_base* sock)
+            {
+                BAL_UNUSED(sock);
+                return true;
+            };
+
+            on_write = [](socket_base* sock)
+            {
+                BAL_UNUSED(sock);
+                return true;
+            };
+
+            on_connect = [](socket_base* sock)
+            {
+                BAL_UNUSED(sock);
+                return true;
+            };
+
+            on_conn_fail = [](socket_base* sock)
+            {
+                BAL_UNUSED(sock);
+                return true;
+            };
+
+            on_incoming_conn = [](socket_base* sock)
+            {
+                BAL_UNUSED(sock);
+                return true;
+            };
+
+            on_close = [](socket_base* sock)
+            {
+                [[maybe_unused]] const auto closed = sock->close();
+                return false;
+            };
+
+            on_priority = [](socket_base* sock)
+            {
+                BAL_UNUSED(sock);
+                return true;
+            };
+
+            on_error = [](socket_base* sock)
+            {
+                [[maybe_unused]] const auto closed = sock->close();
+                return false;
+            };
+
+            on_invalid = [](socket_base* sock)
+            {
+                BAL_UNUSED(sock);
+                return false;
+            };
+
+            on_oob_read = [](socket_base* sock)
+            {
+                BAL_UNUSED(sock);
+                return true;
+            };
+
+            on_oob_write = [](socket_base* sock)
+            {
+                BAL_UNUSED(sock);
+                return true;
+            };
+        }
+
     protected:
         static void _on_async_io(bal_socket* s, uint32_t events)
         {
             try {
-                socket_base* self = std::bit_cast<socket_base*>(s->user_data);
+                socket_base* self = from_user_data(s);
+                if (self == nullptr) {
+                    _bal_dbglog("socket has no user_data " BAL_SOCKET_SPEC " (0x%"
+                        PRIxPTR ", mask = %08" PRIx32 ")", s->sd,
+                        std::bit_cast<uintptr_t>(s), s->state.mask);
+                    return;
+                }
+
+                auto print_early_return = [s, self](uint32_t evt) -> void
+                {
+                    _bal_dbglog("return early for socket " BAL_SOCKET_SPEC " (0x%"
+                        PRIxPTR ", evt = %08" PRIx32 ", self = 0x%" PRIxPTR ")",
+                        s->sd, std::bit_cast<uintptr_t>(s), evt,
+                        std::bit_cast<uintptr_t>(self));
+                };
 
                 if (bal_isbitset(events, BAL_EVT_READ) && self->on_read) {
-                    self->on_read();
+                    if (!self->on_read(self)) {
+                        print_early_return(BAL_EVT_READ);
+                        return;
+                    }
                 }
 
                 if (bal_isbitset(events, BAL_EVT_WRITE) && self->on_write) {
-                    self->on_write();
+                    if (!self->on_write(self)) {
+                        print_early_return(BAL_EVT_WRITE);
+                        return;
+                    }
                 }
 
                 if (bal_isbitset(events, BAL_EVT_CONNECT) && self->on_connect) {
-                    self->on_connect();
+                    if (!self->on_connect(self)) {
+                        print_early_return(BAL_EVT_CONNECT);
+                        return;
+                    }
                 }
 
                 if (bal_isbitset(events, BAL_EVT_CONNFAIL) && self->on_conn_fail) {
-                    self->on_conn_fail();
+                    if (!self->on_conn_fail(self)) {
+                        print_early_return(BAL_EVT_CONNFAIL);
+                        return;
+                    }
                 }
 
                 if (bal_isbitset(events, BAL_EVT_ACCEPT) && self->on_incoming_conn) {
-                    self->on_incoming_conn();
+                    if (!self->on_incoming_conn(self)) {
+                        print_early_return(BAL_EVT_ACCEPT);
+                        return;
+                    }
                 }
 
                 if (bal_isbitset(events, BAL_EVT_CLOSE) && self->on_close) {
-                    self->on_close();
+                    if (!self->on_close(self)) {
+                        print_early_return(BAL_EVT_CLOSE);
+                        return;
+                    }
                 }
 
                 if (bal_isbitset(events, BAL_EVT_PRIORITY) && self->on_priority) {
-                    self->on_priority();
+                    if (!self->on_priority(self)) {
+                        print_early_return(BAL_EVT_PRIORITY);
+                        return;
+                    }
                 }
 
                 if (bal_isbitset(events, BAL_EVT_ERROR) && self->on_error) {
-                    self->on_error();
+                    if (!self->on_error(self)) {
+                        print_early_return(BAL_EVT_ERROR);
+                        return;
+                    }
                 }
 
                 if (bal_isbitset(events, BAL_EVT_INVALID) && self->on_invalid) {
-                    self->on_invalid();
+                    if (!self->on_invalid(self)) {
+                        print_early_return(BAL_EVT_INVALID);
+                        return;
+                    }
                 }
 
                 if (bal_isbitset(events, BAL_EVT_OOBREAD) && self->on_oob_read) {
-                    self->on_oob_read();
+                    if (!self->on_oob_read(self)) {
+                        print_early_return(BAL_EVT_OOBREAD);
+                        return;
+                    }
                 }
 
                 if (bal_isbitset(events, BAL_EVT_OOBWRITE) && self->on_oob_write) {
-                    self->on_oob_write();
+                    if (!self->on_oob_write(self)) {
+                        print_early_return(BAL_EVT_OOBWRITE);
+                        return;
+                    }
                 }
             } catch (bal::exception& ex) {
                 _bal_dbglog("error: caught exception: '%s'!", ex.what());

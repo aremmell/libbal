@@ -30,16 +30,13 @@
 # include <utility>
 # include <map>
 
-namespace bal::balserver
+namespace bal::server
 {
     using client_map = std::map<bal_descriptor, scoped_socket>;
 
     scoped_socket* get_existing_client(bal_descriptor sd);
     void rem_existing_client(bal_descriptor sd);
-    void on_client_connect(bal_socket* s);
-    void on_client_disconnect(bal_socket* client_socket, bool error);
-
-    void async_events_cb(bal_socket* s, uint32_t events);
-} // !namespace balserver
+    void on_client_disconnect(bal_socket* s, bool error);
+} // !namespace bal::server
 
 #endif // !_BAL_SERVER_HH_INCLUDED

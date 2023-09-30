@@ -32,8 +32,9 @@
 using namespace std;
 using namespace bal;
 using namespace bal::common;
+using namespace bal::server;
 
-static balserver::client_map _clients;
+static client_map _clients;
 
 int main(int argc, char** argv)
 {
@@ -48,7 +49,82 @@ int main(int argc, char** argv)
         }
 
         initializer balinit;
+
+        auto client_on_read = [](scoped_socket* sock) -> bool
+        {
+            constexpr size_t buf_size = 2048;
+            std::array<char, buf_size> buf {};
+
+            ssize_t read = sock->recv(buf.data(), buf.size() - 1, 0);
+            if (read > 0) {
+                PRINT_SD("read %ld bytes: '%s'", sock->get_descriptor(), read, buf.data());
+                sock->want_write_events(true);
+            } else if (-1 == read) {
+                const auto err = sock->get_error(false);
+                PRINT_SD("read error %d (%s)!", sock->get_descriptor(), err.code,
+                    err.message.c_str());
+            } else {
+                PRINT_SD("read EOF", sock->get_descriptor());
+            }
+
+            return true;
+        };
+
+        auto client_on_write = [](scoped_socket* sock) -> bool
+        {
+            static const char* reply = "O, HELO 2 U";
+            constexpr const size_t reply_size = 11;
+
+            if (ssize_t sent = sock->send(reply, reply_size, MSG_NOSIGNAL); sent > 0) {
+                PRINT_SD("wrote %ld bytes", sock->get_descriptor(), sent);
+            } else {
+                const auto err = sock->get_error(false);
+                PRINT_SD("write error %d (%s)!", sock->get_descriptor(), err.code,
+                    err.message.c_str());
+            }
+
+            sock->want_write_events(false);
+            return true;
+        };
+
+        auto client_on_close = [](scoped_socket* sock) -> bool
+        {
+            on_client_disconnect(sock->get(), false);
+            sock->close();
+            return false;
+        };
+
+        auto client_on_error = [](scoped_socket* sock) -> bool
+        {
+            on_client_disconnect(sock->get(), true);
+            sock->close();
+            return false;
+        };
+
         scoped_socket sock {AF_INET, SOCK_STREAM, IPPROTO_TCP};
+        sock.on_incoming_conn = [=](scoped_socket* sock) -> bool
+        {
+            scoped_socket client_sock;
+            address client_addr {};
+            sock->accept(client_sock, client_addr);
+
+            client_sock.on_read = client_on_read;
+            client_sock.on_write = client_on_write;
+            client_sock.on_close = client_on_close;
+            client_sock.on_error = client_on_error;
+
+            client_sock.async_poll(BAL_EVT_NORMAL);
+
+            address_info addrinfo = client_addr.get_address_info();
+            PRINT("got connection from %s %s:%s: " BAL_SOCKET_SPEC " (0x%" PRIxPTR ");"
+                " now have %zu client(s)", addrinfo.get_type().c_str(),
+                addrinfo.get_addr().c_str(), addrinfo.get_port().c_str(),
+                client_sock.get_descriptor(), std::bit_cast<uintptr_t>(client_sock.get()),
+                _clients.size() + 1);
+
+            _clients[client_sock.get_descriptor()] = std::move(client_sock);
+            return true;
+        };
 
         // TODO: change to sock.set_reuseaddr() when impl'd
         if (!bal_set_reuseaddr(sock.get(), 1)) {
@@ -59,20 +135,31 @@ int main(int argc, char** argv)
         sock.async_poll(BAL_EVT_NORMAL);
         sock.listen(SOMAXCONN);
 
-        printf("listening on %s; ctrl+c to exit...\n", portnum);
+        PRINT("listening on %s; ctrl+c to exit...", portnum);
 
+        do {
+            bal_sleep_msec(sleepfor);
+            bal_thread_yield();
+        } while (should_run());
+
+        PRINT_0("de-registering async I/O events...");
         sock.async_poll(0U);
 
+        for (auto& [sd, client_sock] : _clients) {
+            client_sock.async_poll(0U);
+        }
+
+        PRINT("closing/destroying %zu socket(s)...", _clients.size());
         _clients.clear();
 
         return EXIT_SUCCESS;
     } catch (bal::exception& ex) {
-        printf("error: caught exception: '%s'!", ex.what());
+        PRINT("error: caught exception: '%s'!", ex.what());
         return EXIT_FAILURE;
     }
 }
 
-scoped_socket* balserver::get_existing_client(bal_descriptor sd)
+scoped_socket* bal::server::get_existing_client(bal_descriptor sd)
 {
     if (const auto it = _clients.find(sd); it != _clients.end()) {
         return &it->second;
@@ -81,96 +168,20 @@ scoped_socket* balserver::get_existing_client(bal_descriptor sd)
     return nullptr;
 }
 
-void balserver::rem_existing_client(bal_descriptor sd)
+void bal::server::rem_existing_client(bal_descriptor sd)
 {
     if (_clients.erase(sd) > 0)
         PRINT("now have %zu client(s)", _clients.size());
 }
 
-void balserver::on_client_connect(bal_socket* s)
-{
-    BAL_UNUSED(s);
-    /*bal_socket* client_socket = nullptr;
-    bal_sockaddr client_addr {};
-
-    if (!bal_accept(s, &client_socket, &client_addr)) {
-        print_last_lib_error("bal_accept");
-        return;
-    }
-
-    if (!bal_async_poll(client_socket, &async_events_cb, BAL_EVT_NORMAL)) {
-        print_last_lib_error("bal_async_poll");
-        bal_close(&client_socket, true);
-        return;
-    }
-
-    client c {client_socket, client_addr};
-    address_info addrinfo = c.get_address_info();
-    _clients[client_socket->sd] = std::move(c);
-
-    PRINT_SD("got connection from %s %s:%s: " BAL_SOCKET_SPEC " (%" PRIxPTR ");"
-        " now have %zu client(s)", s->sd, addrinfo.get_type().c_str(),
-        addrinfo.get_addr().c_str(), addrinfo.get_port().c_str(), client_socket->sd,
-        std::bit_cast<uintptr_t>(client_socket), _clients.size());*/
-}
-
-void balserver::on_client_disconnect(bal_socket* client_socket, bool error)
+void bal::server::on_client_disconnect(bal_socket* s, bool error)
 {
     if (error) {
-        PRINT_SD("connection closed w/ error %d!", client_socket->sd,
-            bal_get_sock_error(client_socket));
+        const auto code = bal_get_sock_error(s);
+        PRINT_SD("connection closed with error: %d!", s->sd, code);
     } else {
-        PRINT_SD("connection closed.", client_socket->sd);
+        PRINT_SD("connection closed", s->sd);
     }
 
-    rem_existing_client(client_socket->sd);
-}
-
-void balserver::async_events_cb(bal_socket* s, uint32_t events)
-{
-    if (bal_isbitset(events, BAL_EVT_ACCEPT)) {
-        on_client_connect(s);
-    }
-
-    if (bal_isbitset(events, BAL_EVT_READ)) {
-        constexpr size_t buf_size = 2048;
-        std::array<char, buf_size> buf {};
-
-        ssize_t read = bal_recv(s, buf.data(), buf.size() - 1, 0);
-        if (read > 0) {
-            PRINT_SD("read %ld bytes: '%s'", s->sd, read, buf.data());
-           bal_addtomask(s, BAL_EVT_WRITE);
-        } else if (-1 == read) {
-            bal_error err {};
-            PRINT_SD("read error %d (%s)!", s->sd, bal_get_error(&err), err.message);
-        } else {
-            PRINT_SD("read EOF", s->sd);
-        }
-    }
-
-    if (bal_isbitset(events, BAL_EVT_WRITE)) {
-        static const char* reply = "O, HELO 2 U";
-        constexpr const size_t reply_size = 11;
-
-        if (ssize_t sent = bal_send(s, reply, reply_size, MSG_NOSIGNAL); sent > 0) {
-            PRINT_SD("wrote %ld bytes", s->sd, sent);
-        } else {
-            bal_error err {};
-            PRINT_SD("write error %d (%s)!", s->sd, bal_get_error(&err), err.message);
-        }
-        bal_remfrommask(s, BAL_EVT_WRITE);
-    }
-
-    if (bal_isbitset(events, BAL_EVT_CLOSE)) {
-        on_client_disconnect(s, false);
-        return;
-    }
-
-    if (bal_isbitset(events, BAL_EVT_PRIORITY)) {
-        PRINT_SD("priority exceptional condition!", s->sd);
-    }
-
-    if (bal_isbitset(events, BAL_EVT_ERROR)) {
-        on_client_disconnect(s, true);
-    }
+    rem_existing_client(s->sd);
 }
