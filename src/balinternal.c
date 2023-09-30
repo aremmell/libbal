@@ -152,7 +152,7 @@ bool _bal_get_addrinfo(int flags, int addr_fam, int type, const char* host,
 {
     bool retval = false;
 
-    if ((_bal_okstr(host) || _bal_okstr(port)) && _bal_okptrptr(res)) {
+    if ((_bal_okstrnf(host) || _bal_okstrnf(port)) && _bal_okptrptr(res)) {
         struct addrinfo hints = {0};
 
         hints.ai_flags    = flags;

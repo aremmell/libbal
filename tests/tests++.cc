@@ -30,7 +30,8 @@
 using namespace bal;
 
 static std::vector<bal_test_data> bal_tests = {
-    {"raii-initializer", tests::init_with_initializer, false, true, false},
+    {"raii-initializer",   tests::init_with_initializer, false, true, false},
+    {"raii_socket_sanity", tests::raii_socket_sanity, false, true, false }
 };
 
 int main(int argc, char** argv)
@@ -65,7 +66,9 @@ int main(int argc, char** argv)
 
 bool bal::tests::init_with_initializer()
 {
-    _BAL_TEST_COMMENCE
+    /* can't use _BAL_TEST_COMMENCE, since it declares an initializer. */
+    bool pass = true;
+    try {
 
     /* scope an initializer and ensure that libbal is initialized by its ctor,
      * and cleaned up by its dtor. */
@@ -84,3 +87,45 @@ bool bal::tests::init_with_initializer()
 
     _BAL_TEST_CONCLUDE
 }
+
+bool bal::tests::raii_socket_sanity()
+{
+    _BAL_TEST_COMMENCE
+
+    constexpr const char* port_num = "9969";
+
+    /* scope an RAII socket and ensure that it is valid and can be used in
+     * Berkeley socket calls, such as bind(). */
+    bal_descriptor sd = 0;
+    {
+        TEST_MSG_0("create a scoped socket...");
+        scoped_socket sock(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+
+        TEST_MSG("created; testing bal_bindall(), port %s...", port_num);
+        _bal_eqland(pass, sock.is_valid());
+
+        // TODO: replace with socket_base::bind_all
+        _bal_eqland(pass, bal_bindall(sock.get(), port_num));
+
+        TEST_MSG_0("bound; allow socket to be destructed...");
+        sd = sock.get()->sd;
+    }
+
+    TEST_MSG_0("socket_destructed; ensure socket closed/destroyed...");
+#if defined(__WIN__)
+    _bal_eqland(pass, SOCKET_ERROR == listen(sd, SOMAXCONN));
+    _bal_eqland(pass, WSAGetLastError() == WSAENOTSOCK);
+#else
+    _bal_eqland(pass, -1 == listen(sd, SOMAXCONN));
+    _bal_eqland(pass, errno == ENOTSOCK || errno == EBADF);
+#endif
+
+    _BAL_TEST_CONCLUDE
+}
+
+/*bool bal::tests::()
+{
+    _BAL_TEST_COMMENCE
+
+    _BAL_TEST_CONCLUDE
+}*/

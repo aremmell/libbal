@@ -50,6 +50,13 @@ namespace bal::tests
     bool init_with_initializer();
 
     /**
+     * @test raii_socket_sanity
+     * @brief Ensure that the RAII socket class is functioning properly.
+     * @returns true if the test succeeded, false otherwise.
+     */
+    bool raii_socket_sanity();
+
+    /**
      * @ test
      * @ brief
      * @ returns true if the test succeeded, false otherwise.
@@ -59,17 +66,18 @@ namespace bal::tests
 
 /** @} */
 
-/** Begins a test by declaring the `pass` variable and entering a try/catch block. */
+/** Begins a test by declaring the `pass` variable and entering a try/catch block
+ * where an initializer is declared, automatically initializing and cleaning up
+ * libbal, even if exceptions are thrown. */
 # define _BAL_TEST_COMMENCE \
     bool pass = true; \
-    try {
+    try { \
+        initializer balinit;
 
 /** Implements recovery in the event that an unexpected exception is caught. */
 # define _BAL_TEST_ON_EXCEPTION(what) \
     ERROR_MSG("unexpected exception in %s: '%s'", __PRETTY_FUNCTION__, what); \
-    pass = false; \
-    if (bal_isinitialized()) \
-        [[maybe_unused]] bool unused = bal_cleanup();
+    pass = false;
 
 /** Handles an expected exception. */
 # define _BAL_TEST_ON_EXPECTED_EXCEPTION(what) \

@@ -36,10 +36,6 @@
 extern "C" {
 # endif
 
-/******************************************************************************\
- *                             Exported Functions                             *
-\******************************************************************************/
-
 bool bal_init(void);
 bool bal_cleanup(void);
 bool bal_isinitialized(void);

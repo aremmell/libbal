@@ -27,6 +27,7 @@
 # define _BAL_HH_INCLUDED
 
 # include "bal.h"
+# include <type_traits>
 # include <stdexcept>
 # include <vector>
 # include <atomic>
@@ -157,10 +158,56 @@ namespace bal
         }
     };
 
-    class socket
+    template<bool RAII>
+    class socket_base
     {
     public:
+        socket_base(int addr_fam, int type, int proto) requires RAII
+        {
+            if (!bal_create(&_s, addr_fam, type, proto)) {
+                throw exception(error::from_last_error());
+            }
+        }
+
+        explicit socket_base(bal_socket* s) : _s(s) { }
+
+        virtual ~socket_base()
+        {
+            if constexpr(RAII) {
+                if (is_valid()) {
+                    [[maybe_unused]] auto unused = bal_close(&_s, true);
+                }
+            }
+        }
+
+        bal_socket* get() const noexcept
+        {
+            return _s;
+        }
+
+        bool is_valid() const noexcept
+        {
+            return _s != nullptr;
+        }
+
+        bal_socket* attach(bal_socket* s) noexcept
+        {
+            bal_socket* tmp = _s;
+            _s = s;
+            return tmp;
+        }
+
+        bal_socket* detach() noexcept
+        {
+            return attach(nullptr);
+        }
+
+    private:
+        bal_socket* _s = nullptr;
     };
+
+    using scoped_socket = socket_base<true>;
+    using manual_socket = socket_base<false>;
 
 } // !namespace bal
 

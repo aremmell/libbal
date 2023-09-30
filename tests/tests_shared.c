@@ -46,25 +46,18 @@ void _bal_start_test(size_t total, size_t run, const char* name)
     printf(WHITEB("(%zu/%zu) '%s'...") "\n\n", run + 1, total, name);
 }
 
-void _bal_test_msg(const char* format, ...)
-{
-    char tmp[1024] = {0};
-    va_list args;
-
-    va_start(args, format);
-    (void)vsnprintf(tmp, sizeof(tmp), format, args);
-    va_end(args);
-
-    (void)printf("\t%s\n", tmp);
-}
-
 bool _bal_print_err(bool pass, bool expected)
 {
     if (!pass) {
         bal_error err = {0};
         bal_get_error_ext(&err);
-        _bal_test_msg(expected ? GREEN("%s: %d (%s)") : RED("%s: %d (%s)") "\n",
-            expected ? "Expected" : "Unexpected", err.code, err.message);
+        if (BAL_E_NOERROR != err.code) {
+            if (expected) {
+                TEST_MSG(GREEN("Expected: %d (%s)"), err.code, err.message);
+            } else {
+                TEST_MSG(RED("!! Unexpected: %d (%s)"), err.code, err.message);
+            }
+        }
     }
     return pass;
 }
@@ -85,7 +78,7 @@ void _bal_end_all_tests(size_t total, size_t run, size_t passed)
             _TEST_PLURAL(run));
     } else {
         printf(REDB("%zu of %zu " ULINE("libbal") " %s failed") "\n", run - passed,
-            total, _TEST_PLURAL(run - passed));
+            total, _TEST_PLURAL(run));
     }
 }
 
