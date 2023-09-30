@@ -90,6 +90,10 @@ bool baltest_init_cleanup_sanity(void)
     _bal_eqland(pass, bal_init());
     _bal_print_err(pass, false);
 
+    TEST_MSG_0("checking bal_isinitialized...");
+    _bal_eqland(pass, bal_isinitialized());
+    _bal_print_err(pass, false);
+
     /* cleanup after init should succeed. */
     TEST_MSG_0("running bal_cleanup after bal_init...");
     _bal_eqland(pass, bal_cleanup());
