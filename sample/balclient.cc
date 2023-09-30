@@ -134,6 +134,6 @@ void balclient::async_events_cb(bal_socket* s, uint32_t events)
     }
 
     if (bal_isbitset(events, BAL_EVT_ERROR)) {
-        PRINT_SD("ERROR %d!", s->sd, bal_sock_get_error(s));
+        PRINT_SD("ERROR %d!", s->sd, bal_get_sock_error(s));
     }
 }

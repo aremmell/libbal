@@ -216,8 +216,7 @@ bool bal_auto_socket(bal_socket** s, int addr_fam, int proto, const char* host,
         if (get && NULL != ai) {
             struct addrinfo* cur = ai;
             do {
-                if (bal_create(s, cur->ai_family, cur->ai_protocol,
-                    cur->ai_socktype)) {
+                if (bal_create(s, cur->ai_family, cur->ai_protocol, cur->ai_socktype)) {
                     retval = true;
                     break;
                 }
@@ -717,7 +716,7 @@ bool bal_get_recv_timeout(const bal_socket* s, bal_tvsec* sec, bal_tvusec* usec)
     return retval;
 }
 
-int bal_sock_get_error(const bal_socket* s)
+int bal_get_sock_error(const bal_socket* s)
 {
     int err = 0;
 

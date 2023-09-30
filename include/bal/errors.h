@@ -143,7 +143,7 @@ bool __bal_validate(bool expr, int err, const char* func, const char* file,
 # define _bal_handleerr(err) \
     __bal_handle_error(err, __func__, __file__, __LINE__, false)
 
-# define _bal_handlesockerr(s) _bal_handleerr(bal_sock_get_error(s))
+# define _bal_handlesockerr(s) _bal_handleerr(bal_get_sock_error(s))
 
 # if defined(__WIN__)
 #  define _bal_handlelasterr() \

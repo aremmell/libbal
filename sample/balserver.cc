@@ -130,7 +130,7 @@ void balserver::on_client_disconnect(bal_socket* client_socket, bool error)
 {
     if (error) {
         PRINT_SD("connection closed w/ error %d!", client_socket->sd,
-            bal_sock_get_error(client_socket));
+            bal_get_sock_error(client_socket));
     } else {
         PRINT_SD("connection closed.", client_socket->sd);
     }

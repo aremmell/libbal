@@ -101,7 +101,7 @@ bool bal_get_send_timeout(const bal_socket* s, bal_tvsec* sec, bal_tvusec* usec)
 bool bal_set_recv_timeout(const bal_socket* s, bal_tvsec sec, bal_tvusec usec);
 bool bal_get_recv_timeout(const bal_socket* s, bal_tvsec* sec, bal_tvusec* usec);
 
-int bal_sock_get_error(const bal_socket* s);
+int bal_get_sock_error(const bal_socket* s);
 int bal_get_error(bal_error* err);
 int bal_get_error_ext(bal_error* err);
 
