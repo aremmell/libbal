@@ -30,6 +30,7 @@
 #include "balclient.hh"
 
 using namespace std;
+using namespace bal;
 
 int main(int argc, char** argv)
 {

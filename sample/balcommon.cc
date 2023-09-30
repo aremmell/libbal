@@ -31,7 +31,7 @@ using namespace std;
 
 static atomic_bool _run;
 
-bool balcommon::initialize()
+bool bal::balcommon::initialize()
 {
     if (!balcommon::install_ctrl_c_handler()) {
         return false;
@@ -47,17 +47,17 @@ bool balcommon::initialize()
     return true;
 }
 
-void balcommon::quit()
+void bal::balcommon::quit()
 {
     _run.store(false);
 }
 
-bool balcommon::should_run()
+bool bal::balcommon::should_run()
 {
     return _run.load();
 }
 
-bool balcommon::install_ctrl_c_handler()
+bool bal::balcommon::install_ctrl_c_handler()
 {
 #if defined(__WIN__)
     BOOL ret = SetConsoleCtrlHandler(&on_ctrl_c, TRUE);
@@ -75,13 +75,13 @@ bool balcommon::install_ctrl_c_handler()
 #endif
 }
 
-void balcommon::ctrl_c_handler_impl()
+void bal::balcommon::ctrl_c_handler_impl()
 {
     printf("got ctrl+c; exiting...\n");
     quit();
 }
 
-void balcommon::print_last_lib_error(const string& func /* = std::string() */)
+void bal::balcommon::print_last_lib_error(const string& func /* = std::string() */)
 {
     bal_error err {};
     bal_get_error(&err);
@@ -90,13 +90,12 @@ void balcommon::print_last_lib_error(const string& func /* = std::string() */)
          << " (" << err.message << ")" << endl;
 }
 
-void balcommon::print_startup_banner(const string& name)
+void bal::balcommon::print_startup_banner(const string& name)
 {
     cout << name << " (libbal " << bal_get_versionstring() << ")" << endl;
 }
 
-string balcommon::get_input_line(const string& prompt,
-    const string& def)
+string bal::balcommon::get_input_line(const string& prompt, const string& def)
 {
     string input;
 
@@ -110,14 +109,14 @@ string balcommon::get_input_line(const string& prompt,
 }
 
 #if defined(__WIN__)
-BOOL WINAPI balcommon::on_ctrl_c(DWORD ctl_type)
+BOOL WINAPI bal::balcommon::on_ctrl_c(DWORD ctl_type)
 {
     BAL_UNUSED(ctl_type);
     ctrl_c_handler_impl();
     return TRUE;
 }
 #else
-void balcommon::on_ctrl_c(int sig)
+void bal::balcommon::on_ctrl_c(int sig)
 {
     BAL_UNUSED(sig);
     ctrl_c_handler_impl();

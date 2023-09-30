@@ -26,15 +26,13 @@
 #ifndef _BAL_COMMON_HH_INCLUDED
 # define _BAL_COMMON_HH_INCLUDED
 
-# include <bal.h>
-# include <atomic>
-# include <string>
+# include <bal.hh>
 
 # if !defined(__WIN__)
 #  include <signal.h>
 # endif
 
-namespace balcommon
+namespace bal::balcommon
 {
     constexpr const char* localaddr   = "127.0.0.1";
     constexpr const char* portnum     = "9000";
