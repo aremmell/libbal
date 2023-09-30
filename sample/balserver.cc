@@ -31,7 +31,7 @@
 
 using namespace std;
 using namespace bal;
-using namespace bal::balcommon;
+using namespace bal::common;
 
 static balserver::client_map _clients;
 
@@ -145,7 +145,7 @@ void balserver::async_events_cb(bal_socket* s, uint32_t events)
     }
 
     if (bal_isbitset(events, BAL_EVT_READ)) {
-        constexpr const size_t buf_size = 2048;
+        constexpr size_t buf_size = 2048;
         std::array<char, buf_size> buf {};
 
         ssize_t read = bal_recv(s, buf.data(), buf.size() - 1, 0);

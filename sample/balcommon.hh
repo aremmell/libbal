@@ -32,7 +32,7 @@
 #  include <signal.h>
 # endif
 
-namespace bal::balcommon
+namespace bal::common
 {
     constexpr const char* localaddr   = "127.0.0.1";
     constexpr const char* portnum     = "9000";
@@ -53,12 +53,12 @@ namespace bal::balcommon
         [[maybe_unused]] auto unused = printf(msg "\n", __VA_ARGS__); \
     } while (false)
 
-# define PRINT_SD(msg, ...) PRINT("[" BAL_SOCKET_SPEC "]" ## msg, __VA_ARGS__)
+# define PRINT_SD(msg, ...) PRINT("[" BAL_SOCKET_SPEC "]" msg, __VA_ARGS__)
 
 # define EXIT_IF_FAILED(retval, func) \
     do { \
         if (!retval) { \
-            balcommon::print_last_lib_error(func); \
+            print_last_lib_error(func); \
             return EXIT_FAILURE; \
         } \
     } while (false)
@@ -68,6 +68,6 @@ namespace bal::balcommon
 # else
     void on_ctrl_c(int sig);
 # endif
-} // !namespace balcommon
+} // !namespace common
 
 #endif // !_BAL_COMMON_HH_INCLUDED
