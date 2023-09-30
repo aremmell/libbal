@@ -37,11 +37,6 @@ bool bal::common::initialize()
         return false;
     }
 
-    if (!bal_init()) {
-        print_last_lib_error("bal_init");
-        return false;
-    }
-
     _run.store(true);
 
     return true;
@@ -79,15 +74,6 @@ void bal::common::ctrl_c_handler_impl()
 {
     printf("got ctrl+c; exiting...\n");
     quit();
-}
-
-void bal::common::print_last_lib_error(const string& func /* = std::string() */)
-{
-    bal_error err {};
-    bal_get_error(&err);
-
-    cerr << "libbal error: " << (func.empty() ? func + " " : "") << err.code
-         << " (" << err.message << ")" << endl;
 }
 
 void bal::common::print_startup_banner(const string& name)

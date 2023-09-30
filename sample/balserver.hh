@@ -32,44 +32,9 @@
 
 namespace bal::balserver
 {
-    class client
-    {
-    public:
-        client() = default;
-        explicit client(bal_socket* s, const bal_sockaddr& addr) : _addr(addr), _s(s) { }
-        ~client()
-        {
-            if (_s != nullptr) {
-                _bal_dbglog("closing and destroying socket " BAL_SOCKET_SPEC, _s->sd);
-                [[maybe_unused]] bool closed = bal_close(&_s, true);
-            }
-        }
+    using client_map = std::map<bal_descriptor, scoped_socket>;
 
-        address_info get_address_info(bool dns_resolve = false) const
-        {
-            return _addr.get_address_info(dns_resolve);
-        }
-
-        client& operator=(client&& other)
-        {
-            _s = other._s;
-            other._s = nullptr;
-            return *this;
-        }
-
-        bal_socket* get_socket() const noexcept
-        {
-            return _s;
-        }
-
-    private:
-        address _addr;
-        bal_socket* _s = nullptr;
-    };
-
-    using client_map = std::map<bal_descriptor, client>;
-
-    client* get_existing_client(bal_descriptor sd);
+    scoped_socket* get_existing_client(bal_descriptor sd);
     void rem_existing_client(bal_descriptor sd);
     void on_client_connect(bal_socket* s);
     void on_client_disconnect(bal_socket* client_socket, bool error);

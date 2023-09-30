@@ -40,52 +40,39 @@ int main(int argc, char** argv)
     BAL_UNUSED(argc);
     BAL_UNUSED(argv);
 
-    print_startup_banner("balserver");
+    try {
+        print_startup_banner("balserver");
 
-    if (!initialize()) {
+        if (!initialize()) {
+            throw bal::exception("failed to initialize bal::common");
+        }
+
+        initializer balinit;
+        scoped_socket sock {AF_INET, SOCK_STREAM, IPPROTO_TCP};
+
+        // TODO: change to sock.set_reuseaddr() when impl'd
+        if (!bal_set_reuseaddr(sock.get(), 1)) {
+            throw bal::exception(bal::error::from_last_error());
+        }
+
+        sock.bind_all(portnum);
+        sock.async_poll(BAL_EVT_NORMAL);
+        sock.listen(SOMAXCONN);
+
+        printf("listening on %s; ctrl+c to exit...\n", portnum);
+
+        sock.async_poll(0U);
+
+        _clients.clear();
+
+        return EXIT_SUCCESS;
+    } catch (bal::exception& ex) {
+        printf("error: caught exception: '%s'!", ex.what());
         return EXIT_FAILURE;
     }
-
-    bal_socket* s = nullptr;
-    bool ret = bal_create(&s, AF_INET, SOCK_STREAM, IPPROTO_TCP);
-    EXIT_IF_FAILED(ret, "bal_create");
-
-    ret = bal_set_reuseaddr(s, 1);
-    EXIT_IF_FAILED(ret, "bal_set_reuseaddr");
-
-    ret = bal_bindall(s, portnum);
-    EXIT_IF_FAILED(ret, "bal_bindall");
-
-    ret = bal_async_poll(s, &balserver::async_events_cb, BAL_EVT_NORMAL);
-    EXIT_IF_FAILED(ret, "bal_async_poll");
-
-    ret = bal_listen(s, SOMAXCONN);
-    EXIT_IF_FAILED(ret, "bal_listen");
-
-    printf("listening on %s; ctrl+c to exit...\n", portnum);
-
-    do {
-        bal_sleep_msec(sleepfor);
-        bal_thread_yield();
-    } while (should_run());
-
-    ret = bal_async_poll(s, nullptr, 0U);
-    EXIT_IF_FAILED(ret, "bal_async_poll");
-
-    if (!bal_close(&s, true)) {
-        print_last_lib_error("bal_close");
-    }
-
-    _clients.clear();
-
-    if (!bal_cleanup()) {
-        print_last_lib_error("bal_cleanup");
-    }
-
-    return EXIT_SUCCESS;
 }
 
-balserver::client* get_existing_client(bal_descriptor sd)
+scoped_socket* balserver::get_existing_client(bal_descriptor sd)
 {
     if (const auto it = _clients.find(sd); it != _clients.end()) {
         return &it->second;
@@ -102,7 +89,8 @@ void balserver::rem_existing_client(bal_descriptor sd)
 
 void balserver::on_client_connect(bal_socket* s)
 {
-    bal_socket* client_socket = nullptr;
+    BAL_UNUSED(s);
+    /*bal_socket* client_socket = nullptr;
     bal_sockaddr client_addr {};
 
     if (!bal_accept(s, &client_socket, &client_addr)) {
@@ -123,7 +111,7 @@ void balserver::on_client_connect(bal_socket* s)
     PRINT_SD("got connection from %s %s:%s: " BAL_SOCKET_SPEC " (%" PRIxPTR ");"
         " now have %zu client(s)", s->sd, addrinfo.get_type().c_str(),
         addrinfo.get_addr().c_str(), addrinfo.get_port().c_str(), client_socket->sd,
-        std::bit_cast<uintptr_t>(client_socket), _clients.size());
+        std::bit_cast<uintptr_t>(client_socket), _clients.size());*/
 }
 
 void balserver::on_client_disconnect(bal_socket* client_socket, bool error)

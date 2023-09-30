@@ -43,7 +43,6 @@ namespace bal::common
     bool should_run();
     bool install_ctrl_c_handler();
     void ctrl_c_handler_impl();
-    void print_last_lib_error(const std::string& func = std::string());
     void print_startup_banner(const std::string& name);
     std::string get_input_line(const std::string& prompt,
         const std::string& def);
