@@ -260,16 +260,17 @@ void bal_destroy(bal_socket** s)
     if (_bal_okptrptr(s) && _bal_okptr(*s)) {
         _BAL_MUTEX_COUNTER_INIT(destroy);
         _BAL_LOCK_MUTEX(&_bal_as_container.mutex, destroy);
+        /* if async I/O is active, just to be safe, ensure that the socket is not
+         * currently in the async I/O list. */
+        if (_bal_get_boolean(&_bal_async_poll_init)) {
+            bal_socket* d = NULL;
+            bool removed  = _bal_list_remove(_bal_as_container.lst, (*s)->sd, &d);
 
-        /* just to be safe, ensure that the socket is not currently in the
-        * async I/O list. */
-        bal_socket* d = NULL;
-        bool removed  = _bal_list_remove(_bal_as_container.lst, (*s)->sd, &d);
-
-        if (removed) {
-            BAL_ASSERT(*s == d);
-            _bal_dbglog("removed socket "BAL_SOCKET_SPEC" (%p) from list",
-                (*s)->sd, *s);
+            if (removed) {
+                BAL_ASSERT(*s == d);
+                _bal_dbglog("removed socket "BAL_SOCKET_SPEC" (%p) from list",
+                    (*s)->sd, *s);
+            }
         }
 
         if (!bal_isbitset((*s)->state.bits, BAL_S_CLOSE)) {
