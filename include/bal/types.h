@@ -66,9 +66,9 @@ typedef struct {
 } bal_addrlist;
 
 typedef struct {
+    const char* type;
     char host[NI_MAXHOST];
     char addr[NI_MAXHOST];
-    const char* type;
     char port[NI_MAXSERV];
 } bal_addrstrings;
 
