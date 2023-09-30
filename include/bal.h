@@ -42,9 +42,8 @@ bool bal_isinitialized(void);
 
 bool bal_async_poll(bal_socket* s, bal_async_cb proc, uint32_t mask);
 
-bool bal_auto_socket(bal_socket** s, int addr_fam, int proto, const char* host,
-    const char* srv);
 bool bal_create(bal_socket** s, int addr_fam, int type, int proto);
+bool bal_auto_socket(bal_socket** s, int addr_fam, int proto, const char* host, const char* srv);
 void bal_destroy(bal_socket** s);
 bool bal_close(bal_socket** s, bool destroy);
 bool bal_shutdown(bal_socket* s, int how);

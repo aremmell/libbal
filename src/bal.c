@@ -198,6 +198,31 @@ bool bal_async_poll(bal_socket* s, bal_async_cb proc, uint32_t mask)
     return retval;
 }
 
+bool bal_create(bal_socket** s, int addr_fam, int type, int proto)
+{
+    bool retval = false;
+
+    if (_bal_okptrptr(s)) {
+        *s = calloc(1, sizeof(bal_socket));
+        if (!_bal_okptrnf(*s)) {
+            _bal_handlelasterr();
+        } else {
+            (*s)->sd = socket(addr_fam, type, proto);
+            if (-1 == (*s)->sd) {
+                _bal_handlelasterr();
+                _bal_safefree(s);
+            } else {
+                (*s)->addr_fam = addr_fam;
+                (*s)->type     = type;
+                (*s)->proto    = proto;
+                retval         = true;
+            }
+        }
+    }
+
+    return retval;
+}
+
 bool bal_auto_socket(bal_socket** s, int addr_fam, int proto, const char* host,
     const char* srv)
 {
@@ -224,31 +249,6 @@ bool bal_auto_socket(bal_socket** s, int addr_fam, int proto, const char* host,
             } while (NULL != cur);
 
             freeaddrinfo(ai);
-        }
-    }
-
-    return retval;
-}
-
-bool bal_create(bal_socket** s, int addr_fam, int type, int proto)
-{
-    bool retval = false;
-
-    if (_bal_okptrptr(s)) {
-        *s = calloc(1UL, sizeof(bal_socket));
-        if (!_bal_okptrnf(*s)) {
-            _bal_handlelasterr();
-        } else {
-            (*s)->sd = socket(addr_fam, type, proto);
-            if (-1 == (*s)->sd) {
-                _bal_handlelasterr();
-                _bal_safefree(s);
-            } else {
-                (*s)->addr_fam = addr_fam;
-                (*s)->type     = type;
-                (*s)->proto    = proto;
-                retval         = true;
-            }
         }
     }
 
