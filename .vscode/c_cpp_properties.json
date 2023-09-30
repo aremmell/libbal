@@ -3,7 +3,8 @@
         {
             "name": "Mac",
             "includePath": [
-                "${workspaceFolder}/include/**"
+                "${workspaceFolder}/include/**",
+                "${workspaceFolder}/build/include/**"
             ],
             "defines": [],
             "macFrameworkPath": [
@@ -17,7 +18,8 @@
         {
             "name": "Linux",
             "includePath": [
-                "${workspaceFolder}/include/**"
+                "${workspaceFolder}/include/**",
+                "${workspaceFolder}/build/include/**"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/gcc",
