@@ -70,7 +70,7 @@ bool baltest_init_cleanup_sanity(void)
     bool pass = true;
 
     /* initialize twice. first should succeed, second should fail. */
-    _bal_test_msg("running bal_init twice in a row...");
+    TEST_MSG_0("running bal_init twice in a row...");
     _bal_eqland(pass, bal_init());
     _bal_print_err(pass, false);
 
@@ -78,7 +78,7 @@ bool baltest_init_cleanup_sanity(void)
     _bal_print_err(pass, false);
 
     /* clean up twice. same scenario. */
-    _bal_test_msg("running bal_cleanup twice in a row...");
+    TEST_MSG_0("running bal_cleanup twice in a row...");
     _bal_eqland(pass, bal_cleanup());
     _bal_print_err(pass, false);
 
@@ -86,12 +86,12 @@ bool baltest_init_cleanup_sanity(void)
     _bal_print_err(pass, false);
 
     /* initialize after cleanup should succeed. */
-    _bal_test_msg("running bal_init after bal_cleanup...");
+    TEST_MSG_0("running bal_init after bal_cleanup...");
     _bal_eqland(pass, bal_init());
     _bal_print_err(pass, false);
 
     /* cleanup after init should succeed. */
-    _bal_test_msg("running bal_cleanup after bal_init...");
+    TEST_MSG_0("running bal_cleanup after bal_init...");
     _bal_eqland(pass, bal_cleanup());
     _bal_print_err(pass, false);
 
@@ -102,31 +102,31 @@ bool baltest_create_bind_listen_tcp(void)
 {
     bal_socket* s = NULL;
 #pragma message("TODO: create macros that init/clean up")
-    _bal_test_msg("initializing library...");
+    TEST_MSG_0("initializing library...");
     bool pass     = bal_init();
     _bal_print_err(pass, false);
 
-    _bal_test_msg("creating socket...");
+    TEST_MSG_0("creating socket...");
     pass = bal_create(&s, AF_INET, SOCK_STREAM, IPPROTO_TCP);
     _bal_print_err(pass, false);
 
-    _bal_test_msg("binding on all available adapters on port 6969...");
+    TEST_MSG_0("binding on all available adapters on port 6969...");
     _bal_eqland(pass, bal_bindall(s, "6969"));
     _bal_print_err(pass, false);
 
-    _bal_test_msg("registering for async I/O...");
+    TEST_MSG_0("registering for async I/O...");
     _bal_eqland(pass, bal_async_poll(s, &_bal_async_poll_callback, BAL_EVT_NORMAL));
     _bal_print_err(pass, false);
 
-    _bal_test_msg("asynchronously listening for connect events...");
+    TEST_MSG_0("asynchronously listening for connect events...");
     _bal_eqland(pass, bal_listen(s, SOMAXCONN));
     _bal_print_err(pass, false);
 
-    _bal_test_msg("closing and destroying socket...");
+    TEST_MSG_0("closing and destroying socket...");
     _bal_eqland(pass, bal_close(&s, true));
     _bal_print_err(pass, false);
 
-    _bal_test_msg("cleaning up library...");
+    TEST_MSG_0("cleaning up library...");
     _bal_eqland(pass, bal_cleanup());
     _bal_print_err(pass, false);
 
@@ -174,13 +174,13 @@ bool baltest_error_sanity(void)
         int ret = bal_get_error(&err);
         _bal_eqland(pass, error_dict[n].code == ret && ret == err.code);
         _bal_eqland(pass, err.message[0] != '\0');
-        _bal_test_msg("%s = %s", error_dict[n].as_string, err.message);
+        TEST_MSG("%s = %s", error_dict[n].as_string, err.message);
 
         /* with extended information. */
         ret = bal_get_error_ext(&err);
         _bal_eqland(pass, error_dict[n].code == ret && ret == err.code);
         _bal_eqland(pass, err.message[0] != '\0');
-        _bal_test_msg("%s [ext] = %s", error_dict[n].as_string, err.message);
+        TEST_MSG("%s [ext] = %s", error_dict[n].as_string, err.message);
 
         /* getaddrinfo/getnameinfo errors. */
         if (BAL_E_PLATFORM == error_dict[n].code && !repeat) {

@@ -122,6 +122,18 @@ typedef struct {
 # define WHITE(s)     FG_COLOR(0, 15, s) /**< White foreground text. */
 # define WHITEB(s)    FG_COLOR(1, 15, s) /**< Bold white foreground text. */
 
+/** Prints an informational message during the execution of a test. */
+# define TEST_MSG(msg, ...) \
+    do { \
+        (void)printf("\t" msg "\n", __VA_ARGS__); \
+    } while (false)
+
+/** Prints an informational message during the execution of a test. */
+# define TEST_MSG_0(msg) (void)printf("\t" msg "\n");
+
+/** Prints an error message during the execution of a test. */
+# define ERROR_MSG(msg, ...) TEST_MSG(RED(msg), __VA_ARGS__)
+
 /******************************************************************************\
  *                               Implementation                               *
 \******************************************************************************/
@@ -129,7 +141,6 @@ typedef struct {
 void _bal_tests_init(void);
 void _bal_start_all_tests(size_t total);
 void _bal_start_test(size_t total, size_t run, const char* name);
-void _bal_test_msg(const char* format, ...);
 bool _bal_print_err(bool pass, bool expected);
 void _bal_end_test(size_t total, size_t run, const char* name, bool pass);
 void _bal_end_all_tests(size_t total, size_t run, size_t passed);
