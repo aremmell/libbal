@@ -64,7 +64,7 @@ project(
 # debug/release preprocessor
 add_compile_definitions(
     $<$<CONFIG:Debug>:DEBUG>
-    $<$<CONFIG:Debug>:BAL_DBGLOG>
+    $<$<CONFIG:Debug>:BAL_DBGLOG> # general debug tracing
     #$<$<CONFIG:Debug>:BAL_DBGLOG_SETERROR> # debug tracing on every internal error.
     #$<$<CONFIG:Debug>:BAL_DBGLOG_ASYNC_IO> # debug tracing for async I/O events.
     $<$<CONFIG:Release>:NDEBUG>
