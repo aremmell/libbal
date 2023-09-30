@@ -29,8 +29,49 @@
 #include <bal.hh>
 #include "tests_shared.h"
 
+# if defined(_MSC_VER) && !defined(__PRETTY_FUNCTION__)
+#  define __PRETTY_FUNCTION__ __FUNCSIG__
+# endif
+
+/**
+ * @addtogroup tests
+ * @{
+ */
+
+/** libbal C++ wrapper tests. */
 namespace bal::tests
 {
+    /**
+     * @ test
+     * @ brief
+     * @ returns `true` if the test succeeded, `false` otherwise.
+     */
+    //bool ();
 } // !namespace bal::tests
+
+/** @} */
+
+/** Begins a test by declaring the `pass` variable and entering a try/catch block. */
+# define _BAL_TEST_COMMENCE \
+    bool pass = true; \
+    try {
+
+/** Implements recovery in the event that an unexpected exception is caught. */
+# define _BAL_TEST_ON_EXCEPTION(what) \
+    ERROR_MSG("unexpected exception in %s: '%s'", __PRETTY_FUNCTION__, what); \
+    pass = false; \
+    if (true) \
+        [[maybe_unused]] bool unused = bal_cleanup()
+
+/** Handles an expected exception. */
+# define _BAL_TEST_ON_EXPECTED_EXCEPTION(what) \
+    TEST_MSG(GREEN("expected exception in %s: '%s'"), __PRETTY_FUNCTION__, what)
+
+# define _BAL_TEST_CONCLUDE \
+    } catch (bal::exception& ex) { \
+        _BAL_TEST_ON_EXCEPTION(ex.what()); \
+    } catch (...) { \
+        _BAL_TEST_ON_EXCEPTION(BAL_UNKNOWN); \
+    }
 
 #endif // !_BAL_TESTSXX_HH_INCLUDED
