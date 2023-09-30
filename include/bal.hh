@@ -40,30 +40,29 @@ namespace bal
         using std::runtime_error::runtime_error;
         explicit exception(const bal_error& err) : exception(err.message) { }
 
-        static exception from_last_error() {
+        static exception from_last_error()
+        {
             bal_error err {};
             [[maybe_unused]] int code = bal_get_error(&err);
             return exception(err);
         }
     };
 
-    template<bool DNS>
-    class address_info_base
+    class address_info
     {
     public:
-        address_info_base() = default;
-        explicit address_info_base(const bal_sockaddr& addr) {
-            from_sockaddr(addr);
+        address_info() = default;
+        explicit address_info(const bal_sockaddr& addr, bool dns = false)
+            : _dns(dns)
+        {
+            *this = addr;
         }
-        virtual ~address_info_base() = default;
+        virtual ~address_info() = default;
 
-        address_info_base& operator=(const bal_sockaddr& addr) {
-            return from_sockaddr(addr);
-        }
-
-        address_info_base& from_sockaddr(const bal_sockaddr& addr) {
+        address_info& operator=(const bal_sockaddr& addr)
+        {
             bal_addrstrings strings {};
-            if (!bal_get_addrstrings(&addr, DNS, &strings)) {
+            if (!bal_get_addrstrings(&addr, _dns, &strings)) {
                 throw exception::from_last_error();
             }
 
@@ -71,29 +70,16 @@ namespace bal
             _host = strings.host;
             _addr = strings.addr;
             _port = strings.port;
-
             return *this;
         }
 
-        std::string get_type() const {
-            return _type;
-        }
+        std::string get_type() const { return _type; }
+        std::string get_host() const { return _host; }
+        std::string get_addr() const { return _addr; }
+        std::string get_port() const { return _port; }
 
-        std::string get_host() const {
-            return _host;
-        }
-
-        // TODO: ability to return sockaddr
-        std::string get_addr() const {
-            return _addr;
-        }
-
-        // TODO: ability to return uint16_t
-        std::string get_port() const {
-            return _port;
-        }
-
-        void clear() {
+        void clear()
+        {
             _type.clear();
             _host.clear();
             _addr.clear();
@@ -105,10 +91,8 @@ namespace bal
         std::string _host;
         std::string _addr;
         std::string _port;
+        bool _dns = false;
     };
-
-    using dns_address_info = address_info_base<true>;
-    using address_info = address_info_base<false>;
 
 } // !namespace bal
 

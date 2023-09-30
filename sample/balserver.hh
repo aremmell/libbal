@@ -27,6 +27,7 @@
 # define _BAL_SERVER_HH_INCLUDED
 
 # include "balcommon.hh"
+# include <utility>
 # include <map>
 
 namespace bal::balserver
