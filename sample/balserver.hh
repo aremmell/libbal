@@ -36,32 +36,34 @@ namespace bal::balserver
     {
     public:
         client() = default;
-        explicit client(bal_socket* s, const bal_sockaddr& addr) : _addrinfo(addr), _s(s) { }
-        ~client() {
+        explicit client(bal_socket* s, const bal_sockaddr& addr) : _addr(addr), _s(s) { }
+        ~client()
+        {
             if (_s != nullptr) {
                 _bal_dbglog("closing and destroying socket " BAL_SOCKET_SPEC, _s->sd);
                 [[maybe_unused]] bool closed = bal_close(&_s, true);
             }
         }
 
-        client& operator=(client&& other) {
+        address_info get_address_info(bool dns_resolve = false) const
+        {
+            return _addr.get_address_info(dns_resolve);
+        }
+
+        client& operator=(client&& other)
+        {
             _s = other._s;
             other._s = nullptr;
-            _addrinfo = other._addrinfo;
-            other._addrinfo.clear();
             return *this;
         }
 
-        address_info get_address_info() const {
-            return _addrinfo;
-        }
-
-        bal_socket* get_socket() const noexcept {
+        bal_socket* get_socket() const noexcept
+        {
             return _s;
         }
 
     private:
-        address_info _addrinfo {};
+        address _addr;
         bal_socket* _s = nullptr;
     };
 

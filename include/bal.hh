@@ -28,44 +28,45 @@
 
 # include "bal.h"
 # include <stdexcept>
+# include <vector>
 # include <atomic>
 # include <string>
 
 namespace bal
 {
-    // TODO: capture extended error info and code, expose those.
+    struct error
+    {
+        int code = 0;
+        std::string message;
+
+        static error from_last_error()
+        {
+            bal_error err {};
+            auto code = bal_get_error(&err);
+            return {code, err.message};
+        }
+    };
+
     class exception : public std::runtime_error
     {
     public:
         using std::runtime_error::runtime_error;
-        explicit exception(const bal_error& err) : exception(err.message) { }
-
-        static exception from_last_error()
-        {
-            bal_error err {};
-            [[maybe_unused]] int code = bal_get_error(&err);
-            return exception(err);
-        }
+        explicit exception(const error& err) : exception(err.message) { }
+        ~exception() override = default;
     };
 
     class address_info
     {
     public:
         address_info() = default;
-        explicit address_info(const bal_sockaddr& addr, bool dns = false)
-            : _dns(dns)
+        explicit address_info(const bal_addrstrings& strings)
         {
-            *this = addr;
+            *this = strings;
         }
         virtual ~address_info() = default;
 
-        address_info& operator=(const bal_sockaddr& addr)
+        address_info& operator=(const bal_addrstrings& strings)
         {
-            bal_addrstrings strings {};
-            if (!bal_get_addrstrings(&addr, _dns, &strings)) {
-                throw exception::from_last_error();
-            }
-
             _type = strings.type;
             _host = strings.host;
             _addr = strings.addr;
@@ -91,10 +92,54 @@ namespace bal
         std::string _host;
         std::string _addr;
         std::string _port;
-        bool _dns = false;
+    };
+
+    class address
+    {
+    public:
+        address() = default;
+        explicit address(const bal_sockaddr& addr) : _sockaddr(addr) { }
+        virtual ~address() = default;
+
+        address_info get_address_info(bool dns_resolve = false) const
+        {
+            bal_addrstrings strings {};
+            if (!bal_get_addrstrings(&_sockaddr, dns_resolve, &strings)) {
+                throw exception(error::from_last_error());
+            }
+
+            return address_info {strings};
+        }
+
+        const bal_sockaddr& get_sockaddr() const
+        {
+            return _sockaddr;
+        }
+
+    private:
+        bal_sockaddr _sockaddr {};
+    };
+
+    class address_list : public std::vector<address>
+    {
+    public:
+        using Base = std::vector<address>;
+        using Base::vector;
+
+        explicit address_list(bal_addrlist* addrs)
+        {
+            if (!bal_reset_addrlist(addrs)) {
+                throw exception(error::from_last_error());
+            }
+
+            auto addr = bal_enum_addrlist(addrs);
+            while (addr != nullptr) {
+                Base::emplace_back(address {*addr});
+                addr = bal_enum_addrlist(addrs);
+            }
+        }
     };
 
 } // !namespace bal
-
 
 #endif // !_BAL_HH_INCLUDED

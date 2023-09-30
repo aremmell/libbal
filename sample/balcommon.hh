@@ -48,6 +48,13 @@ namespace bal::balcommon
     std::string get_input_line(const std::string& prompt,
         const std::string& def);
 
+# define PRINT(msg, ...) \
+    do { \
+        [[maybe_unused]] auto unused = printf(msg "\n", __VA_ARGS__); \
+    } while (false)
+
+# define PRINT_SD(msg, ...) PRINT("[" BAL_SOCKET_SPEC "]" ## msg, __VA_ARGS__)
+
 # define EXIT_IF_FAILED(retval, func) \
     do { \
         if (!retval) { \
