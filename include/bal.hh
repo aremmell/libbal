@@ -28,6 +28,7 @@
 
 # include "bal.h"
 # include <type_traits>
+# include <functional>
 # include <stdexcept>
 # include <cstdlib>
 # include <vector>
@@ -141,33 +142,24 @@ namespace bal
         using Base = std::vector<address>;
         using Base::vector;
 
-        explicit address_list(bal_addrlist* addrs)
+        explicit address_list(bal_addrlist& addrs)
         {
-            if (!bal_reset_addrlist(addrs)) {
+            *this = addrs;
+        }
+
+        address_list& operator=(bal_addrlist& addrs)
+        {
+            if (!bal_reset_addrlist(&addrs)) {
                 throw exception(error::from_last_error());
             }
 
-            auto addr = bal_enum_addrlist(addrs);
+            auto addr = bal_enum_addrlist(&addrs);
             while (addr != nullptr) {
                 Base::emplace_back(address {*addr});
-                addr = bal_enum_addrlist(addrs);
+                addr = bal_enum_addrlist(&addrs);
             }
-        }
-    };
 
-    class initializer
-    {
-    public:
-        initializer()
-        {
-            if (!bal_init()) {
-                throw exception(error::from_last_error());
-            }
-        }
-
-        virtual ~initializer()
-        {
-            [[maybe_unused]] auto cleanup = bal_cleanup();
+            return *this;
         }
     };
 
@@ -204,31 +196,39 @@ namespace bal
         return value;
     }
 
-    enum class shutdown_mode : int
+    class initializer
     {
-        read = BAL_SHUT_RD,
-        write = BAL_SHUT_WR,
-        readwrite = BAL_SHUT_RDWR
+    public:
+        initializer()
+        {
+            if (!bal_init()) {
+                throw exception(error::from_last_error());
+            }
+        }
+
+        virtual ~initializer()
+        {
+            [[maybe_unused]] auto cleanup = bal_cleanup();
+        }
     };
 
     template<bool RAII, DerivedFromPolicy TPolicy>
     class socket_base
     {
     public:
+        using policy_type = TPolicy;
+
         socket_base(int addr_fam, int type, int proto) requires RAII
         {
-            const auto created = bal_create(&_s, addr_fam, type, proto);
             [[maybe_unused]]
-            const auto excpt = throw_on_policy<TPolicy>(created, false);
+            auto unused = create(addr_fam, type, proto);
         }
 
         socket_base(int addr_fam, int proto, const std::string& host,
             const std::string& srv) requires RAII
         {
-            const auto created =
-                bal_auto_socket(&_s, addr_fam, proto, host.c_str(), srv.c_str());
             [[maybe_unused]]
-            const auto excpt = throw_on_policy<TPolicy>(created, false);
+            auto unused = create(addr_fam, proto, host, srv);
         }
 
         socket_base(socket_base&) = delete;
@@ -274,46 +274,105 @@ namespace bal
             return attach(nullptr);
         }
 
+        bool create(int addr_fam, int type, int proto)
+        {
+            [[maybe_unused]] const auto existing = detach();
+            BAL_ASSERT(existing == nullptr);
+
+            const auto ret = bal_create(&_s, addr_fam, type, proto);
+            return throw_on_policy<TPolicy>(ret, false);
+        }
+
+        bool create(int addr_fam, int proto, const std::string& host,
+            const std::string& srv)
+        {
+            const auto ret =
+                bal_auto_socket(&_s, addr_fam, proto, host.c_str(), srv.c_str());
+            return throw_on_policy<TPolicy>(ret, false);
+        }
+
         bool close(bool destroy = true)
         {
             if (!is_valid()) {
                 return false;
             }
 
-            const auto closed = bal_close(&_s, destroy);
-            return throw_on_policy<TPolicy>(closed, false);
+            const auto ret = bal_close(&_s, destroy);
+            return throw_on_policy<TPolicy>(ret, false);
         }
 
-        bool shutdown(shutdown_mode how)
+        bool shutdown(int how)
         {
-            const auto sd = bal_shutdown(_s, how);
-            return throw_on_policy<TPolicy>(sd, false);
+            const auto ret = bal_shutdown(_s, how);
+            return throw_on_policy<TPolicy>(ret, false);
+        }
+
+        bool async_poll(uint32_t mask = BAL_EVT_NORMAL)
+        {
+            if (!is_valid()) {
+                return false;
+            }
+
+            _s->user_data = std::bit_cast<uintptr_t>(this);
+
+            const auto ret = bal_async_poll(_s, &socket_base::_on_async_io, mask);
+            return throw_on_policy<TPolicy>(ret, false);
+        }
+
+        std::function<void()> on_read = []() { };
+        std::function<void()> on_write = []() { };
+        std::function<void()> on_connect = []() { };
+        std::function<void()> on_conn_fail = []() { };
+        std::function<void()> on_incoming_conn = []() { };
+        std::function<void()> on_close = [this]()
+        {
+            [[maybe_unused]] const auto closed = close();
+        };
+        std::function<void()> on_priority = []() { };
+        std::function<void()> on_error = [this]()
+        {
+            [[maybe_unused]] const auto closed = close();
+        };
+        std::function<void()> on_invalid = [this]()
+        {
+            [[maybe_unused]] const auto closed = close();
+        };
+        std::function<void()> on_oob_read = []() { };
+        std::function<void()> on_oob_write = []() { };
+
+        void want_write_events(bool want)
+        {
+            if (want) {
+                bal_addtomask(_s, BAL_EVT_WRITE);
+            } else {
+                bal_remfrommask(_s, BAL_EVT_WRITE);
+            }
         }
 
         bool connect(const std::string& host, const std::string& port)
         {
-            const auto conn = bal_connect(_s, host.c_str(), port.c_str());
-            return throw_on_policy<TPolicy>(conn, false);
+            const auto ret = bal_connect(_s, host.c_str(), port.c_str());
+            return throw_on_policy<TPolicy>(ret, false);
         }
 
         ssize_t send(const void* data, bal_iolen len, int flags)
         {
-            const auto sent = bal_send(_s, data, len, flags);
-            return throw_on_policy<TPolicy>(sent, -1);
+            const auto ret = bal_send(_s, data, len, flags);
+            return throw_on_policy<TPolicy>(ret, -1L);
         }
 
         ssize_t sendto(const std::string& host, const std::string& port,
             const void* data, bal_iolen len, int flags)
         {
-            const auto sent =
+            const auto ret =
                 bal_sendto(_s, host.c_str(), port.c_str(), data, len, flags);
-            return throw_on_policy<TPolicy>(sent, -1);
+            return throw_on_policy<TPolicy>(ret, -1L);
         }
 
         ssize_t recv(void* data, bal_iolen len, int flags)
         {
-            const auto read = bal_recv(_s, data, len, flags);
-            return throw_on_policy<TPolicy>(read, -1);
+            const auto ret = bal_recv(_s, data, len, flags);
+            return throw_on_policy<TPolicy>(ret, -1L);
         }
 
         ssize_t recvfrom(void* data, bal_iolen len, int flags, address& whence)
@@ -321,48 +380,141 @@ namespace bal
             whence.clear();
 
             bal_sockaddr tmp {};
-            const auto read = bal_recvfrom(_s, data, len, flags, &tmp);
-            if (read) {
+            const auto ret = bal_recvfrom(_s, data, len, flags, &tmp);
+            if (ret) {
                 whence = tmp;
             }
 
-            return throw_on_policy<TPolicy>(read, -1);
+            return throw_on_policy<TPolicy>(ret, -1L);
         }
 
         bool bind(const std::string& addr, const std::string& srv)
         {
-            const auto bound = bal_bind(_s, addr.c_str(), srv.c_str());
-            return throw_on_policy<TPolicy(bound, false);
+            const auto ret = bal_bind(_s, addr.c_str(), srv.c_str());
+            return throw_on_policy<TPolicy>(ret, false);
         }
 
         bool bind_all(const std::string& srv)
         {
-            const auto bound = bal_bindall(_s, srv.c_str());
-            return throw_on_policy<TPolicy(bound, false);
+            const auto ret = bal_bindall(_s, srv.c_str());
+            return throw_on_policy<TPolicy>(ret, false);
         }
 
         bool listen(int backlog = SOMAXCONN)
         {
-            const auto listening = bal_listen(_s, backlog);
-            return throw_on_policy<TPolicy(listening, false);
+            const auto ret = bal_listen(_s, backlog);
+            return throw_on_policy<TPolicy>(ret, false);
         }
 
         bool accept(socket_base& client_sock, address& client_addr)
         {
-            const auto existing = client_sock.detach();
+            [[maybe_unused]] const auto existing = client_sock.detach();
             BAL_ASSERT(existing == nullptr);
 
             client_addr.clear();
 
             bal_socket* s = nullptr;
             bal_sockaddr addr {};
-            const auto accepted = bal_accept(_s, &s, &addr);
-            if (accepted) {
+            const auto ret = bal_accept(_s, &s, &addr);
+            if (ret) {
                 [[maybe_unused]] auto unused = client_sock.attach(s);
                 client_addr = addr;
             }
 
-            return throw_on_policy<TPolicy>(accepted, false);
+            return throw_on_policy<TPolicy>(ret, false);
+        }
+
+        static bool resolve_host(const std::string& host, address_list& addrs)
+        {
+            addrs.clear();
+
+            bal_addrlist addrlist {};
+            auto ret = bal_resolve_host(host.c_str(), &addrlist);
+            if (ret) {
+                addrs = addrlist;
+                ret = bal_free_addrlist(&addrlist);
+            }
+
+            return throw_on_policy<TPolicy>(ret, false);
+        }
+
+        bool get_peer_addr(address& peer_addr)
+        {
+            peer_addr.clear();
+
+            bal_sockaddr addr {};
+            const auto ret = bal_get_peer_addr(_s, &addr);
+            if (ret) {
+                peer_addr = addr;
+            }
+
+            return throw_on_policy<TPolicy>(ret, false);
+        }
+
+        error get_error(bool extended)
+        {
+            bal_error err {};
+            if (extended) {
+                err.code = bal_get_error_ext(&err);
+            } else {
+                err.code = bal_get_error(&err);
+            }
+
+            return {err.code, err.message};
+        }
+
+    protected:
+        static void _on_async_io(bal_socket* s, uint32_t events)
+        {
+            try {
+                socket_base* self = std::bit_cast<socket_base*>(s->user_data);
+
+                if (bal_isbitset(events, BAL_EVT_READ) && self->on_read) {
+                    self->on_read();
+                }
+
+                if (bal_isbitset(events, BAL_EVT_WRITE) && self->on_write) {
+                    self->on_write();
+                }
+
+                if (bal_isbitset(events, BAL_EVT_CONNECT) && self->on_connect) {
+                    self->on_connect();
+                }
+
+                if (bal_isbitset(events, BAL_EVT_CONNFAIL) && self->on_conn_fail) {
+                    self->on_conn_fail();
+                }
+
+                if (bal_isbitset(events, BAL_EVT_ACCEPT) && self->on_incoming_conn) {
+                    self->on_incoming_conn();
+                }
+
+                if (bal_isbitset(events, BAL_EVT_CLOSE) && self->on_close) {
+                    self->on_close();
+                }
+
+                if (bal_isbitset(events, BAL_EVT_PRIORITY) && self->on_priority) {
+                    self->on_priority();
+                }
+
+                if (bal_isbitset(events, BAL_EVT_ERROR) && self->on_error) {
+                    self->on_error();
+                }
+
+                if (bal_isbitset(events, BAL_EVT_INVALID) && self->on_invalid) {
+                    self->on_invalid();
+                }
+
+                if (bal_isbitset(events, BAL_EVT_OOBREAD) && self->on_oob_read) {
+                    self->on_oob_read();
+                }
+
+                if (bal_isbitset(events, BAL_EVT_OOBWRITE) && self->on_oob_write) {
+                    self->on_oob_write();
+                }
+            } catch (bal::exception& ex) {
+                _bal_dbglog("error: caught exception: '%s'!", ex.what());
+            }
         }
 
     private:
