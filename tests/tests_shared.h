@@ -134,6 +134,10 @@ typedef struct {
 /** Prints an error message during the execution of a test. */
 # define ERROR_MSG(msg, ...) TEST_MSG(RED(msg), __VA_ARGS__)
 
+/** If the pass/fail result of a test is false, prints the last error. Used as
+ * the return statement for tests. */
+# define PRINT_RESULT_RETURN(pass) _bal_print_err(pass, false)
+
 /******************************************************************************\
  *                               Implementation                               *
 \******************************************************************************/

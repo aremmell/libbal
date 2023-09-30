@@ -60,8 +60,8 @@ namespace bal::tests
 # define _BAL_TEST_ON_EXCEPTION(what) \
     ERROR_MSG("unexpected exception in %s: '%s'", __PRETTY_FUNCTION__, what); \
     pass = false; \
-    if (true) \
-        [[maybe_unused]] bool unused = bal_cleanup()
+    if (bal_isinitialized()) \
+        [[maybe_unused]] bool unused = bal_cleanup();
 
 /** Handles an expected exception. */
 # define _BAL_TEST_ON_EXPECTED_EXCEPTION(what) \
@@ -72,6 +72,7 @@ namespace bal::tests
         _BAL_TEST_ON_EXCEPTION(ex.what()); \
     } catch (...) { \
         _BAL_TEST_ON_EXCEPTION(BAL_UNKNOWN); \
-    }
+    } \
+    return PRINT_RESULT_RETURN(pass)
 
 #endif // !_BAL_TESTSXX_HH_INCLUDED
