@@ -1,5 +1,5 @@
 /*
- * tests.h
+ * tests++.cc
  *
  * Author:    Ryan M. Lederman <lederman@gmail.com>
  * Copyright: Copyright (c) 2004-2023
@@ -23,33 +23,38 @@
  * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-#ifndef _BAL_TESTS_H_INCLUDED
-# define _BAL_TESTS_H_INCLUDED
-# include "tests_shared.h"
+#include "tests++.hh"
+#include <vector>
+#include <cstdlib>
 
-/******************************************************************************\
- *                              Test Definitions                              *
-\******************************************************************************/
+using namespace bal;
 
-/**
- * @test baltest_init_cleanup_sanity
- * Ensures that libbal behaves correctly under various circumstances with regards
- * to order and number of init/cleanup operations.
- */
-bool baltest_init_cleanup_sanity(void);
+static std::vector<bal_test_data> bal_tests = {
+    /* {"test-name", tests::test_name, false, true, false}, */
+};
 
-/**
- * @test baltest_create_bind_listen_tcp
- * Ensure that a bal_socket can be instantiated, bound to a local address, and
- * set to listen for connections (then be closed and destroyed).
- */
-bool baltest_create_bind_listen_tcp(void);
+int main(int argc, char** argv)
+{
+    BAL_UNUSED(argc);
+    BAL_UNUSED(argv);
 
-/**
- * @test baltest_error_sanity
- * Ensures that libbal properly handles reported errors and returns the expected
- * error codes and messages for each known error code.
- */
-bool baltest_error_sanity(void);
+    _bal_tests_init();
 
-#endif /* !_BAL_TESTS_H_INCLUDED */
+    size_t tests_total  = bal_tests.size();
+    size_t tests_run    = 0;
+    size_t tests_passed = 0;
+
+    _bal_start_all_tests(tests_total);
+
+    for (size_t n = 0; n < tests_total; n++) {
+        _bal_start_test(tests_total, tests_run, bal_tests[n].name);
+        bal_tests[n].pass = bal_tests[n].func();
+        _bal_end_test(tests_total, tests_run, bal_tests[n].name, bal_tests[n].pass);
+        if (bal_tests[n].pass)
+            tests_passed++;
+        tests_run++;
+    }
+
+    _bal_end_all_tests(tests_total, tests_run, tests_passed);
+    return tests_passed == tests_run ? EXIT_SUCCESS : EXIT_FAILURE;
+}

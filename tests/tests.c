@@ -25,12 +25,14 @@
  */
 #include "tests.h"
 #include <stdlib.h>
+
 #pragma message("TODO: implement CLI")
 #pragma message("TODO: implement offline-only test runs")
-static const bal_test_data bal_tests[] = {
-    {"init-cleanup-sanity", baltest_init_cleanup_sanity, false},
-    {"create-bind-listen",  baltest_create_bind_listen_tcp, false},
-    {"error-sanity",        baltest_error_sanity, false}
+
+static bal_test_data bal_tests[] = {
+    {"init-cleanup-sanity", baltest_init_cleanup_sanity, false, true, false},
+    {"create-bind-listen",  baltest_create_bind_listen_tcp, false, true, false},
+    {"error-sanity",        baltest_error_sanity, false, true, false}
 };
 
 int main(int argc, char** argv)
@@ -38,11 +40,7 @@ int main(int argc, char** argv)
     BAL_UNUSED(argc);
     BAL_UNUSED(argv);
 
-#if defined(__WIN__)
-    DWORD flags = ENABLE_VIRTUAL_TERMINAL_PROCESSING | ENABLE_PROCESSED_OUTPUT;
-    SetConsoleMode(GetStdHandle(STD_OUTPUT_HANDLE), flags);
-    SetConsoleMode(GetStdHandle(STD_ERROR_HANDLE), flags);
-#endif
+    _bal_tests_init();
 
     size_t tests_total  = _bal_countof(bal_tests);
     size_t tests_run    = 0;
@@ -52,9 +50,9 @@ int main(int argc, char** argv)
 
     for (size_t n = 0; n < tests_total; n++) {
         _bal_start_test(tests_total, tests_run, bal_tests[n].name);
-        bool pass = bal_tests[n].func();
-        _bal_end_test(tests_total, tests_run, bal_tests[n].name, pass);
-        if (pass)
+        bal_tests[n].pass = bal_tests[n].func();
+        _bal_end_test(tests_total, tests_run, bal_tests[n].name, bal_tests[n].pass);
+        if (bal_tests[n].pass)
             tests_passed++;
         tests_run++;
     }
@@ -193,70 +191,4 @@ bool baltest_error_sanity(void)
     }
 
     return pass;
-}
-
-/******************************************************************************\
- *                                Test Harness                                *
-\******************************************************************************/
-
-void _bal_start_all_tests(size_t total)
-{
-    printf("\n" WHITEB("" ULINE("libbal") " %s (%s) running %zu %s...") "\n\n",
-        bal_get_versionstring(), (bal_is_releasebuild() ? "" : "prerelease"),
-        total, _TEST_PLURAL(total));
-}
-
-void _bal_start_test(size_t total, size_t run, const char* name)
-{
-    printf(WHITEB("(%zu/%zu) '%s'...") "\n\n", run + 1, total, name);
-}
-
-void _bal_test_msg(const char* format, ...)
-{
-    char tmp[1024] = {0};
-    va_list args;
-
-    va_start(args, format);
-    (void)vsnprintf(tmp, sizeof(tmp), format, args);
-    va_end(args);
-
-    (void)printf("\t%s\n", tmp);
-}
-
-bool _bal_print_err(bool pass, bool expected)
-{
-    if (!pass) {
-        bal_error err = {0};
-        bal_get_error_ext(&err);
-        _bal_test_msg(expected ? GREEN("%s: %d (%s)") : RED("%s: %d (%s)") "\n",
-            expected ? "Expected" : "Unexpected", err.code, err.message);
-    }
-    return pass;
-}
-
-void _bal_end_test(size_t total, size_t run, const char* name, bool pass)
-{
-    if (pass) {
-        printf("\n" WHITEB("(%zu/%zu) '%s': ") GREEN("PASS") "\n\n", run + 1, total, name);
-    } else {
-        printf("\n" WHITEB("(%zu/%zu) '%s': ") RED("FAIL") "\n\n", run + 1, total, name);
-    }
-}
-
-void _bal_end_all_tests(size_t total, size_t run, size_t passed)
-{
-    if (run == passed) {
-        printf(GREENB("all %zu "  ULINE("libbal") " %s passed!") "\n", run,
-            _TEST_PLURAL(run));
-    } else {
-        printf(REDB("%zu of %zu " ULINE("libbal") " %s failed") "\n", run - passed,
-            total, _TEST_PLURAL(run - passed));
-    }
-}
-
-void _bal_async_poll_callback(bal_socket* s, uint32_t events)
-{
-#pragma message("TODO: print events")
-    BAL_UNUSED(s);
-    BAL_UNUSED(events);
 }

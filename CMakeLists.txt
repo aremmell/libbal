@@ -10,6 +10,7 @@ set(PROJECT_NAME bal)
 set(CLIENT_EXECUTABLE_NAME balclient)
 set(SERVER_EXECUTABLE_NAME balserver)
 set(TESTS_EXECUTABLE_NAME baltests)
+set(TESTSXX_EXECUTABLE_NAME baltests++)
 set(STATIC_LIBRARY_NAME bal_static)
 set(SHARED_LIBRARY_NAME bal_shared)
 
@@ -137,6 +138,13 @@ add_executable(
 add_executable(
     ${TESTS_EXECUTABLE_NAME}
     tests/tests.c
+    tests/tests_shared.c
+)
+
+add_executable(
+    ${TESTSXX_EXECUTABLE_NAME}
+    tests/tests++.cc
+    tests/tests_shared.c
 )
 
 file(
@@ -183,6 +191,13 @@ target_include_directories(
     ${CMAKE_CURRENT_BINARY_DIR}/include
 )
 
+target_include_directories(
+    ${TESTSXX_EXECUTABLE_NAME}
+    PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_BINARY_DIR}/include
+)
+
 if(!WIN32)
     target_link_libraries(
         ${SERVER_EXECUTABLE_NAME}
@@ -218,6 +233,11 @@ target_link_libraries(
     ${STATIC_LIBRARY_NAME}
 )
 
+target_link_libraries(
+    ${TESTSXX_EXECUTABLE_NAME}
+    ${STATIC_LIBRARY_NAME}
+)
+
 target_compile_features(
     ${CLIENT_EXECUTABLE_NAME}
     PUBLIC
@@ -234,6 +254,18 @@ target_compile_features(
     ${TESTS_EXECUTABLE_NAME}
     PUBLIC
     ${C_STANDARD}
+)
+
+target_compile_features(
+    ${TESTSXX_EXECUTABLE_NAME}
+    PUBLIC
+    ${C_STANDARD}
+)
+
+target_compile_features(
+    ${TESTSXX_EXECUTABLE_NAME}
+    PUBLIC
+    ${CXX_STANDARD}
 )
 
 target_compile_features(

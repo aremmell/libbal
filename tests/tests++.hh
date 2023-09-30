@@ -1,5 +1,5 @@
 /*
- * tests.h
+ * tests++.hh
  *
  * Author:    Ryan M. Lederman <lederman@gmail.com>
  * Copyright: Copyright (c) 2004-2023
@@ -23,33 +23,14 @@
  * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-#ifndef _BAL_TESTS_H_INCLUDED
-# define _BAL_TESTS_H_INCLUDED
-# include "tests_shared.h"
+#ifndef _BAL_TESTSXX_HH_INCLUDED
+# define _BAL_TESTSXX_HH_INCLUDED
 
-/******************************************************************************\
- *                              Test Definitions                              *
-\******************************************************************************/
+#include <bal.hh>
+#include "tests_shared.h"
 
-/**
- * @test baltest_init_cleanup_sanity
- * Ensures that libbal behaves correctly under various circumstances with regards
- * to order and number of init/cleanup operations.
- */
-bool baltest_init_cleanup_sanity(void);
+namespace bal::tests
+{
+} // !namespace bal::tests
 
-/**
- * @test baltest_create_bind_listen_tcp
- * Ensure that a bal_socket can be instantiated, bound to a local address, and
- * set to listen for connections (then be closed and destroyed).
- */
-bool baltest_create_bind_listen_tcp(void);
-
-/**
- * @test baltest_error_sanity
- * Ensures that libbal properly handles reported errors and returns the expected
- * error codes and messages for each known error code.
- */
-bool baltest_error_sanity(void);
-
-#endif /* !_BAL_TESTS_H_INCLUDED */
+#endif // !_BAL_TESTSXX_HH_INCLUDED
