@@ -58,12 +58,6 @@ bool _bal_init_asyncpoll(void)
         return _bal_handlelasterr();
     }
 
-    _bal_eqland(init, _bal_mutex_create(&_bal_as_container.mutex));
-    if (!init) {
-        _bal_dbglog("error: failed to create mutex(es)");
-        return false;
-    }
-
     struct {
         bal_thread* thread;
         bal_thread_cb proc;
@@ -135,10 +129,6 @@ bool _bal_cleanup_asyncpoll(void)
     }
 
     bool destroy = _bal_list_destroy(&_bal_as_container.lst);
-    BAL_ASSERT(destroy);
-    _bal_eqland(cleanup, destroy);
-
-    destroy = _bal_mutex_destroy(&_bal_as_container.mutex);
     BAL_ASSERT(destroy);
     _bal_eqland(cleanup, destroy);
 
@@ -903,6 +893,9 @@ void _bal_static_once_init_func(void)
 {
 #endif
     bool create = _bal_mutex_create(&_bal_state.mutex);
+    BAL_ASSERT_UNUSED(create, create);
+
+    create = _bal_mutex_create(&_bal_as_container.mutex);
     BAL_ASSERT_UNUSED(create, create);
 #if defined(__HAVE_STDATOMICS__)
     atomic_init(&_bal_state.magic, 0U);
