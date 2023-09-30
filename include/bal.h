@@ -42,6 +42,7 @@ extern "C" {
 
 bool bal_init(void);
 bool bal_cleanup(void);
+bool bal_isinitialized(void);
 
 bool bal_async_poll(bal_socket* s, bal_async_cb proc, uint32_t mask);
 

@@ -125,6 +125,16 @@ bool bal_cleanup(void)
     return cleanup;
 }
 
+bool bal_isinitialized(void)
+{
+#if defined(__HAVE_STDATOMICS__)
+    uint_fast32_t magic = atomic_load(&_bal_state.magic);
+#else
+    uint_fast32_t magic = _bal_state.magic;
+#endif
+    return BAL_MAGIC == magic;
+}
+
 bool bal_async_poll(bal_socket* s, bal_async_cb proc, uint32_t mask)
 {
     if (!_bal_get_boolean(&_bal_async_poll_init) ||
