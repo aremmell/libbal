@@ -42,9 +42,17 @@
 namespace bal::tests
 {
     /**
+     * @test init_with_initializer
+     * @brief Ensure the RAII initializer class successfully initializes and
+     * cleans up libbal in its constructor and destructor, respectively.
+     * @returns true if the test succeeded, false otherwise.
+     */
+    bool init_with_initializer();
+
+    /**
      * @ test
      * @ brief
-     * @ returns `true` if the test succeeded, `false` otherwise.
+     * @ returns true if the test succeeded, false otherwise.
      */
     //bool ();
 } // !namespace bal::tests
@@ -73,6 +81,6 @@ namespace bal::tests
     } catch (...) { \
         _BAL_TEST_ON_EXCEPTION(BAL_UNKNOWN); \
     } \
-    return PRINT_RESULT_RETURN(pass)
+    return PRINT_RESULT_RETURN(pass);
 
 #endif // !_BAL_TESTSXX_HH_INCLUDED

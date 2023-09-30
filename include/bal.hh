@@ -141,6 +141,22 @@ namespace bal
         }
     };
 
+    class initializer
+    {
+    public:
+        initializer()
+        {
+            if (!bal_init()) {
+                throw exception(error::from_last_error());
+            }
+        }
+
+        virtual ~initializer()
+        {
+            [[maybe_unused]] auto cleanup = bal_cleanup();
+        }
+    };
+
     class socket
     {
     public:

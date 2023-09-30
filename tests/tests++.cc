@@ -30,7 +30,7 @@
 using namespace bal;
 
 static std::vector<bal_test_data> bal_tests = {
-    /* {"test-name", tests::test_name, false, true, false}, */
+    {"raii-initializer", tests::init_with_initializer, false, true, false},
 };
 
 int main(int argc, char** argv)
@@ -57,4 +57,30 @@ int main(int argc, char** argv)
 
     _bal_end_all_tests(tests_total, tests_run, tests_passed);
     return tests_passed == tests_run ? EXIT_SUCCESS : EXIT_FAILURE;
+}
+
+/******************************************************************************\
+ *                            Test Implementations                            *
+\******************************************************************************/
+
+bool bal::tests::init_with_initializer()
+{
+    _BAL_TEST_COMMENCE
+
+    /* scope an initializer and ensure that libbal is initialized by its ctor,
+     * and cleaned up by its dtor. */
+    {
+        TEST_MSG_0("create a scoped initializer to initialize libbal...");
+        initializer initbal; /* will throw if bal_init() fails. */
+
+        TEST_MSG_0("created; test bal_isinitialized()...");
+        _bal_eqland(pass, bal_isinitialized());
+
+        TEST_MSG_0("allow initializer to be destructed, cleaning up libbal...");
+    }
+
+    TEST_MSG_0("initializer destructed; test bal_isinitialized()...");
+    _bal_eqland(pass, !bal_isinitialized());
+
+    _BAL_TEST_CONCLUDE
 }
