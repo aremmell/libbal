@@ -169,6 +169,8 @@ namespace bal
             }
         }
 
+        socket_base(socket_base&) = delete;
+
         explicit socket_base(bal_socket* s) : _s(s) { }
 
         virtual ~socket_base()
@@ -178,6 +180,14 @@ namespace bal
                     [[maybe_unused]] auto unused = bal_close(&_s, true);
                 }
             }
+        }
+
+        socket_base& operator=(socket_base&) = delete;
+
+        socket_base& operator=(socket_base&& rhs)
+        {
+            [[maybe_unused]] auto unused = attach(rhs.detach());
+            return *this;
         }
 
         bal_socket* get() const noexcept
