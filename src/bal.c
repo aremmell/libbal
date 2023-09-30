@@ -529,7 +529,7 @@ bool bal_accept(const bal_socket* s, bal_socket** res, bal_sockaddr* resaddr)
     bool retval = false;
 
     if (_bal_oksock(s) && _bal_okptrptr(res) && _bal_okptr(resaddr)) {
-        *res = calloc(1UL, sizeof(bal_socket));
+        *res = calloc(1, sizeof(bal_socket));
         if (!_bal_okptrnf(*res)) {
             _bal_handlelasterr();
         } else {
@@ -829,17 +829,17 @@ bool bal_set_io_mode(const bal_socket* s, bool async)
 
 size_t bal_get_recvqueue_size(const bal_socket* s)
 {
-    size_t size = 0UL;
+    size_t size = 0;
 
     if (_bal_oksock(s)) {
 #if defined(__WIN__)
         if (0 != ioctlsocket(s->sd, FIONREAD, (void*)&size)) {
-            size = 0UL;
+            size = 0;
             _bal_handlelasterr();
         }
 #else
         if (0 != ioctl(s->sd, FIONREAD, &size)) {
-            size = 0UL;
+            size = 0;
             _bal_handlelasterr();
         }
 #endif
