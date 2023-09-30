@@ -43,7 +43,6 @@ typedef bool (*bal_list_iter_cb)(bal_descriptor /*key*/,
 /** Worker thread callback. */
 typedef bal_threadret (*bal_thread_cb)(void*);
 
-
 typedef struct bal_socket {
     bal_descriptor sd;     /**< Socket descriptor. */
     int addr_fam;          /**< Address family (e.g. AF_INET). */
