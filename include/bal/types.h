@@ -48,6 +48,7 @@ typedef struct bal_socket {
     int addr_fam;          /**< Address family (e.g. AF_INET). */
     int type;              /**< Socket type (e.g., SOCK_STREAM). */
     int proto;             /**< Protocol (e.g., IPPROTO_TCP). */
+    uintptr_t user_data;   /**< Any user-supplied data that is desired. */
     struct {               /**< Internal socket state data. */
         uint32_t mask;     /**< Async I/O event mask. */
         uint32_t bits;     /**< State bitmask. */
