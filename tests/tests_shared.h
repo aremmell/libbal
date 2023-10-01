@@ -23,6 +23,9 @@
  * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+#ifndef _BAL_TESTS_SHARED_H_INCLUDED
+# define _BAL_TESTS_SHARED_H_INCLUDED
+
 # include "bal.h"
 
 # if defined(__cplusplus)
@@ -155,3 +158,5 @@ void _bal_async_poll_callback(bal_socket* s, uint32_t events);
 # if defined(__cplusplus)
 }
 # endif
+
+#endif /* !_BAL_TESTS_SHARED_H_INCLUDED */
