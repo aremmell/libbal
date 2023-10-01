@@ -706,16 +706,16 @@ namespace bal
 
                 auto print_early_return = [s, self](uint32_t evt) -> void
                 {
-#if defined(BAL_DBGLOG)
+# if defined(BAL_DBGLOG)
                     _bal_dbglog("early return for socket " BAL_SOCKET_SPEC " (0x%"
                         PRIxPTR ", evt = %08" PRIx32 ", self = 0x%" PRIxPTR ")",
                         s->sd, std::bit_cast<uintptr_t>(s), evt,
                         std::bit_cast<uintptr_t>(self));
-#else
+# else
                     BAL_UNUSED(s);
                     BAL_UNUSED(self);
                     BAL_UNUSED(evt);
-#endif
+# endif
                 };
 
                 if (bal_isbitset(events, BAL_EVT_READ) && self->on_read &&

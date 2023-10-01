@@ -34,11 +34,11 @@
 static inline
 bool _bal_strsame(const char* lhs, const char* rhs, size_t len)
 {
-#if defined(__WIN__)
+# if defined(__WIN__)
     return 0 == StrStrIA(lhs, rhs, len);
-#else
+# else
     return 0 == strncasecmp(lhs, rhs, len);
-#endif
+# endif
 }
 
 /** Sets the specified pointer-to-pointer's value to NULL after free(). */

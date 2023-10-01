@@ -29,8 +29,12 @@
 # include <bal.hh>
 # include "tests_shared.h"
 
-# if defined(_MSC_VER) && !defined(__PRETTY_FUNCTION__)
-#  define __PRETTY_FUNCTION__ __FUNCSIG__
+# if !defined(__PRETTY_FUNCTION__)
+#  if defined(_MSC_VER)
+#   define __PRETTY_FUNCTION__ __FUNCSIG__
+#  else
+#   define __PRETTY_FUNCTION__ __func__
+#  endif
 # endif
 
 /**
@@ -77,7 +81,7 @@ namespace bal::tests
 /** Implements recovery in the event that an unexpected exception is caught. */
 # define _BAL_TEST_ON_EXCEPTION(what) \
     ERROR_MSG("unexpected exception in %s: '%s'", __PRETTY_FUNCTION__, what); \
-    pass = false;
+    pass = false
 
 /** Handles an expected exception. */
 # define _BAL_TEST_ON_EXPECTED_EXCEPTION(what) \
