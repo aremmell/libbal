@@ -61,9 +61,9 @@ int main(int argc, char** argv)
     return tests_passed == tests_run ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
-/******************************************************************************\
- *                            Test Implementations                            *
-\******************************************************************************/
+/**
+ * Test implementations
+ */
 
 bool baltest_init_cleanup_sanity(void)
 {

@@ -27,9 +27,9 @@
 # define _BAL_TESTS_H_INCLUDED
 # include "tests_shared.h"
 
-/******************************************************************************\
- *                              Test Definitions                              *
-\******************************************************************************/
+/**
+ * Test definitions
+ */
 
 /**
  * @test baltest_init_cleanup_sanity

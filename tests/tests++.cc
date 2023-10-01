@@ -60,9 +60,9 @@ int main(int argc, char** argv)
     return tests_passed == tests_run ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
-/******************************************************************************\
- *                            Test Implementations                            *
-\******************************************************************************/
+/**
+ * Test implementations
+ */
 
 bool bal::tests::init_with_initializer()
 {
