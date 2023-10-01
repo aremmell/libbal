@@ -24,9 +24,10 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 #include "balcommon.hh"
+#include <sstream>
 
-#define QUIT_MSG "quit"
-#define HELO_MSG "HELO"
+static constexpr const char* quit_msg = "quit";
+static constexpr const char* helo_msg = "HELO";
 
 using namespace std;
 using namespace bal;
@@ -44,7 +45,7 @@ int main(int argc, char** argv)
             throw bal::exception("failed to initialize bal::common");
         }
 
-        string send_buffer = HELO_MSG;
+        string send_buffer = helo_msg;
         initializer balinit;
         scoped_socket main_sock {AF_INET, SOCK_STREAM, IPPROTO_TCP};
 
@@ -73,8 +74,10 @@ int main(int argc, char** argv)
             std::array<char, read_buf_size> buf {};
             if (ssize_t read = sock->recv(buf.data(), buf.size() - 1, 0); read > 0) {
                 PRINT_SD("read %ld bytes: '%s'", sock->get_descriptor(), read, buf.data());
-                sb = get_input_line("Enter text to send (or '" QUIT_MSG "')", HELO_MSG);
-                if (_bal_strsame(sb.c_str(), QUIT_MSG, 4)) {
+                std::stringstream strm {"Enter text to send (or '"};
+                strm << quit_msg << "')";
+                sb = get_input_line(strm.str(), helo_msg);
+                if (_bal_strsame(sb.c_str(), quit_msg, 4)) {
                     sb.clear();
                     quit();
                 } else {
