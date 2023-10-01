@@ -120,7 +120,7 @@ int main(int argc, char** argv)
             client_sock.async_poll(BAL_EVT_NORMAL);
 
             address_info addrinfo = client_addr.get_address_info();
-            PRINT("got connection from %s %s:%s: " BAL_SOCKET_SPEC " (0x%" PRIxPTR ");"
+            PRINT("got connection from %s %s:%s on " BAL_SOCKET_SPEC " (0x%" PRIxPTR ");"
                 " now have %zu client(s)", addrinfo.get_type().c_str(),
                 addrinfo.get_addr().c_str(), addrinfo.get_port().c_str(),
                 client_sock.get_descriptor(), std::bit_cast<uintptr_t>(client_sock.get()),
