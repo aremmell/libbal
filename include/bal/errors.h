@@ -42,25 +42,28 @@ bool __bal_handle_error(int code, const char* func, const char* file,
 /** Creates a libbal-specific error code from a positive integer that would
  * otherwise likely collide with OS-level error codes. Supports values
  * 1..255 inclusive. */
-# define _bal_mk_error(err) ((((err) & 0xff) << 16) | 0x78000000)
+# define _bal_mk_error(err) ((((err) & (int)0xff) << 16) | 0x78000000)
 
 /** libbal-specific error codes. */
-# define BAL_E_NOERROR      1 /**< Operation completed successfully */
-# define BAL_E_NULLPTR      2 /**< NULL pointer argument */
-# define BAL_E_BADSTRING    3 /**< Invalid string argument */
-# define BAL_E_BADSOCKET    4 /**< Invalid bal_socket argument */
-# define BAL_E_BADBUFLEN    5 /**< Invalid buffer length argument */
-# define BAL_E_INVALIDARG   6 /**< Invalid argument */
-# define BAL_E_NOTINIT      7 /**< libbal is not initialized */
-# define BAL_E_DUPEINIT     8 /**< libbal is already initialized */
-# define BAL_E_ASNOTINIT    9 /**< Asynchronous I/O is not initialized */
-# define BAL_E_ASDUPEINIT  10 /**< Asynchronous I/O is already initialized */
-# define BAL_E_ASNOSOCKET  11 /**< Socket is not registered for asynchronous I/O events */
-# define BAL_E_BADEVTMASK  12 /**< Invalid asynchronous I/O event bitmask */
-# define BAL_E_INTERNAL    13 /**< An internal error has occurred */
-# define BAL_E_UNAVAIL     14 /**< Feature is disabled or unavailable */
-# define BAL_E_PLATFORM    15 /**< Platform error code %d (%s) */
-# define BAL_E_UNKNOWN    255 /**< An unknown error has occurred */
+enum
+{
+    BAL_E_NOERROR    =  1, /**< Operation completed successfully */
+    BAL_E_NULLPTR    =  2, /**< NULL pointer argument */
+    BAL_E_BADSTRING  =  3, /**< Invalid string argument */
+    BAL_E_BADSOCKET  =  4, /**< Invalid bal_socket argument */
+    BAL_E_BADBUFLEN  =  5, /**< Invalid buffer length argument */
+    BAL_E_INVALIDARG =  6, /**< Invalid argument */
+    BAL_E_NOTINIT    =  7, /**< libbal is not initialized */
+    BAL_E_DUPEINIT   =  8, /**< libbal is already initialized */
+    BAL_E_ASNOTINIT  =  9, /**< Asynchronous I/O is not initialized */
+    BAL_E_ASDUPEINIT = 10, /**< Asynchronous I/O is already initialized */
+    BAL_E_ASNOSOCKET = 11, /**< Socket is not registered for asynchronous I/O events */
+    BAL_E_BADEVTMASK = 12,  /**< Invalid asynchronous I/O event bitmask */
+    BAL_E_INTERNAL   = 13, /**< An internal error has occurred */
+    BAL_E_UNAVAIL    = 14, /**< Feature is disabled or unavailable */
+    BAL_E_PLATFORM   = 15, /**< Platform error code %d (%s) */
+    BAL_E_UNKNOWN    = 255 /**< An unknown error has occurred */
+};
 
 /** libbal-specific packed error code values. */
 # define _BAL_E_NOERROR    _bal_mk_error(BAL_E_NOERROR)
