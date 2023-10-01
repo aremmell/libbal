@@ -243,7 +243,7 @@ void __bal_dbglog(const char* func, const char* file, uint32_t line,
         /* if this macro is defined, only log warnings and errors. */
         if (strncmp("0", color, 2) < 0)
 # endif
-        printf("\x1b[%sm%s%s\x1b[0m\n", color, prefix, buf);
+            (void)printf("\x1b[%sm%s%s\x1b[0m\n", color, prefix, buf);
 
         _bal_safefree(&buf);
     }

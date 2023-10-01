@@ -36,7 +36,7 @@ namespace bal::server
 
     scoped_socket* get_existing_client(bal_descriptor sd);
     void rem_existing_client(bal_descriptor sd);
-    void on_client_disconnect(bal_socket* s, bool error);
+    void on_client_disconnect(const bal_socket* s, bool error);
 } // !namespace bal::server
 
 #endif // !_BAL_SERVER_HH_INCLUDED

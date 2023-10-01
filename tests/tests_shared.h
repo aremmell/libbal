@@ -132,10 +132,10 @@ typedef struct {
     } while (false)
 
 /** Prints an informational message during the execution of a test. */
-# define TEST_MSG_0(msg) (void)printf("\t" WHITE(msg) "\n");
+# define TEST_MSG_0(msg) (void)printf("\t" WHITE(msg) "\n")
 
 /** Prints an error message during the execution of a test. */
-# define ERROR_MSG(msg, ...) (void)printf("\t" RED(msg) "\n", __VA_ARGS__);
+# define ERROR_MSG(msg, ...) (void)printf("\t" RED(msg) "\n", __VA_ARGS__)
 
 /** If the pass/fail result of a test is false, prints the last error. Used as
  * the return statement for tests. */

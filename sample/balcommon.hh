@@ -37,6 +37,7 @@ namespace bal::common
     constexpr const char* localaddr   = "127.0.0.1";
     constexpr const char* portnum     = "9969";
     constexpr const uint32_t sleep_interval = 100;
+    constexpr const size_t read_buf_size = 2048;
 
     bool initialize();
     void quit();

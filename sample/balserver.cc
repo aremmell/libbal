@@ -51,7 +51,7 @@ int main(int argc, char** argv)
         string send_buffer;
         initializer balinit;
 
-        auto client_on_read = [&send_buffer](scoped_socket* sock) -> bool
+        auto client_on_read = [&send_buffer](scoped_socket* sock)
         {
             constexpr size_t buf_size = 2048;
             std::array<char, buf_size> buf {};
@@ -73,7 +73,7 @@ int main(int argc, char** argv)
             return true;
         };
 
-        auto client_on_write = [&send_buffer](scoped_socket* sock) -> bool
+        auto client_on_write = [&send_buffer](scoped_socket* sock)
         {
             if (!send_buffer.empty()) {
                 if (ssize_t sent = sock->send(send_buffer.data(), send_buffer.size(),
@@ -91,22 +91,22 @@ int main(int argc, char** argv)
             return true;
         };
 
-        auto client_on_close = [](scoped_socket* sock) -> bool
+        auto client_on_close = [](scoped_socket* sock)
         {
             on_client_disconnect(sock->get(), false);
             sock->close();
             return false;
         };
 
-        auto client_on_error = [](scoped_socket* sock) -> bool
+        auto client_on_error = [](scoped_socket* sock)
         {
             on_client_disconnect(sock->get(), true);
             sock->close();
             return false;
         };
 
-        scoped_socket sock {AF_INET, SOCK_STREAM, IPPROTO_TCP};
-        sock.on_incoming_conn = [=](scoped_socket* sock) -> bool
+        scoped_socket main_sock {AF_INET, SOCK_STREAM, IPPROTO_TCP};
+        main_sock.on_incoming_conn = [=](scoped_socket* sock)
         {
             scoped_socket client_sock;
             address client_addr {};
@@ -130,10 +130,10 @@ int main(int argc, char** argv)
             return true;
         };
 
-        sock.set_reuseaddr(1);
-        sock.bind_all(portnum);
-        sock.async_poll(BAL_EVT_NORMAL);
-        sock.listen(SOMAXCONN);
+        main_sock.set_reuseaddr(1);
+        main_sock.bind_all(portnum);
+        main_sock.async_poll(BAL_EVT_NORMAL);
+        main_sock.listen(SOMAXCONN);
 
         PRINT("listening on %s; ctrl+c to exit...", portnum);
 
@@ -169,7 +169,7 @@ void bal::server::rem_existing_client(bal_descriptor sd)
         PRINT("now have %zu client(s)", _clients.size());
 }
 
-void bal::server::on_client_disconnect(bal_socket* s, bool error)
+void bal::server::on_client_disconnect(const bal_socket* s, bool error)
 {
     if (error) {
         const auto code = bal_get_sock_error(s);
