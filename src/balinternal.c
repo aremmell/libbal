@@ -28,9 +28,9 @@
 #include "bal/state.h"
 #include "bal.h"
 
-/******************************************************************************\
- *                             Internal Functions                             *
-\******************************************************************************/
+/**
+ * Internal functions
+ */
 
 bool _bal_sanity(void)
 {
@@ -58,39 +58,21 @@ bool _bal_init_asyncpoll(void)
         return _bal_handlelasterr();
     }
 
-    _bal_eqland(init, _bal_mutex_create(&_bal_as_container.mutex));
-    if (!init) {
-        _bal_dbglog("error: failed to create mutex(es)");
-        return false;
-    }
-
-    struct {
-        bal_thread* thread;
-        bal_thread_cb proc;
-    } threads[] = {
-        {
-            &_bal_as_container.thread,
-            &_bal_eventthread
-        }
-    };
-
-    for (size_t n = 0; n < _bal_countof(threads); n++) {
 #if defined(__WIN__)
-        *threads[n].thread = _beginthreadex(NULL, 0U, threads[n].proc, NULL,
-            0U, NULL);
-        BAL_ASSERT(0ULL != *threads[n].thread);
+    _bal_as_container.thread = _beginthreadex(NULL, 0U, &_bal_eventthread, NULL,
+        0U, NULL);
+    BAL_ASSERT(0ULL != _bal_as_container.thread);
 
-        if (0ULL == *threads[n].thread)
-            _bal_eqland(init, _bal_handlelasterr());
+    if (0ULL == _bal_as_container.thread)
+        _bal_eqland(init, _bal_handlelasterr());
 #else
-        int op = pthread_create(threads[n].thread, NULL, threads[n].proc, NULL);
-        BAL_ASSERT(0 == op);
-        _bal_eqland(init, 0 == op);
+    int op = pthread_create(&_bal_as_container.thread, NULL, &_bal_eventthread, NULL);
+    BAL_ASSERT(0 == op);
+    _bal_eqland(init, 0 == op);
 
-        if (0 != op)
-            (void)_bal_handleerr(op);
+    if (0 != op)
+        (void)_bal_handleerr(op);
 #endif
-    }
 
     _bal_set_boolean(&_bal_async_poll_init, init);
     _bal_set_boolean(&_bal_as_container.die, !init);
@@ -107,22 +89,17 @@ bool _bal_cleanup_asyncpoll(void)
     _bal_set_boolean(&_bal_as_container.die, true);
     _bal_set_boolean(&_bal_async_poll_init, false);
 
-    bal_thread* threads[] = {
-        &_bal_as_container.thread
-    };
+    _bal_dbglog("joining async I/O thread...");
 
-    _bal_dbglog("joining %zu thread(s)...", _bal_countof(threads));
-    for (size_t n = 0; n < _bal_countof(threads); n++) {
 #if defined(__WIN__)
-        DWORD wait = WaitForSingleObject((HANDLE)*threads[n], INFINITE);
-        BAL_ASSERT_UNUSED(wait, WAIT_OBJECT_0 == wait);
+    DWORD wait = WaitForSingleObject((HANDLE)_bal_as_container.thread, INFINITE);
+    BAL_ASSERT_UNUSED(wait, WAIT_OBJECT_0 == wait);
 #else
-        int wait = pthread_join(*threads[n], NULL);
-        BAL_ASSERT_UNUSED(wait, 0 == wait);
-        if (0 != wait)
-            (void)_bal_handleerr(wait);
+    int wait = pthread_join(_bal_as_container.thread, NULL);
+    BAL_ASSERT_UNUSED(wait, 0 == wait);
+    if (0 != wait)
+        (void)_bal_handleerr(wait);
 #endif
-    }
 
     bool cleanup       = true;
     bal_descriptor key = 0;
@@ -138,10 +115,6 @@ bool _bal_cleanup_asyncpoll(void)
     BAL_ASSERT(destroy);
     _bal_eqland(cleanup, destroy);
 
-    destroy = _bal_mutex_destroy(&_bal_as_container.mutex);
-    BAL_ASSERT(destroy);
-    _bal_eqland(cleanup, destroy);
-
     _bal_dbglog("async I/O clean up %s", cleanup ? "succeeded" : "failed");
 
     return cleanup;
@@ -152,7 +125,7 @@ bool _bal_get_addrinfo(int flags, int addr_fam, int type, const char* host,
 {
     bool retval = false;
 
-    if ((_bal_okstr(host) || _bal_okstr(port)) && _bal_okptrptr(res)) {
+    if ((_bal_okstrnf(host) || _bal_okstrnf(port)) && _bal_okptrptr(res)) {
         struct addrinfo hints = {0};
 
         hints.ai_flags    = flags;
@@ -313,7 +286,7 @@ bal_threadret _bal_eventthread(void* ctx)
     static const int poll_timeout = 500;
 
     while (!_bal_get_boolean(&_bal_as_container.die)) {
-        size_t count       = 0UL;
+        size_t count       = 0;
 #if defined(__WIN__)
         WSAPOLLFD* fds     = NULL;
 #else
@@ -323,7 +296,7 @@ bal_threadret _bal_eventthread(void* ctx)
         _BAL_LOCK_MUTEX(&_bal_as_container.mutex, eventthread);
 
         count = _bal_list_count(_bal_as_container.lst);
-        if (count > 0UL) {
+        if (count > 0) {
             fds = calloc(count, sizeof(struct pollfd));
             BAL_ASSERT(NULL != fds);
 
@@ -351,7 +324,7 @@ bal_threadret _bal_eventthread(void* ctx)
                 _BAL_LOCK_MUTEX(&_bal_as_container.mutex, eventthread);
 
                 if (res > 0) {
-                    for (size_t n = 0UL; n < count; n++) {
+                    for (size_t n = 0; n < count; n++) {
                         bal_socket* s = NULL;
                         bool found    = _bal_list_find(_bal_as_container.lst,
                             fds[n].fd, &s);
@@ -374,7 +347,7 @@ bal_threadret _bal_eventthread(void* ctx)
         _BAL_MUTEX_COUNTER_CHECK(eventthread);
 
         if (0 == count)
-            bal_sleep_msec(100); // TODO: better alternative than sleeping here?
+            bal_sleep_msec(100);
         bal_thread_yield();
     }
 
@@ -472,7 +445,7 @@ bool _bal_list_create(bal_list** lst)
     bool retval = _bal_okptr(lst);
 
     if (retval) {
-        *lst = calloc(1UL, sizeof(bal_list));
+        *lst = calloc(1, sizeof(bal_list));
         retval = NULL != *lst;
     }
 
@@ -485,7 +458,7 @@ bool _bal_list_create_node(bal_list_node** node, bal_descriptor key,
     bool ok = _bal_okptrptr(node);
 
     if (ok) {
-        *node = calloc(1UL, sizeof(bal_list_node));
+        *node = calloc(1, sizeof(bal_list_node));
         if (*node) {
             (*node)->key = key;
             (*node)->val = val;
@@ -537,7 +510,7 @@ bool _bal_list_empty(const bal_list* lst)
 
 size_t _bal_list_count(bal_list* lst)
 {
-    size_t count = 0UL;
+    size_t count = 0;
 
     if (!_bal_list_empty(lst)) {
         bal_descriptor key = 0;
@@ -579,7 +552,7 @@ bool _bal_list_iterate_func(bal_list* lst, void* ctx, bal_list_iter_cb cb)
     bool ok = !_bal_list_empty(lst) && _bal_okptr(cb);
 
     if (ok) {
-        size_t count        = 0UL;
+        size_t count        = 0;
         bal_list_node* node = lst->head;
         while (node) {
             count++;
@@ -587,7 +560,7 @@ bool _bal_list_iterate_func(bal_list* lst, void* ctx, bal_list_iter_cb cb)
                 break;
             node = node->next;
         }
-        ok = 0UL < count;
+        ok = 0 < count;
     }
 
     return ok;
@@ -818,7 +791,7 @@ bool _bal_addrinfo_to_addrlist(struct addrinfo* ai, bal_addrlist* out)
         bal_addr** a         = &out->addr;
 
         do {
-            *a = calloc(1UL, sizeof(bal_addr));
+            *a = calloc(1, sizeof(bal_addr));
             if (!_bal_okptrnf(*a))
                 return _bal_handlelasterr();
 
@@ -903,6 +876,9 @@ void _bal_static_once_init_func(void)
 {
 #endif
     bool create = _bal_mutex_create(&_bal_state.mutex);
+    BAL_ASSERT_UNUSED(create, create);
+
+    create = _bal_mutex_create(&_bal_as_container.mutex);
     BAL_ASSERT_UNUSED(create, create);
 #if defined(__HAVE_STDATOMICS__)
     atomic_init(&_bal_state.magic, 0U);

@@ -6,6 +6,8 @@
 	],
 	"settings": {
 		"files.associations": {
+			"*.i": "swig",
+			"CODEOWNERS": "ignore",
 			"__bit_reference": "cpp",
 			"__bits": "cpp",
 			"__config": "cpp",
@@ -73,7 +75,26 @@
 			"system_error": "cpp",
 			"stdatomic.h": "c",
 			"balplatform.h": "c",
-			"format": "cpp"
+			"format": "cpp",
+			"charconv": "cpp",
+			"condition_variable": "cpp",
+			"deque": "cpp",
+			"numbers": "cpp",
+			"queue": "cpp",
+			"semaphore": "cpp",
+			"span": "cpp",
+			"stack": "cpp",
+			"thread": "cpp",
+			"*.tcc": "cpp",
+			"functional": "cpp",
+			"iterator": "cpp",
+			"memory_resource": "cpp",
+			"numeric": "cpp",
+			"random": "cpp",
+			"utility": "cpp",
+			"stop_token": "cpp",
+			"cinttypes": "cpp",
+			"source_location": "cpp"
 		}
 	}
 }

@@ -27,40 +27,43 @@
 # define _BAL_COMMON_HH_INCLUDED
 
 # include <bal.hh>
+# include <cstdio>
+# include <array>
 
 # if !defined(__WIN__)
 #  include <signal.h>
 # endif
 
-namespace bal::balcommon
+namespace bal::common
 {
     constexpr const char* localaddr   = "127.0.0.1";
-    constexpr const char* portnum     = "9000";
-    constexpr const uint32_t sleepfor = 100;
+    constexpr const char* portnum     = "9969";
+    constexpr const uint32_t sleep_interval = 100;
+    constexpr const size_t read_buf_size = 2048;
 
     bool initialize();
     void quit();
     bool should_run();
     bool install_ctrl_c_handler();
     void ctrl_c_handler_impl();
-    void print_last_lib_error(const std::string& func = std::string());
     void print_startup_banner(const std::string& name);
     std::string get_input_line(const std::string& prompt,
         const std::string& def);
 
-# define EXIT_IF_FAILED(retval, func) \
+# define PRINT(msg, ...) \
     do { \
-        if (!retval) { \
-            balcommon::print_last_lib_error(func); \
-            return EXIT_FAILURE; \
-        } \
+        [[maybe_unused]] auto unused = printf(msg "\n", __VA_ARGS__); \
     } while (false)
+
+# define PRINT_0(msg) [[maybe_unused]] auto unused = printf(msg "\n")
+
+# define PRINT_SD(msg, ...) PRINT("[" BAL_SOCKET_SPEC "] " msg, __VA_ARGS__)
 
 # if defined(__WIN__)
     BOOL WINAPI on_ctrl_c(DWORD ctl_type);
 # else
     void on_ctrl_c(int sig);
 # endif
-} // !namespace balcommon
+} // !namespace common
 
 #endif // !_BAL_COMMON_HH_INCLUDED

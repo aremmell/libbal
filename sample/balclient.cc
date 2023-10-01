@@ -23,122 +23,124 @@
  * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-#include <iostream>
-#include <iomanip>
-#include <exception>
-#include <array>
-#include "balclient.hh"
+#include "balcommon.hh"
+#include <sstream>
+
+static constexpr const char* quit_msg = "quit";
+static constexpr const char* helo_msg = "HELO";
 
 using namespace std;
 using namespace bal;
+using namespace bal::common;
 
 int main(int argc, char** argv)
 {
     BAL_UNUSED(argc);
     BAL_UNUSED(argv);
 
-    balcommon::print_startup_banner("balclient");
+    try {
+        print_startup_banner("balclient");
 
-    if (!balcommon::initialize()) {
-        return EXIT_FAILURE;
-    }
-
-    bal_socket* s = nullptr;
-    bool ret = bal_create(&s, AF_INET, SOCK_STREAM, IPPROTO_TCP);
-    EXIT_IF_FAILED(ret, "bal_create");
-
-    string remote_host = balcommon::get_input_line("Enter server hostname",
-        balcommon::localaddr);
-
-    ret = bal_async_poll(s, &balclient::async_events_cb, BAL_EVT_CLIENT);
-    EXIT_IF_FAILED(ret, "bal_async_poll");
-
-    printf("connecting to %s:%s...\n", remote_host.c_str(), balcommon::portnum);
-
-    ret = bal_connect(s, remote_host.c_str(), balcommon::portnum);
-    EXIT_IF_FAILED(ret, "bal_connect");
-
-    printf("running; ctrl+c to exit...\n");
-
-    do {
-        bal_sleep_msec(balcommon::sleepfor);
-        bal_thread_yield();
-    } while (balcommon::should_run());
-
-    if (!bal_close(&s, true)) {
-        balcommon::print_last_lib_error("bal_close");
-    }
-
-    if (!bal_cleanup()) {
-        balcommon::print_last_lib_error("bal_cleanup");
-    }
-
-    return EXIT_SUCCESS;
-}
-
-void balclient::async_events_cb(bal_socket* s, uint32_t events)
-{
-    if (bal_isbitset(events, BAL_EVT_CONNECT)) {
-        bal_addrstrings peer_strs {};
-        bal_get_peer_strings(s, false, &peer_strs);
-        printf("[" BAL_SOCKET_SPEC "] connected to %s:%s\n", s->sd, peer_strs.addr,
-            peer_strs.port);
-        bal_addtomask(s, BAL_EVT_WRITE);
-    }
-
-    if (bal_isbitset(events, BAL_EVT_CONNFAIL)) {
-        bal_error err {};
-        bal_get_error(&err);
-        printf("[" BAL_SOCKET_SPEC "] connection failed! error: %s\n", s->sd,
-            err.message);
-        balcommon::quit();
-    }
-
-    if (bal_isbitset(events, BAL_EVT_READ)) {
-        constexpr const size_t buf_size = 2048;
-        std::array<char, buf_size> buf {};
-        ssize_t read = bal_recv(s, buf.data(), buf.size() - 1, 0);
-        if (read > 0) {
-            printf("[" BAL_SOCKET_SPEC "] read %ld bytes: '%s'\n", s->sd, read,
-                buf.data());
-        } else if (-1 == read) {
-            bal_error err {};
-            printf("[" BAL_SOCKET_SPEC "] read error %d (%s)!\n", s->sd,
-                bal_get_error(&err), err.message);
-        } else {
-            printf("[" BAL_SOCKET_SPEC "] read EOF\n", s->sd);
+        if (!initialize()) {
+            throw bal::exception("failed to initialize bal::common");
         }
-    }
 
-    if (bal_isbitset(events, BAL_EVT_WRITE)) {
-        static bool wrote_helo = false;
-        if (!wrote_helo) {
-            const char* req = "HELO";
-            constexpr const size_t req_size = 4;
+        string send_buffer = helo_msg;
+        initializer balinit;
+        scoped_socket main_sock {AF_INET, SOCK_STREAM, IPPROTO_TCP};
 
-            ssize_t ret = bal_send(s, req, req_size, MSG_NOSIGNAL);
-            if (ret <= 0) {
-                bal_error err {};
-                printf("[" BAL_SOCKET_SPEC "] write error %d (%s)!\n", s->sd,
-                    bal_get_error(&err), err.message);
-            } else {
-                printf("[" BAL_SOCKET_SPEC "] wrote %ld bytes\n", s->sd, ret);
-                wrote_helo = true;
-                bal_remfrommask(s, BAL_EVT_WRITE);
+        main_sock.on_connect = [](scoped_socket* sock)
+        {
+            address peer_addr {};
+            sock->get_peer_addr(peer_addr);
+            auto addr_info = peer_addr.get_address_info();
+            PRINT("connected to %s:%s", addr_info.get_addr().c_str(),
+                addr_info.get_port().c_str());
+            sock->want_write_events(true);
+            return true;
+        };
+
+        main_sock.on_conn_fail = [](scoped_socket* sock)
+        {
+            const auto err = sock->get_error(false);
+            PRINT_SD("connection failed! errror: %s", sock->get_descriptor(),
+                err.message.c_str());
+            quit();
+            return false;
+        };
+
+        main_sock.on_read = [&sb = send_buffer](scoped_socket* sock)
+        {
+            std::array<char, read_buf_size> buf {};
+            if (ssize_t read = sock->recv(buf.data(), buf.size() - 1, 0); read > 0) {
+                PRINT_SD("read %ld bytes: '%s'", sock->get_descriptor(), read, buf.data());
+                std::stringstream strm {"Enter text to send (or '"};
+                strm << quit_msg << "')";
+                sb = get_input_line(strm.str(), helo_msg);
+                if (_bal_strsame(sb.c_str(), quit_msg, 4)) {
+                    sb.clear();
+                    quit();
+                } else {
+                    sock->want_write_events(true);
+                }
+            } else if (-1 == read) {
+                const auto err = sock->get_error(false);
+                PRINT_SD("read error %d (%s)!", sock->get_descriptor(), err.code,
+                    err.message.c_str());
             }
-        }
-    }
+            return true;
+        };
 
-    if (bal_isbitset(events, BAL_EVT_CLOSE)) {
-        printf("[" BAL_SOCKET_SPEC "] connection closed.\n", s->sd);
-        balcommon::quit();
-    }
+        main_sock.on_write = [&sb = send_buffer](scoped_socket* sock)
+        {
+            if (!sb.empty()) {
+                if (ssize_t sent = sock->send(sb.data(), sb.size(),
+                    MSG_NOSIGNAL); sent > 0) {
+                    PRINT_SD("wrote %ld bytes", sock->get_descriptor(), sent);
+                } else {
+                    const auto err = sock->get_error(false);
+                    PRINT_SD("write error %d (%s)!", sock->get_descriptor(), err.code,
+                        err.message.c_str());
+                }
+                sb.clear();
+            }
 
-    if (bal_isbitset(events, BAL_EVT_PRIORITY)) {
-        printf("[" BAL_SOCKET_SPEC "] priority exceptional condition!\n", s->sd);
-    }
+            sock->want_write_events(false);
+            return true;
+        };
 
-    if (bal_isbitset(events, BAL_EVT_ERROR)) {
-        printf("[" BAL_SOCKET_SPEC "] ERROR %d!\n", s->sd, bal_sock_get_error(s));
+        main_sock.on_close = [](scoped_socket* sock)
+        {
+            PRINT_SD("connection closed.", sock->get_descriptor());
+            quit();
+            return false;
+        };
+
+        main_sock.on_error = [](scoped_socket* sock)
+        {
+            const auto err = sock->get_error(false);
+            PRINT_SD("error: %d (%s)!", sock->get_descriptor(), err.code, err.message.c_str());
+            quit();
+            return false;
+        };
+
+        main_sock.async_poll(BAL_EVT_CLIENT);
+
+        string remote_host = get_input_line("Enter server hostname", localaddr);
+        PRINT("connecting to %s:%s...", remote_host.c_str(), portnum);
+
+        main_sock.connect(remote_host, portnum);
+
+        PRINT_0("running; ctrl+c to exit...");
+
+        do {
+            bal_sleep_msec(sleep_interval);
+            bal_thread_yield();
+        } while (should_run());
+
+        return EXIT_SUCCESS;
+    } catch (bal::exception& ex) {
+        PRINT("error: caught exception: '%s'!", ex.what());
+        return EXIT_FAILURE;
     }
 }

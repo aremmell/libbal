@@ -29,6 +29,18 @@
 # include "types.h"
 # include "errors.h"
 
+/** Performs a case-insensitive string comparison and returns true if the
+ * strings are the same. */
+static inline
+bool _bal_strsame(const char* lhs, const char* rhs, size_t len)
+{
+# if defined(__WIN__)
+    return 0 == StrStrIA(lhs, rhs, len);
+# else
+    return 0 == strncasecmp(lhs, rhs, len);
+# endif
+}
+
 /** Sets the specified pointer-to-pointer's value to NULL after free(). */
 static inline
 void __bal_safefree(void** pp)

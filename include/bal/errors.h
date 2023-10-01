@@ -29,6 +29,7 @@
 # include "types.h"
 
 # if defined(__cplusplus)
+#  include <source_location>
 extern "C" {
 # endif
 
@@ -42,26 +43,31 @@ bool __bal_handle_error(int code, const char* func, const char* file,
 /** Creates a libbal-specific error code from a positive integer that would
  * otherwise likely collide with OS-level error codes. Supports values
  * 1..255 inclusive. */
-# define _bal_mk_error(err) ((((err) & 0xff) << 16) | 0x78000000)
+# define _bal_mk_error(err) ((((err) & (int)0xff) << 16) | 0x78000000)
 
 /** libbal-specific error codes. */
-# define BAL_E_NULLPTR      1 /**< NULL pointer argument */
-# define BAL_E_BADSTRING    2 /**< Invalid string argument */
-# define BAL_E_BADSOCKET    3 /**< Invalid bal_socket argument */
-# define BAL_E_BADBUFLEN    4 /**< Invalid buffer length argument */
-# define BAL_E_INVALIDARG   5 /**< Invalid argument */
-# define BAL_E_NOTINIT      6 /**< libbal is not initialized */
-# define BAL_E_DUPEINIT     7 /**< libbal is already initialized */
-# define BAL_E_ASNOTINIT    8 /**< Asynchronous I/O is not initialized */
-# define BAL_E_ASDUPEINIT   9 /**< Asynchronous I/O is already initialized */
-# define BAL_E_ASNOSOCKET  10 /**< Socket is not registered for asynchronous I/O events */
-# define BAL_E_BADEVTMASK  11 /**< Invalid asynchronous I/O event bitmask */
-# define BAL_E_INTERNAL    12 /**< An internal error has occurred */
-# define BAL_E_UNAVAIL     13 /**< Feature is disabled or unavailable */
-# define BAL_E_PLATFORM    14 /**< Platform error code %d (%s) */
-# define BAL_E_UNKNOWN    255 /**< An unknown error has occurred */
+enum
+{
+    BAL_E_NOERROR    =  1, /**< Operation completed successfully */
+    BAL_E_NULLPTR    =  2, /**< NULL pointer argument */
+    BAL_E_BADSTRING  =  3, /**< Invalid string argument */
+    BAL_E_BADSOCKET  =  4, /**< Invalid bal_socket argument */
+    BAL_E_BADBUFLEN  =  5, /**< Invalid buffer length argument */
+    BAL_E_INVALIDARG =  6, /**< Invalid argument */
+    BAL_E_NOTINIT    =  7, /**< libbal is not initialized */
+    BAL_E_DUPEINIT   =  8, /**< libbal is already initialized */
+    BAL_E_ASNOTINIT  =  9, /**< Asynchronous I/O is not initialized */
+    BAL_E_ASDUPEINIT = 10, /**< Asynchronous I/O is already initialized */
+    BAL_E_ASNOSOCKET = 11, /**< Socket is not registered for asynchronous I/O events */
+    BAL_E_BADEVTMASK = 12,  /**< Invalid asynchronous I/O event bitmask */
+    BAL_E_INTERNAL   = 13, /**< An internal error has occurred */
+    BAL_E_UNAVAIL    = 14, /**< Feature is disabled or unavailable */
+    BAL_E_PLATFORM   = 15, /**< Platform error code %d (%s) */
+    BAL_E_UNKNOWN    = 255 /**< An unknown error has occurred */
+};
 
 /** libbal-specific packed error code values. */
+# define _BAL_E_NOERROR    _bal_mk_error(BAL_E_NOERROR)
 # define _BAL_E_NULLPTR    _bal_mk_error(BAL_E_NULLPTR)
 # define _BAL_E_BADSTRING  _bal_mk_error(BAL_E_BADSTRING)
 # define _BAL_E_BADSOCKET  _bal_mk_error(BAL_E_BADSOCKET)
@@ -82,8 +88,7 @@ bool __bal_handle_error(int code, const char* func, const char* file,
 static inline
 bool _bal_is_error(int err)
 {
-    int masked = (err & 0x78ff0000);
-    return masked >= 0x78010000 && masked <= 0x78ff0000;
+    return (err & 0x78ff0000) >= 0x78010000;
 }
 
 /** Extracts the libbal-specific error code from a packed error created by
@@ -141,7 +146,7 @@ bool __bal_validate(bool expr, int err, const char* func, const char* file,
 # define _bal_handleerr(err) \
     __bal_handle_error(err, __func__, __file__, __LINE__, false)
 
-# define _bal_handlesockerr(s) _bal_handleerr(bal_sock_get_error(s))
+# define _bal_handlesockerr(s) _bal_handleerr(bal_get_sock_error(s))
 
 # if defined(__WIN__)
 #  define _bal_handlelasterr() \
@@ -157,8 +162,16 @@ bool __bal_validate(bool expr, int err, const char* func, const char* file,
 # if defined(BAL_DBGLOG)
 void __bal_dbglog(const char* func, const char* file, uint32_t line,
     const char* format, ...);
-#  define _bal_dbglog(...) \
-    __bal_dbglog(__func__, __file__, __LINE__, __VA_ARGS__)
+#  if defined(__cplusplus)
+#   define _bal_dbglog(...) \
+        do { \
+            std::source_location loc = std::source_location::current(); \
+            __bal_dbglog(loc.function_name(), loc.file_name(), loc.line(), __VA_ARGS__); \
+        } while (false)
+#  else
+#   define _bal_dbglog(...) \
+        __bal_dbglog(__func__, __file__, __LINE__, __VA_ARGS__)
+#  endif
 # else
 #  define _bal_dbglog(...)
 # endif

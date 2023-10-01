@@ -31,14 +31,9 @@ using namespace std;
 
 static atomic_bool _run;
 
-bool bal::balcommon::initialize()
+bool bal::common::initialize()
 {
-    if (!balcommon::install_ctrl_c_handler()) {
-        return false;
-    }
-
-    if (!bal_init()) {
-        print_last_lib_error("bal_init");
+    if (!install_ctrl_c_handler()) {
         return false;
     }
 
@@ -47,17 +42,17 @@ bool bal::balcommon::initialize()
     return true;
 }
 
-void bal::balcommon::quit()
+void bal::common::quit()
 {
     _run.store(false);
 }
 
-bool bal::balcommon::should_run()
+bool bal::common::should_run()
 {
     return _run.load();
 }
 
-bool bal::balcommon::install_ctrl_c_handler()
+bool bal::common::install_ctrl_c_handler()
 {
 #if defined(__WIN__)
     BOOL ret = SetConsoleCtrlHandler(&on_ctrl_c, TRUE);
@@ -75,27 +70,18 @@ bool bal::balcommon::install_ctrl_c_handler()
 #endif
 }
 
-void bal::balcommon::ctrl_c_handler_impl()
+void bal::common::ctrl_c_handler_impl()
 {
     printf("got ctrl+c; exiting...\n");
     quit();
 }
 
-void bal::balcommon::print_last_lib_error(const string& func /* = std::string() */)
-{
-    bal_error err {};
-    bal_get_error(&err);
-
-    cerr << "libbal error: " << (func.empty() ? func + " " : "") << err.code
-         << " (" << err.message << ")" << endl;
-}
-
-void bal::balcommon::print_startup_banner(const string& name)
+void bal::common::print_startup_banner(const string& name)
 {
     cout << name << " (libbal " << bal_get_versionstring() << ")" << endl;
 }
 
-string bal::balcommon::get_input_line(const string& prompt, const string& def)
+string bal::common::get_input_line(const string& prompt, const string& def)
 {
     string input;
 
@@ -109,14 +95,14 @@ string bal::balcommon::get_input_line(const string& prompt, const string& def)
 }
 
 #if defined(__WIN__)
-BOOL WINAPI bal::balcommon::on_ctrl_c(DWORD ctl_type)
+BOOL WINAPI bal::common::on_ctrl_c(DWORD ctl_type)
 {
     BAL_UNUSED(ctl_type);
     ctrl_c_handler_impl();
     return TRUE;
 }
 #else
-void bal::balcommon::on_ctrl_c(int sig)
+void bal::common::on_ctrl_c(int sig)
 {
     BAL_UNUSED(sig);
     ctrl_c_handler_impl();

@@ -25,9 +25,9 @@
  */
 #include "bal/state.h"
 
-/******************************************************************************\
- *                                   Globals                                  *
-\******************************************************************************/
+/**
+ * Globals
+ */
 
 /* one-time initializer for async I/O data container. */
 bal_once _bal_static_once_init = BAL_ONCE_INIT;

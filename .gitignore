@@ -29,3 +29,6 @@ build/
 # Linter files
 pvsreport/
 log.pvs
+
+# direnv
+.envrc

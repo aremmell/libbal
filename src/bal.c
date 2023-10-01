@@ -32,9 +32,9 @@
 # pragma comment(lib, "ws2_32.lib")
 #endif
 
-/******************************************************************************\
- *                             Exported Functions                             *
-\******************************************************************************/
+/**
+ * Exported functions
+ */
 
 bool bal_init(void)
 {
@@ -125,6 +125,16 @@ bool bal_cleanup(void)
     return cleanup;
 }
 
+bool bal_isinitialized(void)
+{
+#if defined(__HAVE_STDATOMICS__)
+    uint_fast32_t magic = atomic_load(&_bal_state.magic);
+#else
+    uint_fast32_t magic = _bal_state.magic;
+#endif
+    return BAL_MAGIC == magic;
+}
+
 bool bal_async_poll(bal_socket* s, bal_async_cb proc, uint32_t mask)
 {
     if (!_bal_get_boolean(&_bal_async_poll_init) ||
@@ -188,8 +198,34 @@ bool bal_async_poll(bal_socket* s, bal_async_cb proc, uint32_t mask)
     return retval;
 }
 
-bool bal_auto_socket(bal_socket** s, int addr_fam, int proto, const char* host,
-    const char* srv)
+bool bal_create(bal_socket** s, uintptr_t user_data, int addr_fam, int type, int proto)
+{
+    bool retval = false;
+
+    if (_bal_okptrptr(s)) {
+        *s = calloc(1, sizeof(bal_socket));
+        if (!_bal_okptrnf(*s)) {
+            _bal_handlelasterr();
+        } else {
+            (*s)->sd = socket(addr_fam, type, proto);
+            if (-1 == (*s)->sd) {
+                _bal_handlelasterr();
+                _bal_safefree(s);
+            } else {
+                (*s)->addr_fam  = addr_fam;
+                (*s)->type      = type;
+                (*s)->proto     = proto;
+                (*s)->user_data = user_data;
+                retval          = true;
+            }
+        }
+    }
+
+    return retval;
+}
+
+bool bal_auto_socket(bal_socket** s, uintptr_t user_data, int addr_fam, int proto,
+    const char* host, const char* srv)
 {
     bool retval = false;
 
@@ -206,7 +242,7 @@ bool bal_auto_socket(bal_socket** s, int addr_fam, int proto, const char* host,
         if (get && NULL != ai) {
             struct addrinfo* cur = ai;
             do {
-                if (bal_create(s, cur->ai_family, cur->ai_protocol,
+                if (bal_create(s, user_data, cur->ai_family, cur->ai_protocol,
                     cur->ai_socktype)) {
                     retval = true;
                     break;
@@ -221,46 +257,23 @@ bool bal_auto_socket(bal_socket** s, int addr_fam, int proto, const char* host,
     return retval;
 }
 
-bool bal_create(bal_socket** s, int addr_fam, int type, int proto)
-{
-    bool retval = false;
-
-    if (_bal_okptrptr(s)) {
-        *s = calloc(1UL, sizeof(bal_socket));
-        if (!_bal_okptrnf(*s)) {
-            _bal_handlelasterr();
-        } else {
-            (*s)->sd = socket(addr_fam, type, proto);
-            if (-1 == (*s)->sd) {
-                _bal_handlelasterr();
-                _bal_safefree(s);
-            } else {
-                (*s)->addr_fam = addr_fam;
-                (*s)->type     = type;
-                (*s)->proto    = proto;
-                retval         = true;
-            }
-        }
-    }
-
-    return retval;
-}
-
 void bal_destroy(bal_socket** s)
 {
     if (_bal_okptrptr(s) && _bal_okptr(*s)) {
         _BAL_MUTEX_COUNTER_INIT(destroy);
         _BAL_LOCK_MUTEX(&_bal_as_container.mutex, destroy);
 
-        /* just to be safe, ensure that the socket is not currently in the
-        * async I/O list. */
-        bal_socket* d = NULL;
-        bool removed  = _bal_list_remove(_bal_as_container.lst, (*s)->sd, &d);
+        /* if async I/O is active, just to be safe, ensure that the socket is not
+         * currently in the async I/O list. */
+        if (_bal_get_boolean(&_bal_async_poll_init)) {
+            bal_socket* d = NULL;
+            bool removed  = _bal_list_remove(_bal_as_container.lst, (*s)->sd, &d);
 
-        if (removed) {
-            BAL_ASSERT(*s == d);
-            _bal_dbglog("removed socket "BAL_SOCKET_SPEC" (%p) from list",
-                (*s)->sd, *s);
+            if (removed) {
+                BAL_ASSERT(*s == d);
+                _bal_dbglog("removed socket "BAL_SOCKET_SPEC" (%p) from list",
+                    (*s)->sd, *s);
+            }
         }
 
         if (!bal_isbitset((*s)->state.bits, BAL_S_CLOSE)) {
@@ -519,7 +532,7 @@ bool bal_accept(const bal_socket* s, bal_socket** res, bal_sockaddr* resaddr)
     bool retval = false;
 
     if (_bal_oksock(s) && _bal_okptrptr(res) && _bal_okptr(resaddr)) {
-        *res = calloc(1UL, sizeof(bal_socket));
+        *res = calloc(1, sizeof(bal_socket));
         if (!_bal_okptrnf(*res)) {
             _bal_handlelasterr();
         } else {
@@ -570,19 +583,14 @@ bool bal_set_option(const bal_socket* s, int level, int name, const void* optval
     return retval;
 }
 
-bool bal_set_broadcast(const bal_socket* s, int value)
-{
-    return bal_set_option(s, SOL_SOCKET, SO_BROADCAST, &value, sizeof(int));
-}
-
 bool bal_get_broadcast(const bal_socket* s, int* value)
 {
     return bal_get_option(s, SOL_SOCKET, SO_BROADCAST, value, sizeof(int));
 }
 
-bool bal_set_debug(const bal_socket* s, int value)
+bool bal_set_broadcast(const bal_socket* s, int value)
 {
-    return bal_set_option(s, SOL_SOCKET, SO_DEBUG, &value, sizeof(int));
+    return bal_set_option(s, SOL_SOCKET, SO_BROADCAST, &value, sizeof(int));
 }
 
 bool bal_get_debug(const bal_socket* s, int* value)
@@ -590,10 +598,9 @@ bool bal_get_debug(const bal_socket* s, int* value)
     return bal_get_option(s, SOL_SOCKET, SO_DEBUG, value, sizeof(int));
 }
 
-bool bal_set_linger(const bal_socket* s, bal_linger sec)
+bool bal_set_debug(const bal_socket* s, int value)
 {
-    struct linger l = { (0 != sec) ? 1 : 0, sec };
-    return bal_set_option(s, SOL_SOCKET, SO_LINGER, &l, sizeof(struct linger));
+    return bal_set_option(s, SOL_SOCKET, SO_DEBUG, &value, sizeof(int));
 }
 
 bool bal_get_linger(const bal_socket* s, bal_linger* sec)
@@ -611,9 +618,10 @@ bool bal_get_linger(const bal_socket* s, bal_linger* sec)
     return retval;
 }
 
-bool bal_set_keepalive(const bal_socket* s, int value)
+bool bal_set_linger(const bal_socket* s, bal_linger sec)
 {
-    return bal_set_option(s, SOL_SOCKET, SO_KEEPALIVE, &value, sizeof(int));
+    struct linger l = { (0 != sec) ? 1 : 0, sec };
+    return bal_set_option(s, SOL_SOCKET, SO_LINGER, &l, sizeof(struct linger));
 }
 
 bool bal_get_keepalive(const bal_socket* s, int* value)
@@ -621,9 +629,9 @@ bool bal_get_keepalive(const bal_socket* s, int* value)
     return bal_get_option(s, SOL_SOCKET, SO_KEEPALIVE, value, sizeof(int));
 }
 
-bool bal_set_oobinline(const bal_socket* s, int value)
+bool bal_set_keepalive(const bal_socket* s, int value)
 {
-    return bal_set_option(s, SOL_SOCKET, SO_OOBINLINE, &value, sizeof(int));
+    return bal_set_option(s, SOL_SOCKET, SO_KEEPALIVE, &value, sizeof(int));
 }
 
 bool bal_get_oobinline(const bal_socket* s, int* value)
@@ -631,9 +639,9 @@ bool bal_get_oobinline(const bal_socket* s, int* value)
     return bal_get_option(s, SOL_SOCKET, SO_OOBINLINE, value, sizeof(int));
 }
 
-bool bal_set_reuseaddr(const bal_socket* s, int value)
+bool bal_set_oobinline(const bal_socket* s, int value)
 {
-    return bal_set_option(s, SOL_SOCKET, SO_REUSEADDR, &value, sizeof(int));
+    return bal_set_option(s, SOL_SOCKET, SO_OOBINLINE, &value, sizeof(int));
 }
 
 bool bal_get_reuseaddr(const bal_socket* s, int* value)
@@ -641,9 +649,9 @@ bool bal_get_reuseaddr(const bal_socket* s, int* value)
     return bal_get_option(s, SOL_SOCKET, SO_REUSEADDR, value, sizeof(int));
 }
 
-bool bal_set_sendbuf_size(const bal_socket* s, int size)
+bool bal_set_reuseaddr(const bal_socket* s, int value)
 {
-    return bal_set_option(s, SOL_SOCKET, SO_SNDBUF, &size, sizeof(int));
+    return bal_set_option(s, SOL_SOCKET, SO_REUSEADDR, &value, sizeof(int));
 }
 
 bool bal_get_sendbuf_size(const bal_socket* s, int* size)
@@ -651,9 +659,9 @@ bool bal_get_sendbuf_size(const bal_socket* s, int* size)
     return bal_get_option(s, SOL_SOCKET, SO_SNDBUF, size, sizeof(int));
 }
 
-bool bal_set_recvbuf_size(const bal_socket* s, int size)
+bool bal_set_sendbuf_size(const bal_socket* s, int size)
 {
-    return bal_set_option(s, SOL_SOCKET, SO_RCVBUF, &size, sizeof(int));
+    return bal_set_option(s, SOL_SOCKET, SO_SNDBUF, &size, sizeof(int));
 }
 
 bool bal_get_recvbuf_size(const bal_socket* s, int* size)
@@ -661,10 +669,9 @@ bool bal_get_recvbuf_size(const bal_socket* s, int* size)
     return bal_get_option(s, SOL_SOCKET, SO_RCVBUF, size, sizeof(int));
 }
 
-bool bal_set_send_timeout(const bal_socket* s, bal_tvsec sec, bal_tvusec usec)
+bool bal_set_recvbuf_size(const bal_socket* s, int size)
 {
-    const struct timeval tv = {sec, usec};
-    return bal_set_option(s, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(struct timeval));
+    return bal_set_option(s, SOL_SOCKET, SO_RCVBUF, &size, sizeof(int));
 }
 
 bool bal_get_send_timeout(const bal_socket* s, bal_tvsec* sec, bal_tvusec* usec)
@@ -684,10 +691,10 @@ bool bal_get_send_timeout(const bal_socket* s, bal_tvsec* sec, bal_tvusec* usec)
     return retval;
 }
 
-bool bal_set_recv_timeout(const bal_socket* s, bal_tvsec sec, bal_tvusec usec)
+bool bal_set_send_timeout(const bal_socket* s, bal_tvsec sec, bal_tvusec usec)
 {
     const struct timeval tv = {sec, usec};
-    return bal_set_option(s, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(struct timeval));
+    return bal_set_option(s, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(struct timeval));
 }
 
 bool bal_get_recv_timeout(const bal_socket* s, bal_tvsec* sec, bal_tvusec* usec)
@@ -707,7 +714,56 @@ bool bal_get_recv_timeout(const bal_socket* s, bal_tvsec* sec, bal_tvusec* usec)
     return retval;
 }
 
-int bal_sock_get_error(const bal_socket* s)
+bool bal_set_recv_timeout(const bal_socket* s, bal_tvsec sec, bal_tvusec usec)
+{
+    const struct timeval tv = {sec, usec};
+    return bal_set_option(s, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(struct timeval));
+}
+
+bool bal_set_io_mode(const bal_socket* s, bool async)
+{
+    bool retval = false;
+
+    if (_bal_oksock(s)) {
+#if defined(__WIN__)
+        u_long flag = async ? 1UL : 0UL;
+        int ret = ioctlsocket(s->sd, FIONBIO, &flag);
+        if (-1 == ret)
+            _bal_handlelasterr();
+        retval = 0 == ret;
+#else
+        int ret = fcntl(s->sd, F_SETFL, async ? O_NONBLOCK : 0U);
+        if (-1 == ret)
+            _bal_handlelasterr();
+        retval = 0 == ret;
+#endif
+    }
+
+    return retval;
+}
+
+size_t bal_get_recvqueue_size(const bal_socket* s)
+{
+    size_t size = 0;
+
+    if (_bal_oksock(s)) {
+#if defined(__WIN__)
+        if (0 != ioctlsocket(s->sd, FIONREAD, (void*)&size)) {
+            size = 0;
+            _bal_handlelasterr();
+        }
+#else
+        if (0 != ioctl(s->sd, FIONREAD, &size)) {
+            size = 0;
+            _bal_handlelasterr();
+        }
+#endif
+    }
+
+    return size;
+}
+
+int bal_get_sock_error(const bal_socket* s)
 {
     int err = 0;
 
@@ -793,49 +849,6 @@ bool bal_is_listening(const bal_socket* s)
     /* backup method: bitmask. */
     return _bal_oksock(s) && bal_isbitset(s->state.bits, BAL_S_LISTEN);
 #endif
-}
-
-bool bal_set_io_mode(const bal_socket* s, bool async)
-{
-    bool retval = false;
-
-    if (_bal_oksock(s)) {
-#if defined(__WIN__)
-        u_long flag = async ? 1UL : 0UL;
-        int ret = ioctlsocket(s->sd, FIONBIO, &flag);
-        if (-1 == ret)
-            _bal_handlelasterr();
-        retval = 0 == ret;
-#else
-        int ret = fcntl(s->sd, F_SETFL, async ? O_NONBLOCK : 0U);
-        if (-1 == ret)
-            _bal_handlelasterr();
-        retval = 0 == ret;
-#endif
-    }
-
-    return retval;
-}
-
-size_t bal_get_recvqueue_size(const bal_socket* s)
-{
-    size_t size = 0UL;
-
-    if (_bal_oksock(s)) {
-#if defined(__WIN__)
-        if (0 != ioctlsocket(s->sd, FIONREAD, (void*)&size)) {
-            size = 0UL;
-            _bal_handlelasterr();
-        }
-#else
-        if (0 != ioctl(s->sd, FIONREAD, &size)) {
-            size = 0UL;
-            _bal_handlelasterr();
-        }
-#endif
-    }
-
-    return size;
 }
 
 bool bal_resolve_host(const char* host, bal_addrlist* out)

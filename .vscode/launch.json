@@ -13,6 +13,18 @@
             "MIMode": "lldb"
         },
         {
+            "name": "lldb: Launch (tests++)",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/baltests++",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "lldb"
+        },
+        {
             "name": "gdb: Launch (server)",
             "type": "cppdbg",
             "request": "launch",
@@ -41,6 +53,25 @@
             "type": "cppdbg",
             "request": "attach",
             "program": "${workspaceFolder}/build/balserver",
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Set Disassembly Flavor to Intel",
+                    "text": "-gdb-set disassembly-flavor intel",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
+            "name": "gdb: Attach (client)",
+            "type": "cppdbg",
+            "request": "attach",
+            "program": "${workspaceFolder}/build/balclient",
             "MIMode": "gdb",
             "setupCommands": [
                 {
