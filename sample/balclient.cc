@@ -46,6 +46,7 @@ int main(int argc, char** argv)
             throw bal::exception("failed to initialize bal::common");
         }
 
+        string send_buffer = "HELO";
         initializer balinit;
         scoped_socket sock {AF_INET, SOCK_STREAM, IPPROTO_TCP};
 
@@ -69,12 +70,24 @@ int main(int argc, char** argv)
             return false;
         };
 
-        sock.on_read = [](scoped_socket* sock) -> bool
+        sock.on_read = [&send_buffer](scoped_socket* sock) -> bool
         {
             constexpr size_t buf_size = 2048;
             std::array<char, buf_size> buf {};
             if (ssize_t read = sock->recv(buf.data(), buf.size() - 1, 0); read > 0) {
                 PRINT_SD("read %ld bytes: '%s'", sock->get_descriptor(), read, buf.data());
+                send_buffer = get_input_line("Enter text to send (or 'quit')", "HELO");
+#if defined(__WIN__)
+                bool do_quit = StrStrIA(send_buffer.c_str(), "quit", 4);
+#else
+                bool do_quit = 0 == strncasecmp(send_buffer.c_str(), "quit", 4);
+#endif
+                if (do_quit) {
+                    send_buffer.clear();
+                    quit();
+                } else {
+                    sock->want_write_events(true);
+                }
             } else if (-1 == read) {
                 const auto err = sock->get_error(false);
                 PRINT_SD("read error %d (%s)!", sock->get_descriptor(), err.code,
@@ -82,21 +95,22 @@ int main(int argc, char** argv)
             } else {
                 PRINT_SD("read EOF", sock->get_descriptor());
             }
+
             return true;
         };
 
-        sock.on_write = [](scoped_socket* sock) -> bool
+        sock.on_write = [&send_buffer](scoped_socket* sock) -> bool
         {
-            const char* req = "HELO";
-            constexpr const size_t req_size = 4;
-
-            ssize_t ret = sock->send(req, req_size, MSG_NOSIGNAL);
-            if (ret <= 0) {
-                const auto err = sock->get_error(false);
-                PRINT_SD("write error %d (%s)!", sock->get_descriptor(), err.code,
-                    err.message.c_str());
-            } else {
-                PRINT_SD("wrote %ld bytes", sock->get_descriptor(), ret);
+            if (!send_buffer.empty()) {
+                if (ssize_t sent = sock->send(send_buffer.data(), send_buffer.size(),
+                    MSG_NOSIGNAL); sent > 0) {
+                    PRINT_SD("wrote %ld bytes", sock->get_descriptor(), sent);
+                } else {
+                    const auto err = sock->get_error(false);
+                    PRINT_SD("write error %d (%s)!", sock->get_descriptor(), err.code,
+                        err.message.c_str());
+                }
+                send_buffer.clear();
             }
 
             sock->want_write_events(false);
@@ -121,7 +135,7 @@ int main(int argc, char** argv)
         sock.async_poll(BAL_EVT_CLIENT);
 
         string remote_host = get_input_line("Enter server hostname", localaddr);
-        PRINT("connecting to %s:%s...\n", remote_host.c_str(), portnum);
+        PRINT("connecting to %s:%s...", remote_host.c_str(), portnum);
 
         sock.connect(remote_host, portnum);
 
