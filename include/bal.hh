@@ -201,15 +201,21 @@ namespace bal
     public:
         initializer()
         {
-            if (!bal_init()) {
+            if (!bal_isinitialized() && !bal_init()) {
                 throw exception(error::from_last_error());
             }
         }
+
+        initializer(const initializer&) = delete;
+        initializer(initializer&&) = delete;
 
         virtual ~initializer()
         {
             [[maybe_unused]] auto cleanup = bal_cleanup();
         }
+
+        initializer& operator=(const initializer&) = delete;
+        initializer& operator=(initializer&&) = delete;
     };
 
     template<bool RAII, DerivedFromPolicy TPolicy>
@@ -250,7 +256,7 @@ namespace bal
 
         socket_base& operator=(socket_base&) = delete;
 
-        socket_base& operator=(socket_base&& rhs)
+        socket_base& operator=(socket_base&& rhs) noexcept
         {
             [[maybe_unused]] auto unused = attach(rhs.detach());
 
@@ -700,6 +706,11 @@ namespace bal
 
                 auto print_early_return = [s, self](uint32_t evt) -> void
                 {
+# if !defined(BAL_DBGLOG)
+                    BAL_UNUSED(s);
+                    BAL_UNUSED(self);
+                    BAL_UNUSED(evt);
+# endif
                     _bal_dbglog("early return for socket " BAL_SOCKET_SPEC " (0x%"
                         PRIxPTR ", evt = %08" PRIx32 ", self = 0x%" PRIxPTR ")",
                         s->sd, std::bit_cast<uintptr_t>(s), evt,
