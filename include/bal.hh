@@ -231,7 +231,7 @@ namespace bal
 
         socket_base(const socket_base&) = delete;
 
-        socket_base(socket_base&& other)
+        socket_base(socket_base&& other) noexcept
         {
             *this = other;
         }
@@ -709,7 +709,7 @@ namespace bal
                     return;
                 }
 
-                auto print_early_return = [s, self](uint32_t evt) -> void
+                auto print_early_return = [s, self](uint32_t evt)
                 {
 # if defined(BAL_DBGLOG)
                     _bal_dbglog("early return for socket " BAL_SOCKET_SPEC " (0x%"
