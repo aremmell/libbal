@@ -138,7 +138,7 @@ int main(int argc, char** argv)
         PRINT("listening on %s; ctrl+c to exit...", portnum);
 
         do {
-            bal_sleep_msec(sleepfor);
+            bal_sleep_msec(sleep_interval);
             bal_thread_yield();
         } while (should_run());
 

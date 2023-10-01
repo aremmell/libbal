@@ -141,7 +141,7 @@ int main(int argc, char** argv)
         PRINT_0("running; ctrl+c to exit...");
 
         do {
-            bal_sleep_msec(sleepfor);
+            bal_sleep_msec(sleep_interval);
             bal_thread_yield();
         } while (should_run());
 
