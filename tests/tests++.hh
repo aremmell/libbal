@@ -72,21 +72,21 @@ namespace bal::tests
         initializer balinit;
 
 /** Implements recovery in the event that an unexpected exception is caught. */
-# define _BAL_TEST_ON_EXCEPTION(what) \
+# define _BAL_TEST_ON_EXCEPTION(ex) \
     std::source_location loc = std::source_location::current(); \
-    ERROR_MSG("unexpected exception in %s: '%s'", loc.function_name(), what); \
+    ERROR_MSG("unexpected exception in %s: '%s'", loc.function_name(), ex.what()); \
     pass = false
 
 /** Handles an expected exception. */
-# define _BAL_TEST_ON_EXPECTED_EXCEPTION(what) \
+# define _BAL_TEST_ON_EXPECTED_EXCEPTION(ex) \
     std::source_location loc = std::source_location::current(); \
-    TEST_MSG(GREEN("expected exception in %s: '%s'"), loc.function_name(), what)
+    TEST_MSG(GREEN("expected exception in %s: '%s'"), loc.function_name(), ex.what())
 
 # define _BAL_TEST_CONCLUDE \
     } catch (bal::exception& ex) { \
-        _BAL_TEST_ON_EXCEPTION(ex.what()); \
+        _BAL_TEST_ON_EXCEPTION(ex); \
     } catch (...) { \
-        _BAL_TEST_ON_EXCEPTION(BAL_UNKNOWN); \
+        _BAL_TEST_ON_EXCEPTION(bal::exception(BAL_UNKNOWN)); \
     } \
     return PRINT_RESULT_RETURN(pass);
 
