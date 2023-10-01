@@ -59,14 +59,6 @@ namespace bal::common
 
 # define PRINT_SD(msg, ...) PRINT("[" BAL_SOCKET_SPEC "] " msg, __VA_ARGS__)
 
-# define EXIT_IF_FAILED(retval, func) \
-    do { \
-        if (!retval) { \
-            print_last_lib_error(func); \
-            return EXIT_FAILURE; \
-        } \
-    } while (false)
-
 # if defined(__WIN__)
     BOOL WINAPI on_ctrl_c(DWORD ctl_type);
 # else
