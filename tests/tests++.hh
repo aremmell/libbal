@@ -27,15 +27,8 @@
 # define _BAL_TESTSXX_HH_INCLUDED
 
 # include <bal.hh>
+# include <source_location>
 # include "tests_shared.h"
-
-# if !defined(__PRETTY_FUNCTION__)
-#  if defined(_MSC_VER)
-#   define __PRETTY_FUNCTION__ __FUNCSIG__
-#  else
-#   define __PRETTY_FUNCTION__ __func__
-#  endif
-# endif
 
 /**
  * @addtogroup tests
@@ -80,12 +73,14 @@ namespace bal::tests
 
 /** Implements recovery in the event that an unexpected exception is caught. */
 # define _BAL_TEST_ON_EXCEPTION(what) \
-    ERROR_MSG("unexpected exception in %s: '%s'", __PRETTY_FUNCTION__, what); \
+    std::source_location loc = std::source_location::current(); \
+    ERROR_MSG("unexpected exception in %s: '%s'", loc.function_name(), what); \
     pass = false
 
 /** Handles an expected exception. */
 # define _BAL_TEST_ON_EXPECTED_EXCEPTION(what) \
-    TEST_MSG(GREEN("expected exception in %s: '%s'"), __PRETTY_FUNCTION__, what)
+    std::source_location loc = std::source_location::current(); \
+    TEST_MSG(GREEN("expected exception in %s: '%s'"), loc.function_name(), what)
 
 # define _BAL_TEST_CONCLUDE \
     } catch (bal::exception& ex) { \
