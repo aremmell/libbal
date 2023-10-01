@@ -27,6 +27,8 @@
 # define _BAL_COMMON_HH_INCLUDED
 
 # include <bal.hh>
+# include <cstdio>
+# include <array>
 
 # if !defined(__WIN__)
 #  include <signal.h>
