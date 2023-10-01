@@ -48,16 +48,19 @@ int main(int argc, char** argv)
             throw bal::exception("failed to initialize bal::common");
         }
 
+        string send_buffer;
         initializer balinit;
 
-        auto client_on_read = [](scoped_socket* sock) -> bool
+        auto client_on_read = [&send_buffer](scoped_socket* sock) -> bool
         {
             constexpr size_t buf_size = 2048;
             std::array<char, buf_size> buf {};
 
-            ssize_t read = sock->recv(buf.data(), buf.size() - 1, 0);
-            if (read > 0) {
+            if (ssize_t read = sock->recv(buf.data(), buf.size() - 1, 0); read > 0) {
                 PRINT_SD("read %ld bytes: '%s'", sock->get_descriptor(), read, buf.data());
+                send_buffer = "You said '";
+                send_buffer += buf.data();
+                send_buffer += "'; acknowledged.";
                 sock->want_write_events(true);
             } else if (-1 == read) {
                 const auto err = sock->get_error(false);
@@ -70,17 +73,18 @@ int main(int argc, char** argv)
             return true;
         };
 
-        auto client_on_write = [](scoped_socket* sock) -> bool
+        auto client_on_write = [&send_buffer](scoped_socket* sock) -> bool
         {
-            static const char* reply = "O, HELO 2 U";
-            constexpr const size_t reply_size = 11;
-
-            if (ssize_t sent = sock->send(reply, reply_size, MSG_NOSIGNAL); sent > 0) {
-                PRINT_SD("wrote %ld bytes", sock->get_descriptor(), sent);
-            } else {
-                const auto err = sock->get_error(false);
-                PRINT_SD("write error %d (%s)!", sock->get_descriptor(), err.code,
-                    err.message.c_str());
+            if (!send_buffer.empty()) {
+                if (ssize_t sent = sock->send(send_buffer.data(), send_buffer.size(),
+                    MSG_NOSIGNAL); sent > 0) {
+                    PRINT_SD("wrote %ld bytes", sock->get_descriptor(), sent);
+                } else {
+                    const auto err = sock->get_error(false);
+                    PRINT_SD("write error %d (%s)!", sock->get_descriptor(), err.code,
+                        err.message.c_str());
+                }
+                send_buffer.clear();
             }
 
             sock->want_write_events(false);
@@ -108,7 +112,7 @@ int main(int argc, char** argv)
             address client_addr {};
             sock->accept(client_sock, client_addr);
 
-            client_sock.on_read = client_on_read;
+            client_sock.on_read  = client_on_read;
             client_sock.on_write = client_on_write;
             client_sock.on_close = client_on_close;
             client_sock.on_error = client_on_error;
@@ -142,15 +146,10 @@ int main(int argc, char** argv)
             bal_thread_yield();
         } while (should_run());
 
-        PRINT_0("de-registering async I/O events...");
-        sock.async_poll(0U);
-
-        for (auto& [sd, client_sock] : _clients) {
-            client_sock.async_poll(0U);
+        if (!_clients.empty()) {
+            PRINT("closing/destroying %zu socket(s)...", _clients.size());
+            _clients.clear();
         }
-
-        PRINT("closing/destroying %zu socket(s)...", _clients.size());
-        _clients.clear();
 
         return EXIT_SUCCESS;
     } catch (bal::exception& ex) {
