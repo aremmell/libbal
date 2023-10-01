@@ -239,6 +239,10 @@ void __bal_dbglog(const char* func, const char* file, uint32_t line,
         else if (NULL != strcasestr(buf, "warn"))
             color = "33";
 # endif
+# if defined(BAL_DBGLOG_WARNERR_ONLY)
+        /* if this macro is defined, only log warnings and errors. */
+        if (strncmp("0", color, 2) < 0)
+# endif
         printf("\x1b[%sm%s%s\x1b[0m\n", color, prefix, buf);
 
         _bal_safefree(&buf);
