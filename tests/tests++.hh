@@ -26,8 +26,8 @@
 #ifndef _BAL_TESTSXX_HH_INCLUDED
 # define _BAL_TESTSXX_HH_INCLUDED
 
-#include <bal.hh>
-#include "tests_shared.h"
+# include <bal.hh>
+# include "tests_shared.h"
 
 # if defined(_MSC_VER) && !defined(__PRETTY_FUNCTION__)
 #  define __PRETTY_FUNCTION__ __FUNCSIG__
