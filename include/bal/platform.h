@@ -23,8 +23,8 @@
  * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-#ifndef _BAL_PLATF0RM_H_INCLUDED
-# define _BAL_PLATF0RM_H_INCLUDED
+#ifndef _BAL_PLATFORM_H_INCLUDED
+# define _BAL_PLATFORM_H_INCLUDED
 
 # if !defined(_WIN32)
 #  if defined(__APPLE__) && defined(__MACH__)
@@ -355,4 +355,4 @@ typedef unsigned bal_threadret;
 #  define __file__ __FILE__
 # endif
 
-#endif /* !_BAL_PLATF0RM_H_INCLUDED */
+#endif /* !_BAL_PLATFORM_H_INCLUDED */

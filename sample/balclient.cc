@@ -60,7 +60,7 @@ int main(int argc, char** argv)
             return true;
         };
 
-        main_sock.on_conn_fail = [](scoped_socket* sock)
+        main_sock.on_conn_fail = [](const scoped_socket* sock)
         {
             const auto err = sock->get_error(false);
             PRINT_SD("connection failed! errror: %s", sock->get_descriptor(),
@@ -80,9 +80,9 @@ int main(int argc, char** argv)
                 if (_bal_strsame(sb.c_str(), quit_msg, 4)) {
                     sb.clear();
                     quit();
-                } else {
-                    sock->want_write_events(true);
+                    return false;
                 }
+                sock->want_write_events(true);
             } else if (-1 == read) {
                 const auto err = sock->get_error(false);
                 PRINT_SD("read error %d (%s)!", sock->get_descriptor(), err.code,
@@ -109,14 +109,14 @@ int main(int argc, char** argv)
             return true;
         };
 
-        main_sock.on_close = [](scoped_socket* sock)
+        main_sock.on_close = [](const scoped_socket* sock)
         {
             PRINT_SD("connection closed.", sock->get_descriptor());
             quit();
             return false;
         };
 
-        main_sock.on_error = [](scoped_socket* sock)
+        main_sock.on_error = [](const scoped_socket* sock)
         {
             const auto err = sock->get_error(false);
             PRINT_SD("error: %d (%s)!", sock->get_descriptor(), err.code, err.message.c_str());

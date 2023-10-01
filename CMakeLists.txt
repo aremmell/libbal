@@ -31,8 +31,8 @@ else()
     message(FATAL_ERROR, "CMake >= 3.12 is required in order to build libbal")
 endif()
 
-set(CMAKE_C_STANDARD_REQUIRED TRUE)
-set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
+set(CMAKE_C_STANDARD_REQUIRED true)
+set(CMAKE_CXX_STANDARD_REQUIRED true)
 
 # policy settings, so CMake doesn't whine.
 cmake_policy(SET CMP0025 NEW) # AppleClang
@@ -79,8 +79,8 @@ if (MSVC)
         $<$<CONFIG:Release>:/Ox>
     )
 else()
-    set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
-    set(THREADS_PREFER_PTHREAD_FLAG TRUE)
+    set(CMAKE_THREAD_PREFER_PTHREAD true)
+    set(THREADS_PREFER_PTHREAD_FLAG true)
     find_package(Threads REQUIRED)
 
     # -Wformat-nonliteral is also an option
