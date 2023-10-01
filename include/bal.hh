@@ -706,92 +706,82 @@ namespace bal
 
                 auto print_early_return = [s, self](uint32_t evt) -> void
                 {
-# if !defined(BAL_DBGLOG)
-                    BAL_UNUSED(s);
-                    BAL_UNUSED(self);
-                    BAL_UNUSED(evt);
-# endif
+#if defined(BAL_DBGLOG)
                     _bal_dbglog("early return for socket " BAL_SOCKET_SPEC " (0x%"
                         PRIxPTR ", evt = %08" PRIx32 ", self = 0x%" PRIxPTR ")",
                         s->sd, std::bit_cast<uintptr_t>(s), evt,
                         std::bit_cast<uintptr_t>(self));
+#else
+                    BAL_UNUSED(s);
+                    BAL_UNUSED(self);
+                    BAL_UNUSED(evt);
+#endif
                 };
 
-                if (bal_isbitset(events, BAL_EVT_READ) && self->on_read) {
-                    if (!self->on_read(self)) {
-                        print_early_return(BAL_EVT_READ);
-                        return;
-                    }
+                if (bal_isbitset(events, BAL_EVT_READ) && self->on_read &&
+                    !self->on_read(self)) {
+                    print_early_return(BAL_EVT_READ);
+                    return;
                 }
 
-                if (bal_isbitset(events, BAL_EVT_WRITE) && self->on_write) {
-                    if (!self->on_write(self)) {
-                        print_early_return(BAL_EVT_WRITE);
-                        return;
-                    }
+                if (bal_isbitset(events, BAL_EVT_WRITE) && self->on_write &&
+                    !self->on_write(self)) {
+                    print_early_return(BAL_EVT_WRITE);
+                    return;
                 }
 
-                if (bal_isbitset(events, BAL_EVT_CONNECT) && self->on_connect) {
-                    if (!self->on_connect(self)) {
-                        print_early_return(BAL_EVT_CONNECT);
-                        return;
-                    }
+                if (bal_isbitset(events, BAL_EVT_CONNECT) && self->on_connect &&
+                    !self->on_connect(self)) {
+                    print_early_return(BAL_EVT_CONNECT);
+                    return;
                 }
 
-                if (bal_isbitset(events, BAL_EVT_CONNFAIL) && self->on_conn_fail) {
-                    if (!self->on_conn_fail(self)) {
-                        print_early_return(BAL_EVT_CONNFAIL);
-                        return;
-                    }
+                if (bal_isbitset(events, BAL_EVT_CONNFAIL) && self->on_conn_fail &&
+                    !self->on_conn_fail(self)) {
+                    print_early_return(BAL_EVT_CONNFAIL);
+                    return;
                 }
 
-                if (bal_isbitset(events, BAL_EVT_ACCEPT) && self->on_incoming_conn) {
-                    if (!self->on_incoming_conn(self)) {
-                        print_early_return(BAL_EVT_ACCEPT);
-                        return;
-                    }
+                if (bal_isbitset(events, BAL_EVT_ACCEPT) && self->on_incoming_conn &&
+                    !self->on_incoming_conn(self)) {
+                    print_early_return(BAL_EVT_ACCEPT);
+                    return;
                 }
 
-                if (bal_isbitset(events, BAL_EVT_CLOSE) && self->on_close) {
-                    if (!self->on_close(self)) {
-                        print_early_return(BAL_EVT_CLOSE);
-                        return;
-                    }
+                if (bal_isbitset(events, BAL_EVT_CLOSE) && self->on_close &&
+                    !self->on_close(self)) {
+                    print_early_return(BAL_EVT_CLOSE);
+                    return;
                 }
 
-                if (bal_isbitset(events, BAL_EVT_PRIORITY) && self->on_priority) {
-                    if (!self->on_priority(self)) {
-                        print_early_return(BAL_EVT_PRIORITY);
-                        return;
-                    }
+                if (bal_isbitset(events, BAL_EVT_PRIORITY) && self->on_priority &&
+                    !self->on_priority(self)) {
+                    print_early_return(BAL_EVT_PRIORITY);
+                    return;
                 }
 
-                if (bal_isbitset(events, BAL_EVT_ERROR) && self->on_error) {
-                    if (!self->on_error(self)) {
-                        print_early_return(BAL_EVT_ERROR);
-                        return;
-                    }
+                if (bal_isbitset(events, BAL_EVT_ERROR) && self->on_error &&
+                    !self->on_error(self)) {
+                    print_early_return(BAL_EVT_ERROR);
+                    return;
                 }
 
-                if (bal_isbitset(events, BAL_EVT_INVALID) && self->on_invalid) {
-                    if (!self->on_invalid(self)) {
-                        print_early_return(BAL_EVT_INVALID);
-                        return;
-                    }
+                if (bal_isbitset(events, BAL_EVT_INVALID) && self->on_invalid &&
+                    !self->on_invalid(self)) {
+                    print_early_return(BAL_EVT_INVALID);
+                    return;
                 }
 
-                if (bal_isbitset(events, BAL_EVT_OOBREAD) && self->on_oob_read) {
-                    if (!self->on_oob_read(self)) {
-                        print_early_return(BAL_EVT_OOBREAD);
-                        return;
-                    }
+                if (bal_isbitset(events, BAL_EVT_OOBREAD) && self->on_oob_read &&
+                    !self->on_oob_read(self)) {
+                    print_early_return(BAL_EVT_OOBREAD);
+                    return;
                 }
 
-                if (bal_isbitset(events, BAL_EVT_OOBWRITE) && self->on_oob_write) {
-                    if (!self->on_oob_write(self)) {
-                        print_early_return(BAL_EVT_OOBWRITE);
-                        return;
-                    }
+                if (bal_isbitset(events, BAL_EVT_OOBWRITE) && self->on_oob_write &&
+                    !self->on_oob_write(self)) {
+                    print_early_return(BAL_EVT_OOBWRITE);
+                    return;
                 }
             } catch (bal::exception& ex) {
                 _bal_dbglog("error: caught exception: '%s'!", ex.what());
