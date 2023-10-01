@@ -35,7 +35,7 @@
 namespace bal::common
 {
     constexpr const char* localaddr   = "127.0.0.1";
-    constexpr const char* portnum     = "9000";
+    constexpr const char* portnum     = "9969";
     constexpr const uint32_t sleepfor = 100;
 
     bool initialize();
