@@ -231,6 +231,11 @@ namespace bal
 
         socket_base(const socket_base&) = delete;
 
+        socket_base(socket_base&& other)
+        {
+            *this = other;
+        }
+
         socket_base(int addr_fam, int type, int proto) requires RAII : socket_base()
         {
             [[maybe_unused]]
@@ -248,8 +253,8 @@ namespace bal
         {
             if constexpr(RAII) {
                 if (is_valid()) {
-                    [[maybe_unused]] auto unused = deregister_async_poll();
-                    unused = bal_close(&_s, true);
+                    [[maybe_unused]] auto unused1 = deregister_async_poll();
+                    [[maybe_unused]] auto unused2 = bal_close(&_s, true);
                 }
             }
         }
@@ -258,7 +263,7 @@ namespace bal
 
         socket_base& operator=(socket_base&& rhs) noexcept
         {
-            [[maybe_unused]] auto unused = attach(rhs.detach());
+            [[maybe_unused]] const auto* unused = attach(rhs.detach());
 
             on_read          = rhs.on_read;
             on_write         = rhs.on_write;
@@ -316,7 +321,7 @@ namespace bal
 
         bool create(int addr_fam, int type, int proto)
         {
-            [[maybe_unused]] const auto existing = detach();
+            [[maybe_unused]] const auto* existing = detach();
             BAL_ASSERT(existing == nullptr);
 
             const auto ret = bal_create(&_s, to_user_data(), addr_fam, type, proto);
@@ -422,7 +427,7 @@ namespace bal
 
         bool accept(socket_base& client_sock, address& client_addr) const
         {
-            [[maybe_unused]] const auto existing = client_sock.detach();
+            [[maybe_unused]] const auto* existing = client_sock.detach();
             BAL_ASSERT(existing == nullptr);
 
             client_addr.clear();
@@ -431,7 +436,7 @@ namespace bal
             bal_sockaddr addr {};
             const auto ret = bal_accept(_s, &s, &addr);
             if (ret) {
-                [[maybe_unused]] auto unused = client_sock.attach(s);
+                [[maybe_unused]] const auto* unused = client_sock.attach(s);
                 client_addr = addr;
             }
 
@@ -669,25 +674,25 @@ namespace bal
 
         void set_default_event_handlers()
         {
-            async_io_cb on_read = nullptr;
-            async_io_cb on_write = nullptr;
-            async_io_cb on_connect = nullptr;
-            async_io_cb on_conn_fail = nullptr;
-            async_io_cb on_incoming_conn = nullptr;
+            on_read = nullptr;
+            on_write = nullptr;
+            on_connect = nullptr;
+            on_conn_fail = nullptr;
+            on_incoming_conn = nullptr;
             on_close = [](socket_base* sock)
             {
                 [[maybe_unused]] const auto closed = sock->close();
                 return false;
             };
-            async_io_cb on_priority = nullptr;
+            on_priority = nullptr;
             on_error = [](socket_base* sock)
             {
                 [[maybe_unused]] const auto closed = sock->close();
                 return false;
             };
-            async_io_cb on_invalid = nullptr;
-            async_io_cb on_oob_read = nullptr;
-            async_io_cb on_oob_write = nullptr;
+            on_invalid = nullptr;
+            on_oob_read = nullptr;
+            on_oob_write = nullptr;
         }
 
     protected:

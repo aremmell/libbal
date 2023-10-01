@@ -58,33 +58,21 @@ bool _bal_init_asyncpoll(void)
         return _bal_handlelasterr();
     }
 
-    struct {
-        bal_thread* thread;
-        bal_thread_cb proc;
-    } threads[] = {
-        {
-            &_bal_as_container.thread,
-            &_bal_eventthread
-        }
-    };
-
-    for (size_t n = 0; n < _bal_countof(threads); n++) {
 #if defined(__WIN__)
-        *threads[n].thread = _beginthreadex(NULL, 0U, threads[n].proc, NULL,
-            0U, NULL);
-        BAL_ASSERT(0ULL != *threads[n].thread);
+    _bal_as_container.thread = _beginthreadex(NULL, 0U, &_bal_eventthread, NULL,
+        0U, NULL);
+    BAL_ASSERT(0ULL != _bal_as_container.thread);
 
-        if (0ULL == *threads[n].thread)
-            _bal_eqland(init, _bal_handlelasterr());
+    if (0ULL == _bal_as_container.thread)
+        _bal_eqland(init, _bal_handlelasterr());
 #else
-        int op = pthread_create(threads[n].thread, NULL, threads[n].proc, NULL);
-        BAL_ASSERT(0 == op);
-        _bal_eqland(init, 0 == op);
+    int op = pthread_create(&_bal_as_container.thread, NULL, &_bal_eventthread, NULL);
+    BAL_ASSERT(0 == op);
+    _bal_eqland(init, 0 == op);
 
-        if (0 != op)
-            (void)_bal_handleerr(op);
+    if (0 != op)
+        (void)_bal_handleerr(op);
 #endif
-    }
 
     _bal_set_boolean(&_bal_async_poll_init, init);
     _bal_set_boolean(&_bal_as_container.die, !init);
@@ -101,22 +89,17 @@ bool _bal_cleanup_asyncpoll(void)
     _bal_set_boolean(&_bal_as_container.die, true);
     _bal_set_boolean(&_bal_async_poll_init, false);
 
-    bal_thread* threads[] = {
-        &_bal_as_container.thread
-    };
+    _bal_dbglog("joining async I/O thread...");
 
-    _bal_dbglog("joining %zu thread(s)...", _bal_countof(threads));
-    for (size_t n = 0; n < _bal_countof(threads); n++) {
 #if defined(__WIN__)
-        DWORD wait = WaitForSingleObject((HANDLE)*threads[n], INFINITE);
-        BAL_ASSERT_UNUSED(wait, WAIT_OBJECT_0 == wait);
+    DWORD wait = WaitForSingleObject((HANDLE)_bal_as_container.thread, INFINITE);
+    BAL_ASSERT_UNUSED(wait, WAIT_OBJECT_0 == wait);
 #else
-        int wait = pthread_join(*threads[n], NULL);
-        BAL_ASSERT_UNUSED(wait, 0 == wait);
-        if (0 != wait)
-            (void)_bal_handleerr(wait);
+    int wait = pthread_join(_bal_as_container.thread, NULL);
+    BAL_ASSERT_UNUSED(wait, 0 == wait);
+    if (0 != wait)
+        (void)_bal_handleerr(wait);
 #endif
-    }
 
     bool cleanup       = true;
     bal_descriptor key = 0;

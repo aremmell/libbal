@@ -87,8 +87,7 @@ enum
 static inline
 bool _bal_is_error(int err)
 {
-    int masked = (err & 0x78ff0000);
-    return masked >= 0x78010000 && masked <= 0x78ff0000;
+    return (err & 0x78ff0000) >= 0x78010000;
 }
 
 /** Extracts the libbal-specific error code from a packed error created by
