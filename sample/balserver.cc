@@ -130,11 +130,7 @@ int main(int argc, char** argv)
             return true;
         };
 
-        // TODO: change to sock.set_reuseaddr() when impl'd
-        if (!bal_set_reuseaddr(sock.get(), 1)) {
-            throw bal::exception(bal::error::from_last_error());
-        }
-
+        sock.set_reuseaddr(1);
         sock.bind_all(portnum);
         sock.async_poll(BAL_EVT_NORMAL);
         sock.listen(SOMAXCONN);
