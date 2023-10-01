@@ -46,7 +46,7 @@ int main(int argc, char** argv)
             throw bal::exception("failed to initialize bal::common");
         }
 
-        string send_buffer = "HELO";
+        string send_buffer = HELO_MSG;
         initializer balinit;
         scoped_socket sock {AF_INET, SOCK_STREAM, IPPROTO_TCP};
 
@@ -76,13 +76,12 @@ int main(int argc, char** argv)
             std::array<char, buf_size> buf {};
             if (ssize_t read = sock->recv(buf.data(), buf.size() - 1, 0); read > 0) {
                 PRINT_SD("read %ld bytes: '%s'", sock->get_descriptor(), read, buf.data());
-                send_buffer = get_input_line("Enter text to send (or 'quit')", "HELO");
+                send_buffer = get_input_line("Enter text to send (or '" QUIT_MSG "')", HELO_MSG);
 #if defined(__WIN__)
-                bool do_quit = StrStrIA(send_buffer.c_str(), "quit", 4);
+                if (0 == StrStrIA(send_buffer.c_str(), QUIT_MSG, 4)) {
 #else
-                bool do_quit = 0 == strncasecmp(send_buffer.c_str(), "quit", 4);
+                if (0 == strncasecmp(send_buffer.c_str(), QUIT_MSG, 4)) {
 #endif
-                if (do_quit) {
                     send_buffer.clear();
                     quit();
                 } else {

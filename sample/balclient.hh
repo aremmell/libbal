@@ -30,7 +30,8 @@
 
 namespace bal::client
 {
-
+# define QUIT_MSG "quit"
+# define HELO_MSG "HELO"
 } // !namespace bal::client
 
 #endif // !_BAL_CLIENT_HH_INCLUDED
