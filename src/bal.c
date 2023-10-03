@@ -375,7 +375,7 @@ bool bal_connect_addrlist(bal_socket* s, bal_addrlist* al)
 #if defined(__WIN__)
             if (!ret || WSAEWOULDBLOCK == WSAGetLastError()) {
 #else
-            if (!ret || EAGAIN == errno || EINPROGRESS == errno) {
+            if (!ret || EAGAIN == errno || EINPROGRESS == errno || EWOULDBLOCK == errno) {
 #endif
                 bal_setbitshigh(&s->state.mask, BAL_EVT_WRITE);
                 bal_setbitshigh(&s->state.bits, BAL_S_CONNECT);
