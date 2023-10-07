@@ -83,12 +83,12 @@ int main(int argc, char** argv)
                     return false;
                 }
                 sock->want_write_events(true);
-            } else if (-1 == read) {
-                const auto err = sock->get_error(false);
-                PRINT_SD("read error %d (%s)!", sock->get_descriptor(), err.code,
-                    err.message.c_str());
+                return true;
             }
-            return true;
+            const auto err = sock->get_error(false);
+            PRINT_SD("read error %d (%s)!", sock->get_descriptor(), err.code,
+                err.message.c_str());
+            return false;
         };
 
         main_sock.on_write = [&sb = send_buffer](scoped_socket* sock)

@@ -229,15 +229,17 @@ void __bal_dbglog(const char* func, const char* file, uint32_t line,
 
         const char* color = "0";
 # if defined(__WIN__)
-        if (NULL != StrStrIA(buf, "error") || NULL != StrStrIA(buf, "assert"))
+        if (NULL != StrStrIA(buf, "error") || NULL != StrStrIA(buf, "assert")) {
             color = "91";
-        else if (NULL != StrStrIA(buf, "warn"))
+        } else if (NULL != StrStrIA(buf, "warn")) {
             color = "33";
+        }
 # else
-        if (NULL != strcasestr(buf, "error") || NULL != strcasestr(buf, "assert"))
+        if (NULL != strcasestr(buf, "error") || NULL != strcasestr(buf, "assert")) {
             color = "91";
-        else if (NULL != strcasestr(buf, "warn"))
+        } else if (NULL != strcasestr(buf, "warn")) {
             color = "33";
+        }
 # endif
 # if defined(BAL_DBGLOG_WARNERR_ONLY)
         /* if this macro is defined, only log warnings and errors. */
