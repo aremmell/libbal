@@ -29,7 +29,7 @@ Copyright: 2004-2024 Ryan M. Lederman <lederman@gmail.com>
 License: MIT
 
 # C source code
-Files: src/*.c tests/tests.c
+Files: src/*.c tests/*.c tests/*.h
 Copyright: 2004-2024 Ryan M. Lederman <lederman@gmail.com>
 License: MIT
 
