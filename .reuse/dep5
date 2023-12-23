@@ -5,30 +5,40 @@ Source: https://github.com/aremmell/libbal
 
 # Visual Studio Code files
 Files: .vscode/*
-Copyright: 2004-current Ryan M. Lederman <lederman@gmail.com>
+Copyright: 2004-2024 Ryan M. Lederman <lederman@gmail.com>
 License: MIT
 
 # Workspace files
 Files: bal.code-workspace
-Copyright: 2004-current Ryan M. Lederman <lederman@gmail.com>
+Copyright: 2004-2024 Ryan M. Lederman <lederman@gmail.com>
 License: MIT
 
 # CMake files
 Files: CMakePresets.json
-Copyright: 2004-current Ryan M. Lederman <lederman@gmail.com>
+Copyright: 2004-2024 Ryan M. Lederman <lederman@gmail.com>
 License: MIT
 
 # C++ sample applications
 Files: sample/*.cc sample/*.hh
-Copyright: 2004-current Ryan M. Lederman <lederman@gmail.com>
+Copyright: 2004-2024 Ryan M. Lederman <lederman@gmail.com>
+License: MIT
+
+# C++ test rig
+Files: tests/*.cc tests/*.hh
+Copyright: 2004-2024 Ryan M. Lederman <lederman@gmail.com>
 License: MIT
 
 # C source code
 Files: src/*.c tests/tests.c
-Copyright: 2004-current Ryan M. Lederman <lederman@gmail.com>
+Copyright: 2004-2024 Ryan M. Lederman <lederman@gmail.com>
 License: MIT
 
 # C headers
 Files: include/*.h tests/tests.h include/bal/version.h.in
-Copyright: 2004-current Ryan M. Lederman <lederman@gmail.com>
+Copyright: 2004-2024 Ryan M. Lederman <lederman@gmail.com>
+License: MIT
+
+# Security policy
+Files: SECURITY.md
+Copyright: 2004-2024 Ryan M. Lederman <lederman@gmail.com>
 License: MIT
