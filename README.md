@@ -1,7 +1,7 @@
 # libbal
 
 <!-- SPDX-License-Identifier: MIT -->
-<!-- Copyright (c) 2004-current Ryan M. Lederman <lederman@gmail.com> -->
+<!-- Copyright (c) 2004-2024 Ryan M. Lederman <lederman@gmail.com> -->
 
 [![License](https://img.shields.io/github/license/aremmell/libbal?color=%2340b900&cacheSeconds=60)](https://github.com/aremmell/libbal/blob/master/LICENSE)
 [![REUSE status](https://api.reuse.software/badge/github.com/aremmell/libbal)](https://api.reuse.software/info/github.com/aremmell/libbal)
@@ -10,6 +10,10 @@
 [![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=aremmell_libbal&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=aremmell_libbal)
 
 `libbal`: a lightweight, portable C17/C++20 abstraction layer for Berkeley Sockets, complete with asynchronous I/O and *no third-party depdendencies*.
+
+# UPDATE December 2023
+
+I have let this project slip as I got sidetracked with a few other things, but I intend fully to return to this in the new year and polish it up/stamp it for release.
 
 # UPDATE October 2023
 
