@@ -39,10 +39,10 @@ int main(int argc, char** argv)
     try {
         /* RAII library initializer. As long as it stays in scope, libbal stays ready for duty. */
         initializer balinit;
-        
+
         /* RAII socket (this behavior is optional, and you can create a manual init/destroy socket as well). */
         scoped_socket client_sock {AF_INET, SOCK_STREAM, IPPROTO_TCP};
-        
+
         /* the socket class uses public std::function properties for event handlers, so that you can use a lambda,
          * std::bind, or whatever. */
         client_sock.on_connect = [](scoped_socket* sock)
