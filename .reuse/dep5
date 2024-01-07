@@ -3,6 +3,11 @@ Upstream-Name: libbal
 Upstream-Contact: Ryan M. Lederman <lederman@gmail.com>
 Source: https://github.com/aremmell/libbal
 
+# GitHub files
+Files: .github/workflows/*.yml
+Copyright: 2004-2024 Ryan M. Lederman <lederman@gmail.com>
+License: MIT
+
 # Visual Studio Code files
 Files: .vscode/*
 Copyright: 2004-2024 Ryan M. Lederman <lederman@gmail.com>
