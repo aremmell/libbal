@@ -551,15 +551,15 @@ namespace bal
             return throw_on_policy<TPolicy>(ret, false);
         }
 
-        bool get_send_timeout(int* value) const
+        bool get_send_timeout(bal_tvsec* sec, bal_tvusec* usec) const
         {
-            const auto ret = bal_get_send_timeout(_s, value);
+            const auto ret = bal_get_send_timeout(_s, sec, usec);
             return throw_on_policy<TPolicy>(ret, false);
         }
 
-        bool set_send_timeout(int value) const
+        bool set_send_timeout(bal_tvsec sec, bal_tvusec usec) const
         {
-            const auto ret = bal_set_send_timeout(_s, value);
+            const auto ret = bal_set_send_timeout(_s, sec, usec);
             return throw_on_policy<TPolicy>(ret, false);
         }
 
