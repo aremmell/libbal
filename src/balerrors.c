@@ -90,11 +90,11 @@ int _bal_get_error(bal_error* err, bool extended)
                 }
 
                 if (extended) {
-                    _bal_snprintf_trunc(err->message, BAL_MAXERROR, BAL_ERRFMTEXT,
+                    _bal_snprintf_trunc(err->message, BAL_MAXERRORFMT, BAL_ERRFMTEXT,
                         _bal_tei.loc.func, _bal_tei.loc.file, _bal_tei.loc.line,
                         _bal_okptrnf(heap_msg) ? heap_msg : bal_errors[n].msg);
                 } else {
-                    _bal_snprintf_trunc(err->message, BAL_MAXERROR, BAL_ERRFMT,
+                    _bal_snprintf_trunc(err->message, BAL_MAXERRORFMT, BAL_ERRFMT,
                         _bal_okptrnf(heap_msg) ? heap_msg : bal_errors[n].msg);
                 }
 
