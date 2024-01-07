@@ -190,7 +190,7 @@ bool __bal_handle_error(int code, const char* func, const char* file,
         _bal_strcpy(msg, BAL_MAXERROR, tmp, strnlen(tmp, BAL_MAXERROR));
 # endif
 # if defined(__HAVE_XSI_STRERROR_R__) || defined(__HAVE_STRERROR_S__)
-        assert(0 == finderr);
+        BAL_ASSERT_UNUSED(finderr, 0 == finderr);
 # else
         BAL_UNUSED(finderr);
 # endif
