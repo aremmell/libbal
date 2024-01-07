@@ -11,6 +11,10 @@
 
 `libbal`: a lightweight, portable C17/C++20 abstraction layer for Berkeley Sockets, complete with asynchronous I/O and *no third-party depdendencies*.
 
+# UPDATE January 2024
+
+I have set up a simplistic GitHub CMake action that will test compilation on Windows/Ubuntu/macOS with Clang/gcc/cl. This revealed several problems related to compiler versioning and portability, which are now fixed. I have tagged v0.3.0 as the first official releease of the reborn library!
+
 # UPDATE December 2023
 
 I have let this project slip as I got sidetracked with a few other things, but I intend fully to return to this in the new year and polish it up/stamp it for release.
