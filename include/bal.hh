@@ -31,6 +31,7 @@
 # include <functional>
 # include <stdexcept>
 # include <cstdlib>
+# include <cstring>
 # include <vector>
 # include <atomic>
 # include <string>
