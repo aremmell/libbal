@@ -76,7 +76,7 @@ typedef struct {
 /** The public error type. */
 typedef struct {
     int code;
-    char message[BAL_MAXERROR];
+    char message[BAL_MAXERRORFMT];
 } bal_error;
 
 /** The internal error type. */
