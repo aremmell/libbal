@@ -91,11 +91,11 @@ namespace bal::tests
 
 /** Handles an expected exception. */
 # if defined(source_location)
-# define _BAL_TEST_ON_EXPECTED_EXCEPTION(ex) \
+#  define _BAL_TEST_ON_EXPECTED_EXCEPTION(ex) \
     source_location loc = source_location::current(); \
     _BAL_TEST_LOG_EXPECTED_EXCEPTION(loc.function_name(), ex.what())
 # else
-# define _BAL_TEST_ON_EXPECTED_EXCEPTION(ex) \
+#  define _BAL_TEST_ON_EXPECTED_EXCEPTION(ex) \
     _BAL_TEST_LOG_EXPECTED_EXCEPTION(__func__, ex.what())
 # endif
 
