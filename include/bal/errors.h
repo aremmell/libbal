@@ -29,7 +29,9 @@
 # include "types.h"
 
 # if defined(__cplusplus)
-#  include <source_location>
+#  if _has_include(<source_location>)
+#   include <source_location>
+#  endif
 extern "C" {
 # endif
 
@@ -162,7 +164,7 @@ bool __bal_validate(bool expr, int err, const char* func, const char* file,
 # if defined(BAL_DBGLOG)
 void __bal_dbglog(const char* func, const char* file, uint32_t line,
     const char* format, ...);
-#  if defined(__cplusplus)
+#  if defined(__cplusplus) && _has_include(<source_location>)
 #   define _bal_dbglog(...) \
         do { \
             std::source_location loc = std::source_location::current(); \
