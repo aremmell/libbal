@@ -81,9 +81,9 @@ int _bal_get_error(bal_error* err, bool extended)
             if (bal_errors[n].code == _bal_tei.code) {
                 char* heap_msg = NULL;
                 if (_BAL_E_PLATFORM == bal_errors[n].code) {
-                    heap_msg = calloc(BAL_MAXERROR, sizeof(char));
+                    heap_msg = calloc(BAL_MAXERROR + 33, sizeof(char));
                     if (NULL != heap_msg) {
-                        _bal_snprintf_trunc(heap_msg, BAL_MAXERROR, bal_errors[n].msg,
+                        _bal_snprintf_trunc(heap_msg, BAL_MAXERROR + 33, bal_errors[n].msg,
                             _bal_tei.os.code, _bal_okstrnf(_bal_tei.os.msg)
                                 ? _bal_tei.os.msg : BAL_UNKNOWN);
                     }
