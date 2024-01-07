@@ -26,6 +26,12 @@
 #ifndef _BAL_HH_INCLUDED
 # define _BAL_HH_INCLUDED
 
+# if defined(__has_include)
+#  define __HAS_INCLUDE(hdr) __has_include(hdr)
+# else
+#  define __HAS_INCLUDE(hdr) false
+# endif
+
 # include "bal.h"
 # include <type_traits>
 # include <functional>
@@ -35,7 +41,12 @@
 # include <vector>
 # include <atomic>
 # include <string>
-# include <bit>
+# if __HAS_INCLUDE(<bit>)
+#  include <bit>
+#  define bit_cast std::bit_cast
+# else
+#  define bit_cast reinterpret_cast
+# endif
 
 /** The one and only namespace for libbal. */
 namespace bal
@@ -653,12 +664,12 @@ namespace bal
 
         static socket_base* from_user_data(bal_socket* s)
         {
-            return std::bit_cast<socket_base*>(s->user_data);
+            return bit_cast<socket_base*>(s->user_data);
         }
 
         uintptr_t to_user_data() const
         {
-            return std::bit_cast<uintptr_t>(this);
+            return bit_cast<uintptr_t>(this);
         }
 
         async_io_cb on_read;
@@ -706,7 +717,7 @@ namespace bal
                 if (self == nullptr) {
                     _bal_dbglog("no user_data for socket " BAL_SOCKET_SPEC " (0x%"
                         PRIxPTR ", mask = %08" PRIx32 ")", s->sd,
-                        std::bit_cast<uintptr_t>(s), s->state.mask);
+                        bit_cast<uintptr_t>(s), s->state.mask);
                     return;
                 }
 
@@ -715,8 +726,7 @@ namespace bal
 # if defined(BAL_DBGLOG)
                     _bal_dbglog("early return for socket " BAL_SOCKET_SPEC " (0x%"
                         PRIxPTR ", evt = %08" PRIx32 ", self = 0x%" PRIxPTR ")",
-                        s->sd, std::bit_cast<uintptr_t>(s), evt,
-                        std::bit_cast<uintptr_t>(self));
+                        s->sd, bit_cast<uintptr_t>(s), evt, bit_cast<uintptr_t>(self));
 # else
                     BAL_UNUSED(s);
                     BAL_UNUSED(self);
