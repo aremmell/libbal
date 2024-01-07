@@ -2,8 +2,8 @@
  * helpers.h
  *
  * Author:    Ryan M. Lederman <lederman@gmail.com>
- * Copyright: Copyright (c) 2004-2023
- * Version:   0.2.0
+ * Copyright: Copyright (c) 2004-2024
+ * Version:   0.3.0
  * License:   The MIT License (MIT)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -29,13 +29,17 @@
 # include "types.h"
 # include "errors.h"
 
+/** Allows a parameter to be unreferenced without compiler warnings. */
+# define BAL_UNUSED(var) (void)(var)
+
 /** Performs a case-insensitive string comparison and returns true if the
  * strings are the same. */
 static inline
 bool _bal_strsame(const char* lhs, const char* rhs, size_t len)
 {
 # if defined(__WIN__)
-    return 0 == StrStrIA(lhs, rhs, len);
+    BAL_UNUSED(len);
+    return 0 == StrStrIA(lhs, rhs);
 # else
     return 0 == strncasecmp(lhs, rhs, len);
 # endif
@@ -77,9 +81,6 @@ void __bal_safefree(void** pp)
       volatile size_t _n = size; \
       (void)snprintf(dst, _n, __VA_ARGS__); \
     } while (false)
-
-/** Allows a parameter to be unreferenced without compiler warnings. */
-# define BAL_UNUSED(var) (void)(var)
 
 /** getnameinfo flags: do not perform DNS queries. */
 # define _BAL_NI_NODNS (NI_NUMERICHOST | NI_NUMERICSERV)

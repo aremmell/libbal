@@ -2,8 +2,8 @@
  * balerrors.c
  *
  * Author:    Ryan M. Lederman <lederman@gmail.com>
- * Copyright: Copyright (c) 2004-2023
- * Version:   0.2.0
+ * Copyright: Copyright (c) 2004-2024
+ * Version:   0.3.0
  * License:   The MIT License (MIT)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -81,20 +81,20 @@ int _bal_get_error(bal_error* err, bool extended)
             if (bal_errors[n].code == _bal_tei.code) {
                 char* heap_msg = NULL;
                 if (_BAL_E_PLATFORM == bal_errors[n].code) {
-                    heap_msg = calloc(BAL_MAXERROR, sizeof(char));
+                    heap_msg = calloc(BAL_MAXERROR + 33, sizeof(char));
                     if (NULL != heap_msg) {
-                        _bal_snprintf_trunc(heap_msg, BAL_MAXERROR, bal_errors[n].msg,
+                        _bal_snprintf_trunc(heap_msg, BAL_MAXERROR + 33, bal_errors[n].msg,
                             _bal_tei.os.code, _bal_okstrnf(_bal_tei.os.msg)
                                 ? _bal_tei.os.msg : BAL_UNKNOWN);
                     }
                 }
 
                 if (extended) {
-                    _bal_snprintf_trunc(err->message, BAL_MAXERROR, BAL_ERRFMTEXT,
+                    _bal_snprintf_trunc(err->message, BAL_MAXERRORFMT, BAL_ERRFMTEXT,
                         _bal_tei.loc.func, _bal_tei.loc.file, _bal_tei.loc.line,
                         _bal_okptrnf(heap_msg) ? heap_msg : bal_errors[n].msg);
                 } else {
-                    _bal_snprintf_trunc(err->message, BAL_MAXERROR, BAL_ERRFMT,
+                    _bal_snprintf_trunc(err->message, BAL_MAXERRORFMT, BAL_ERRFMT,
                         _bal_okptrnf(heap_msg) ? heap_msg : bal_errors[n].msg);
                 }
 
@@ -190,7 +190,7 @@ bool __bal_handle_error(int code, const char* func, const char* file,
         _bal_strcpy(msg, BAL_MAXERROR, tmp, strnlen(tmp, BAL_MAXERROR));
 # endif
 # if defined(__HAVE_XSI_STRERROR_R__) || defined(__HAVE_STRERROR_S__)
-        assert(0 == finderr);
+        BAL_ASSERT_UNUSED(finderr, 0 == finderr);
 # else
         BAL_UNUSED(finderr);
 # endif

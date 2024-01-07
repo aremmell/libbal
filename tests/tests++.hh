@@ -2,8 +2,8 @@
  * tests++.hh
  *
  * Author:    Ryan M. Lederman <lederman@gmail.com>
- * Copyright: Copyright (c) 2004-2023
- * Version:   0.2.0
+ * Copyright: Copyright (c) 2004-2024
+ * Version:   0.3.0
  * License:   The MIT License (MIT)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -27,7 +27,6 @@
 # define _BAL_TESTSXX_HH_INCLUDED
 
 # include <bal.hh>
-# include <source_location>
 # include "tests_shared.h"
 
 /**
@@ -71,16 +70,34 @@ namespace bal::tests
     try { \
         initializer balinit;
 
+/** Emits an error message when an unexpected exception is caught. */
+# define _BAL_TEST_LOG_UNEXPECTED_EXCEPTION(func, what) \
+     ERROR_MSG("unexpected exception in %s: '%s'", (func), (what)); \
+     pass = false
+
+/** Emits a message when an expected exception is caught. */
+# define _BAL_TEST_LOG_EXPECTED_EXCEPTION(func, what) \
+    TEST_MSG(GREEN("expected exception in %s: '%s'"), (func), (what))
+
 /** Implements recovery in the event that an unexpected exception is caught. */
-# define _BAL_TEST_ON_EXCEPTION(ex) \
-    std::source_location loc = std::source_location::current(); \
-    ERROR_MSG("unexpected exception in %s: '%s'", loc.function_name(), ex.what()); \
-    pass = false
+# if defined(source_location)
+#  define _BAL_TEST_ON_EXCEPTION(ex) \
+     source_location loc = source_location::current(); \
+     _BAL_TEST_LOG_UNEXPECTED_EXCEPTION(loc.function_name(), ex.what())
+# else
+#  define _BAL_TEST_ON_EXCEPTION(ex) \
+    _BAL_TEST_LOG_UNEXPECTED_EXCEPTION(__func__, ex.what())
+# endif
 
 /** Handles an expected exception. */
+# if defined(source_location)
 # define _BAL_TEST_ON_EXPECTED_EXCEPTION(ex) \
-    std::source_location loc = std::source_location::current(); \
-    TEST_MSG(GREEN("expected exception in %s: '%s'"), loc.function_name(), ex.what())
+    source_location loc = source_location::current(); \
+    _BAL_TEST_LOG_EXPECTED_EXCEPTION(loc.function_name(), ex.what())
+# else
+# define _BAL_TEST_ON_EXPECTED_EXCEPTION(ex) \
+    _BAL_TEST_LOG_EXPECTED_EXCEPTION(__func__, ex.what())
+# endif
 
 # define _BAL_TEST_CONCLUDE \
     } catch (bal::exception& ex) { \

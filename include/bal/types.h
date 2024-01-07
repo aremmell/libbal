@@ -2,8 +2,8 @@
  * types.h
  *
  * Author:    Ryan M. Lederman <lederman@gmail.com>
- * Copyright: Copyright (c) 2004-2023
- * Version:   0.2.0
+ * Copyright: Copyright (c) 2004-2024
+ * Version:   0.3.0
  * License:   The MIT License (MIT)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -76,7 +76,7 @@ typedef struct {
 /** The public error type. */
 typedef struct {
     int code;
-    char message[BAL_MAXERROR];
+    char message[BAL_MAXERRORFMT];
 } bal_error;
 
 /** The internal error type. */

@@ -2,8 +2,8 @@
  * errors.h
  *
  * Author:    Ryan M. Lederman <lederman@gmail.com>
- * Copyright: Copyright (c) 2004-2023
- * Version:   0.2.0
+ * Copyright: Copyright (c) 2004-2024
+ * Version:   0.3.0
  * License:   The MIT License (MIT)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -29,7 +29,6 @@
 # include "types.h"
 
 # if defined(__cplusplus)
-#  include <source_location>
 extern "C" {
 # endif
 
@@ -162,10 +161,10 @@ bool __bal_validate(bool expr, int err, const char* func, const char* file,
 # if defined(BAL_DBGLOG)
 void __bal_dbglog(const char* func, const char* file, uint32_t line,
     const char* format, ...);
-#  if defined(__cplusplus)
+#  if defined(__cplusplus) && defined(source_location)
 #   define _bal_dbglog(...) \
         do { \
-            std::source_location loc = std::source_location::current(); \
+            source_location loc = source_location::current(); \
             __bal_dbglog(loc.function_name(), loc.file_name(), loc.line(), __VA_ARGS__); \
         } while (false)
 #  else

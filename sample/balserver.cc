@@ -2,8 +2,8 @@
  * balserver.cc
  *
  * Author:    Ryan M. Lederman <lederman@gmail.com>
- * Copyright: Copyright (c) 2004-2023
- * Version:   0.2.0
+ * Copyright: Copyright (c) 2004-2024
+ * Version:   0.3.0
  * License:   The MIT License (MIT)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -119,7 +119,7 @@ int main(int argc, char** argv)
             PRINT("got connection from %s %s:%s on " BAL_SOCKET_SPEC " (0x%" PRIxPTR ");"
                 " now have %zu client(s)", addrinfo.get_type().c_str(),
                 addrinfo.get_addr().c_str(), addrinfo.get_port().c_str(),
-                client_sock.get_descriptor(), std::bit_cast<uintptr_t>(client_sock.get()),
+                client_sock.get_descriptor(), bit_cast<uintptr_t>(client_sock.get()),
                 _clients.size() + 1);
 
             _clients[client_sock.get_descriptor()] = std::move(client_sock);

@@ -2,8 +2,8 @@
  * platform.h
  *
  * Author:    Ryan M. Lederman <lederman@gmail.com>
- * Copyright: Copyright (c) 2004-2023
- * Version:   0.2.0
+ * Copyright: Copyright (c) 2004-2024
+ * Version:   0.3.0
  * License:   The MIT License (MIT)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -33,7 +33,9 @@
 #   define _DARWIN_C_SOURCE
 #   define __HAVE_LIBC_STRLCPY__
 #  elif defined(__linux__)
-#   define _GNU_SOURCE
+#   if !defined(_GNU_SOURCE)
+#    define _GNU_SOURCE
+#   endif
 #   define __HAVE_POLLRDHUP__
 #  elif defined(__OpenBSD__)
 #   define __BSD__
@@ -277,7 +279,9 @@ typedef unsigned bal_threadret;
 # include <inttypes.h>
 # include <assert.h>
 
-# define BAL_MAXERROR 256
+# define BAL_MAXERROR     256
+# define BAL_MAXERRORMISC 256
+# define BAL_MAXERRORFMT  BAL_MAXERROR + BAL_MAXERRORMISC
 # define BAL_UNKNOWN "<unknown>"
 
 # define BAL_AS_IPV6 "IPv6"
