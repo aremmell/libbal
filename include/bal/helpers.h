@@ -29,6 +29,9 @@
 # include "types.h"
 # include "errors.h"
 
+/** Allows a parameter to be unreferenced without compiler warnings. */
+# define BAL_UNUSED(var) (void)(var)
+
 /** Performs a case-insensitive string comparison and returns true if the
  * strings are the same. */
 static inline
@@ -78,9 +81,6 @@ void __bal_safefree(void** pp)
       volatile size_t _n = size; \
       (void)snprintf(dst, _n, __VA_ARGS__); \
     } while (false)
-
-/** Allows a parameter to be unreferenced without compiler warnings. */
-# define BAL_UNUSED(var) (void)(var)
 
 /** getnameinfo flags: do not perform DNS queries. */
 # define _BAL_NI_NODNS (NI_NUMERICHOST | NI_NUMERICSERV)
