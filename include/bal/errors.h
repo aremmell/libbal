@@ -161,11 +161,10 @@ bool __bal_validate(bool expr, int err, const char* func, const char* file,
 # if defined(BAL_DBGLOG)
 void __bal_dbglog(const char* func, const char* file, uint32_t line,
     const char* format, ...);
-#  if defined(__cplusplus) && __HAS_INCLUDE(<source_location>)
-#   include <source_location>
+#  if defined(__cplusplus) && defined(source_location)
 #   define _bal_dbglog(...) \
         do { \
-            std::source_location loc = std::source_location::current(); \
+            source_location loc = source_location::current(); \
             __bal_dbglog(loc.function_name(), loc.file_name(), loc.line(), __VA_ARGS__); \
         } while (false)
 #  else

@@ -26,12 +26,6 @@
 #ifndef _BAL_HH_INCLUDED
 # define _BAL_HH_INCLUDED
 
-# if defined(__has_include)
-#  define __HAS_INCLUDE(hdr) __has_include(hdr)
-# else
-#  define __HAS_INCLUDE(hdr) false
-# endif
-
 # include "bal.h"
 # include <type_traits>
 # include <functional>
@@ -41,7 +35,20 @@
 # include <vector>
 # include <atomic>
 # include <string>
-# if __HAS_INCLUDE(<bit>)
+# include <version>
+
+# if defined(__has_include)
+#  define __HAS_INCLUDE(hdr) __has_include(hdr)
+# else
+#  define __HAS_INCLUDE(hdr) false
+# endif
+
+# if defined(__cpp_lib_source_location) && __HAS_INCLUDE(<source_location>)
+#  include <source_location>
+#  define source_location std::source_location
+# endif
+
+# if defined(__cpp_lib_bit_cast) && __HAS_INCLUDE(<bit>)
 #  include <bit>
 #  define bit_cast std::bit_cast
 # else
