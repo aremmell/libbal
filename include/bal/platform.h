@@ -278,8 +278,7 @@ typedef unsigned bal_threadret;
 # include <assert.h>
 
 # define BAL_MAXERROR       256
-# define BAL_MAXERRORDETAIL 256
-# define BAL_MAXERRORFMT    BAL_MAXERROR + BAL_MAXERRORDETAIL
+# define BAL_MAXERRORFMT    1024
 # define BAL_UNKNOWN "<unknown>"
 
 # define BAL_AS_IPV6 "IPv6"
