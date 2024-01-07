@@ -34,8 +34,8 @@ run_cppi()
 {
   printf '%s' "Formatting with cppi ... "
   ( # shellcheck disable=SC2038
-    find . -name "*.[ch]" -o -name "*.cc" -o -name "*.hh" -print | \
-      grep -Ev '(mcmb\.c|\.git/.*)' | \
+    find . -name "*.[ch]" -o -name "*.cc" -o -name "*.hh" | \
+      grep -Ev '(mcmb\.c|\.git/.*|build/.*)' | \
         xargs -I{} "${SHELL:-sh}" -c \
           'set -e; cppi "{}" > "{}.cppi" && mv -f "{}.cppi" "{}"'
   ) && printf '%s\n' "complete."
