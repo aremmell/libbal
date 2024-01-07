@@ -33,7 +33,9 @@
 #   define _DARWIN_C_SOURCE
 #   define __HAVE_LIBC_STRLCPY__
 #  elif defined(__linux__)
-#   define _GNU_SOURCE
+#   if !defined(_GNU_SOURCE)
+#    define _GNU_SOURCE
+#   endif
 #   define __HAVE_POLLRDHUP__
 #  elif defined(__OpenBSD__)
 #   define __BSD__
