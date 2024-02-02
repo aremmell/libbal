@@ -161,8 +161,9 @@ scoped_socket* bal::server::get_existing_client(bal_descriptor sd)
 
 void bal::server::rem_existing_client(bal_descriptor sd)
 {
-    if (_clients.erase(sd) > 0)
+    if (_clients.erase(sd) > 0) {
         PRINT("now have %zu client(s)", _clients.size());
+    }
 }
 
 void bal::server::on_client_disconnect(const bal_socket* s, bool error)
