@@ -647,7 +647,7 @@ namespace bal
             return throw_on_policy<TPolicy>(ret, false);
         }
 
-        bool get_peer_addr(address& peer_addr)
+        bool get_peer_addr(address& peer_addr) const
         {
             peer_addr.clear();
 
