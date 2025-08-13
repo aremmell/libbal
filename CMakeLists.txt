@@ -53,6 +53,14 @@ if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.21")
     cmake_policy(SET CMP0126 NEW) # cache
 endif()
 
+if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.29")
+    cmake_policy(SET CMP0156 OLD) # Static library deduping
+endif()
+
+if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "4.0")
+    cmake_policy(SET CMP0181 NEW) # Quote parsing
+endif()
+
 # define the project
 project(
     ${PROJECT_NAME}
