@@ -11,7 +11,7 @@
 
 `libbal`: a lightweight, portable C17/C++20 abstraction layer for Berkeley Sockets, complete with asynchronous I/O and *no third-party depdendencies*.
 
-# UPDATE December 2025
+## UPDATE December 2025
 
 I'll be getting to documentation in the new year. No, I'm not going to use Claude, hipster.
 
@@ -19,15 +19,15 @@ I'm also considering branching off and converting everything to C23, since I've 
 
 And finally, it looks like I have the "quirky" folks who maintain CMake to thank for wasting my time resolving various warnings that emerged from the ether a project whose source code hasn't changed&mdash;only the version of CMake on my machine. It's called backwards compatibility, people. Knock it off already. Nobody's ever going to use `-Wno-dev` unironically.
 
-# UPDATE January 2025
+## UPDATE January 2025
 
 I have set up a simplistic GitHub CMake action that will test compilation on Windows/Ubuntu/macOS with Clang/gcc/cl. This revealed several problems related to compiler versioning and portability, which are now fixed. I have tagged v0.3.0 as the first official releease of the reborn library!
 
-# UPDATE December 2023
+## UPDATE December 2023
 
 I have let this project slip as I got sidetracked with a few other things, but I intend fully to return to this in the new year and polish it up/stamp it for release.
 
-# UPDATE October 2023
+## UPDATE October 2023
 
 I have finished reorganizing things, and rewrote the C++ wrapper from scratch. I have also created a test suite for the core C library (`build/baltests[.exe]`) as well as a standalone test suite for the C++ wrapper (`build/baltests++[.exe]`). Next steps: documentation. This is something I've been wrestling with–I like Doxygen, but I have found that unless you wait until you ship to write the comments, they will change over time, entropy will creep in, and sooner or later your documentation is out of sync.
 
