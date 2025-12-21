@@ -32,3 +32,6 @@ log.pvs
 
 # direnv
 .envrc
+
+# macOS Finder
+.DS_Store
