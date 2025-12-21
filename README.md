@@ -5,6 +5,7 @@
 
 [![License](https://img.shields.io/github/license/aremmell/libbal?color=%2340b900&cacheSeconds=60)](https://github.com/aremmell/libbal/blob/master/LICENSE)
 [![REUSE status](https://api.reuse.software/badge/github.com/aremmell/libbal)](https://api.reuse.software/info/github.com/aremmell/libbal)
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/a7e6cfb38dc44542b34b9ce447fcc792)](https://app.codacy.com/gh/aremmell/libbal/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
 [![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=aremmell_libbal&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=aremmell_libbal)
 [![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=aremmell_libbal&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=aremmell_libbal)
 [![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=aremmell_libbal&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=aremmell_libbal)
