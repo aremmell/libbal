@@ -2,7 +2,7 @@
  * balstate.c
  *
  * Author:    Ryan M. Lederman <lederman@gmail.com>
- * Copyright: Copyright (c) 2004-2024
+ * Copyright: Copyright (c) 2004-2025
  * Version:   0.3.0
  * License:   The MIT License (MIT)
  *

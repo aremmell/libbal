@@ -1,7 +1,7 @@
 # libbal
 
 <!-- SPDX-License-Identifier: MIT -->
-<!-- Copyright (c) 2004-2024 Ryan M. Lederman <lederman@gmail.com> -->
+<!-- Copyright (c) 2004-2025 Ryan M. Lederman <lederman@gmail.com> -->
 
 [![License](https://img.shields.io/github/license/aremmell/libbal?color=%2340b900&cacheSeconds=60)](https://github.com/aremmell/libbal/blob/master/LICENSE)
 [![REUSE status](https://api.reuse.software/badge/github.com/aremmell/libbal)](https://api.reuse.software/info/github.com/aremmell/libbal)
@@ -11,7 +11,15 @@
 
 `libbal`: a lightweight, portable C17/C++20 abstraction layer for Berkeley Sockets, complete with asynchronous I/O and *no third-party depdendencies*.
 
-# UPDATE January 2024
+# UPDATE December 2025
+
+I'll be getting to documentation in the new year. No, I'm not going to use Claude, hipster.
+
+I'm also considering branching off and converting everything to C23, since I've wanted to write `nullptr` in C for around 15 years. Yes, for that reason alone; wanna fight about it?
+
+And finally, it looks like I have the "quirky" folks who maintain CMake to thank for wasting my time resolving various warnings that emerged from the ether a project whose source code hasn't changed&mdash;only the version of CMake on my machine. It's called backwards compatibility, people. Knock it off already. Nobody's ever going to use `-Wno-dev` unironically.
+
+# UPDATE January 2025
 
 I have set up a simplistic GitHub CMake action that will test compilation on Windows/Ubuntu/macOS with Clang/gcc/cl. This revealed several problems related to compiler versioning and portability, which are now fixed. I have tagged v0.3.0 as the first official releease of the reborn library!
 
