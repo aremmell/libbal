@@ -18,7 +18,7 @@ I'll be getting to documentation in the new year. No, I'm not going to use Claud
 
 I'm also considering branching off and converting everything to C23, since I've wanted to write `nullptr` in C for around 15 years. Yes, for that reason alone; wanna fight about it?
 
-And finally, it looks like I have the "quirky" folks who maintain CMake to thank for wasting my time resolving various warnings that emerged from the ether a project whose source code hasn't changed&mdash;only the version of CMake on my machine. It's called backwards compatibility, people. Knock it off already. Nobody's ever going to use `-Wno-dev` unironically.
+And finally, it looks like I have the "quirky" folks who maintain CMake to thank for wasting my time resolving various warnings that emerged from the ether in a project whose source code hasn't changed&mdash;only the version of CMake on my machine. It's called backwards compatibility, people. Knock it off already. Nobody's ever going to use `-Wno-dev` unironically.
 
 ## UPDATE January 2025
 
